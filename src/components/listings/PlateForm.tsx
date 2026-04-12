@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Cloud, CloudOff } from "lucide-react";
 import { MediaUpload } from "./MediaUpload";
 import { QuantityStepper } from "./QuantityStepper";
 import { FulfillmentPicker } from "./FulfillmentPicker";
@@ -21,6 +21,47 @@ import { toast } from "sonner";
 
 const NAME_MAX = 60;
 const DESC_MAX = 500;
+const DRAFT_KEY = "kder_plate_draft";
+const AUTOSAVE_DELAY = 1500; // 1.5 seconds debounce
+
+interface DraftData {
+  name: string;
+  description: string;
+  price: string;
+  quantity: number;
+  minOrder: string;
+  photos: string[];
+  video: string | null;
+  fulfillment: FulfillmentType;
+  categories: string[];
+  allergens: string[];
+  savedAt: string;
+}
+
+function loadDraft(): DraftData | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as DraftData;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data: DraftData) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch {
+    // Storage full or unavailable — silently fail
+  }
+}
+
+function clearDraft() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(DRAFT_KEY);
+}
 
 interface PlateFormProps {
   listing?: Listing;
@@ -30,32 +71,70 @@ export function PlateForm({ listing }: PlateFormProps) {
   const router = useRouter();
   const isEditing = !!listing;
 
-  const [name, setName] = useState(listing?.name ?? "");
-  const [description, setDescription] = useState(listing?.description ?? "");
-  const [price, setPrice] = useState(listing?.price?.toString() ?? "");
-  const [quantity, setQuantity] = useState(listing?.quantity ?? 1);
-  const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? "");
-  const [photos, setPhotos] = useState<string[]>(listing?.photos ?? []);
-  const [video, setVideo] = useState<string | null>(listing?.video ?? null);
+  // Restore draft for new plates (not edits)
+  const restored = !isEditing ? loadDraft() : null;
+
+  const [name, setName] = useState(listing?.name ?? restored?.name ?? "");
+  const [description, setDescription] = useState(listing?.description ?? restored?.description ?? "");
+  const [price, setPrice] = useState(listing?.price?.toString() ?? restored?.price ?? "");
+  const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
+  const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
+  const [photos, setPhotos] = useState<string[]>(listing?.photos ?? restored?.photos ?? []);
+  const [video, setVideo] = useState<string | null>(listing?.video ?? restored?.video ?? null);
   const [fulfillment, setFulfillment] = useState<FulfillmentType>(
-    listing?.fulfillment_type ?? "pickup"
+    listing?.fulfillment_type ?? restored?.fulfillment ?? "pickup"
   );
   const [categories, setCategories] = useState<string[]>(
-    listing?.category_tags ?? []
+    listing?.category_tags ?? restored?.categories ?? []
   );
   const [allergens, setAllergens] = useState<string[]>(
-    listing?.allergens ?? []
+    listing?.allergens ?? restored?.allergens ?? []
   );
   const [saving, setSaving] = useState(false);
+  const [autoSaved, setAutoSaved] = useState(false);
 
   // Collapsible sections
   const [showCategories, setShowCategories] = useState(
-    (listing?.category_tags?.length ?? 0) > 0
+    (listing?.category_tags?.length ?? restored?.categories?.length ?? 0) > 0
   );
   const [showAllergens, setShowAllergens] = useState(
-    (listing?.allergens?.length ?? 0) > 0
+    (listing?.allergens?.length ?? restored?.allergens?.length ?? 0) > 0
   );
-  const [showMinOrder, setShowMinOrder] = useState(!!listing?.min_order);
+  const [showMinOrder, setShowMinOrder] = useState(!!listing?.min_order || !!restored?.minOrder);
+
+  // Auto-save with debounce (new plates only)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(false);
+
+  const doAutoSave = useCallback(() => {
+    if (isEditing) return;
+    const hasContent = name.trim() || description.trim() || price || photos.length > 0;
+    if (!hasContent) return;
+
+    saveDraft({
+      name, description, price, quantity, minOrder,
+      photos, video, fulfillment, categories, allergens,
+      savedAt: new Date().toISOString(),
+    });
+    setAutoSaved(true);
+    setTimeout(() => setAutoSaved(false), 2000);
+  }, [name, description, price, quantity, minOrder, photos, video, fulfillment, categories, allergens, isEditing]);
+
+  useEffect(() => {
+    // Skip the initial mount to avoid saving empty/restored state immediately
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    if (isEditing) return;
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(doAutoSave, AUTOSAVE_DELAY);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [name, description, price, quantity, minOrder, photos, video, fulfillment, categories, allergens, isEditing, doAutoSave]);
 
   const priceNum = parseFloat(price) || 0;
   const canPublish = name.trim().length > 0 && priceNum > 0 && quantity >= 1 && photos.length >= 1;
@@ -95,6 +174,7 @@ export function PlateForm({ listing }: PlateFormProps) {
         );
       }
 
+      clearDraft();
       router.push("/listings");
     } catch {
       toast.error("Failed to save plate. Try again.");
@@ -118,6 +198,23 @@ export function PlateForm({ listing }: PlateFormProps) {
         <h1 className="text-lg font-bold text-white">
           {isEditing ? "Edit Plate" : "Create Plate"}
         </h1>
+
+        {/* Auto-save indicator */}
+        {!isEditing && (
+          <div className="ml-auto flex items-center gap-1.5 text-xs">
+            {autoSaved ? (
+              <>
+                <Cloud size={14} className="text-green-400" />
+                <span className="text-green-400">Saved</span>
+              </>
+            ) : restored ? (
+              <>
+                <Cloud size={14} className="text-white/30" />
+                <span className="text-white/30">Draft restored</span>
+              </>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Form body — scrollable */}
