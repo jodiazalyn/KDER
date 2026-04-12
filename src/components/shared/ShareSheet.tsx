@@ -56,8 +56,8 @@ const FacebookIcon = () => (
 
 export function ShareSheet({ open, onOpenChange, handle }: ShareSheetProps) {
   const [copied, setCopied] = useState(false);
-  const fullUrl = `https://kder.com/${handle}`;
-  const displayLink = `kder.com/${handle}`;
+  const fullUrl = `https://kder.club/@${handle}`;
+  const displayLink = `kder.club/@${handle}`;
 
   const shareText = `Check out my plates on KDER!\n\nOrder from me: ${fullUrl}\n\nFeed the city. Own your income.`;
 

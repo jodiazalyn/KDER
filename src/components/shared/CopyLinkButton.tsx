@@ -20,7 +20,7 @@ export function CopyLinkButton({
 }: CopyLinkButtonProps) {
   const [copied, setCopied] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const fullUrl = `https://kder.com/${handle}`;
+  const fullUrl = `https://kder.club/@${handle}`;
 
   const handleCopy = useCallback(async () => {
     try {

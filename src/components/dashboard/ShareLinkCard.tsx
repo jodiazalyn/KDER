@@ -7,7 +7,7 @@ interface ShareLinkCardProps {
 }
 
 export function ShareLinkCard({ handle }: ShareLinkCardProps) {
-  const link = `kder.com/${handle}`;
+  const link = `kder.club/@${handle}`;
 
   return (
     <div className="rounded-2xl border border-green-400/[0.25] bg-green-900/[0.40] p-4 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]">

@@ -114,7 +114,7 @@ export default function HandlePage() {
         <div className="w-full">
           <div className="flex items-center rounded-2xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] transition-colors focus-within:border-green-400/60 focus-within:bg-white/[0.12]">
             <span className="pl-4 text-base text-white/40 select-none">
-              kder.com/
+              kder.club/@
             </span>
             <input
               type="text"
