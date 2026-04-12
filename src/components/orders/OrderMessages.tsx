@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/demo";
+import {
+  getThreadMessages,
+  sendMessage as demoSendMessage,
+} from "@/lib/messages-store";
 import type { Message } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -26,24 +30,29 @@ export function OrderMessages({
   const supabase = createClient();
 
   // Load existing messages
-  const loadMessages = useCallback(async () => {
-    if (isDemoMode()) return;
-
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("order_id", orderId)
-      .order("created_at", { ascending: true });
-
-    if (!error && data) {
-      setMessages(data as Message[]);
-    }
-  }, [orderId, supabase]);
-
   useEffect(() => {
-    const frame = requestAnimationFrame(() => { loadMessages(); });
+    const frame = requestAnimationFrame(() => {
+      if (isDemoMode()) {
+        const msgs = getThreadMessages(recipientId, currentUserId, orderId);
+        setMessages(msgs);
+        return;
+      }
+
+      const load = async () => {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("order_id", orderId)
+          .order("created_at", { ascending: true });
+
+        if (!error && data) {
+          setMessages(data as Message[]);
+        }
+      };
+      load();
+    });
     return () => cancelAnimationFrame(frame);
-  }, [loadMessages]);
+  }, [orderId, recipientId, currentUserId, supabase]);
 
   // Subscribe to new messages via Realtime
   useEffect(() => {
@@ -89,16 +98,7 @@ export function OrderMessages({
     setSending(true);
 
     if (isDemoMode()) {
-      // Demo mode — add locally
-      const demoMsg: Message = {
-        id: `msg_${Date.now()}`,
-        order_id: orderId,
-        sender_id: currentUserId,
-        recipient_id: recipientId,
-        body,
-        read_at: null,
-        created_at: new Date().toISOString(),
-      };
+      const demoMsg = demoSendMessage(currentUserId, recipientId, body, orderId);
       setMessages((prev) => [...prev, demoMsg]);
       setInput("");
       setSending(false);

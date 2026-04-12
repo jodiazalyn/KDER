@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Mail } from "lucide-react";
 import { ConversationRow } from "@/components/messages/ConversationRow";
 import { getConversations, type Conversation } from "@/lib/messages-store";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
 type TabKey = "general" | "orders";
@@ -13,19 +14,19 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "orders", label: "Orders" },
 ];
 
-const CURRENT_USER = "demo_creator";
-
 export default function MessagesPage() {
+  const currentUser = useCurrentUser();
   const [activeTab, setActiveTab] = useState<TabKey>("general");
   const [general, setGeneral] = useState<Conversation[]>([]);
   const [orders, setOrders] = useState<Conversation[]>([]);
   const [inboxActive, setInboxActive] = useState(true);
 
   const refresh = useCallback(() => {
-    const convs = getConversations(CURRENT_USER);
+    if (!currentUser) return;
+    const convs = getConversations(currentUser.id);
     setGeneral(convs.general);
     setOrders(convs.orders);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => refresh());

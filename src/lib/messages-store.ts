@@ -200,6 +200,25 @@ function seedDemoMessagesIfNeeded() {
       read_at: new Date(now.getTime() - 90 * 60000).toISOString(),
       created_at: new Date(now.getTime() - 95 * 60000).toISOString(),
     },
+    // Order thread messages — linked to demo orders
+    {
+      id: generateId(),
+      order_id: "order_demo_1",
+      sender_id: "member_demo_1",
+      recipient_id: creatorId,
+      body: "Hey! Can I pick up my order around 6pm?",
+      read_at: null,
+      created_at: new Date(now.getTime() - 30 * 60000).toISOString(),
+    },
+    {
+      id: generateId(),
+      order_id: "order_demo_1",
+      sender_id: creatorId,
+      recipient_id: "member_demo_1",
+      body: "Yes! I'll have it ready by 5:45. See you then 🙌",
+      read_at: new Date(now.getTime() - 25 * 60000).toISOString(),
+      created_at: new Date(now.getTime() - 28 * 60000).toISOString(),
+    },
   ];
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));

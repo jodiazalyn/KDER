@@ -1,14 +1,21 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { ShoppingCart, UtensilsCrossed, MessageCircle } from "lucide-react";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import { PlateCard } from "@/components/storefront/PlateCard";
 import { CartSheet } from "@/components/storefront/CartSheet";
 import { CheckoutSheet, type OrderDetails } from "@/components/storefront/CheckoutSheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { getCreatorProfile, type CreatorProfile } from "@/lib/creator-store";
 import { getListingsByStatus } from "@/lib/listings-store";
+import { sendMessage } from "@/lib/messages-store";
 import {
   getCart,
   addToCart,
@@ -34,6 +41,8 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [messageOpen, setMessageOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -146,6 +155,18 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
         </div>
       )}
 
+      {/* Message Creator button */}
+      <div className="mt-4 px-4">
+        <button
+          type="button"
+          onClick={() => setMessageOpen(true)}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/[0.15] bg-white/[0.06] text-sm font-medium text-white/70 hover:bg-white/[0.10] active:scale-95 transition-all"
+        >
+          <MessageCircle size={16} />
+          Message {creator.display_name}
+        </button>
+      </div>
+
       {/* Category filter */}
       {allCategories.length > 0 && (
         <div className="mt-4">
@@ -221,6 +242,45 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
         creatorHandle={handle}
         onPlaceOrder={handlePlaceOrder}
       />
+
+      {/* Message Creator sheet */}
+      <Sheet open={messageOpen} onOpenChange={setMessageOpen}>
+        <SheetContent
+          side="bottom"
+          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+        >
+          <SheetHeader>
+            <SheetTitle className="text-white">
+              Message {creator.display_name}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-4 pb-6">
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder={`Ask ${creator.display_name} a question...`}
+              rows={3}
+              className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/60 focus:outline-none resize-none"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!messageText.trim()) return;
+                const memberId = `member_${Date.now()}`;
+                sendMessage(memberId, "demo_creator", messageText.trim());
+                toast.success("Message sent to " + creator.display_name);
+                setMessageText("");
+                setMessageOpen(false);
+              }}
+              disabled={!messageText.trim()}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform disabled:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <MessageCircle size={16} />
+              Send Message
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </main>
   );
 }

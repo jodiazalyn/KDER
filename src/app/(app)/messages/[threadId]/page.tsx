@@ -4,8 +4,7 @@ import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ChatThread } from "@/components/messages/ChatThread";
-
-const CURRENT_USER = "demo_creator";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 const DEMO_NAMES: Record<string, string> = {
   member_demo_1: "Marcus J.",
@@ -22,6 +21,7 @@ export default function MessageThreadPage({
 }) {
   const { threadId } = use(params);
   const router = useRouter();
+  const currentUser = useCurrentUser();
   const decoded = decodeURIComponent(threadId);
 
   // Parse threadId format: "general_{partnerId}" or "order_{orderId}_{partnerId}"
@@ -70,7 +70,7 @@ export default function MessageThreadPage({
       <ChatThread
         partnerId={partnerId}
         partnerName={partnerName}
-        currentUserId={CURRENT_USER}
+        currentUserId={currentUser?.id || "demo_creator"}
         orderId={orderId}
       />
     </main>
