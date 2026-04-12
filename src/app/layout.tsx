@@ -8,13 +8,20 @@ export const metadata: Metadata = {
     "A hospitality sovereignty platform for Houston food creators. List your plates, manage orders, and get paid — all from your phone.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/icons/app-icon-512.png",
     apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
     title: "KDER — Feed the city. Own your income.",
     description: "Houston's hospitality marketplace for food creators.",
     type: "website",
+    images: [{ url: "/icons/app-icon-512.png", width: 128, height: 128 }],
+  },
+  twitter: {
+    card: "summary",
+    title: "KDER — Feed the city. Own your income.",
+    description: "Houston's hospitality marketplace for food creators.",
+    images: ["/icons/app-icon-512.png"],
   },
 };
 
