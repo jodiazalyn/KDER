@@ -33,6 +33,27 @@ export function getOrdersByStatus(status: OrderStatus | "active"): Order[] {
   return orders.filter((o) => o.status === status);
 }
 
+export function createOrder(
+  data: Omit<Order, "id" | "terms_accepted_at" | "auto_decline_at" | "created_at" | "updated_at">
+): Order {
+  const orders = getOrders();
+  const now = new Date();
+  const autoDecline = new Date(now.getTime() + 15 * 60 * 1000); // 15 min
+
+  const order: Order = {
+    ...data,
+    id: generateId(),
+    terms_accepted_at: now.toISOString(),
+    auto_decline_at: autoDecline.toISOString(),
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+
+  orders.unshift(order);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+  return order;
+}
+
 export function getOrder(id: string): Order | null {
   return getOrders().find((o) => o.id === id) ?? null;
 }
