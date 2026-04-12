@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -52,11 +53,48 @@ export function CheckoutSheet({
 
   const handlePlace = async () => {
     setPlacing(true);
-    // Simulate API delay
-    await new Promise((r) => setTimeout(r, 800));
-    onPlaceOrder({ memberName: name.trim(), memberPhone: phone, fulfillmentType: fulfillment, notes: notes.trim() });
-    setPlacing(false);
-    setSuccess(true);
+    try {
+      // Create Stripe Checkout Session
+      const res = await fetch("/api/v1/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            listing_id: item.listing.id,
+            name: item.listing.name,
+            price: item.listing.price,
+            quantity: item.quantity,
+            photo: item.listing.photos[0] || null,
+          })),
+          member_name: name.trim(),
+          member_phone: phone,
+          fulfillment_type: fulfillment,
+          notes: notes.trim(),
+          creator_handle: creatorHandle,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.checkout_url) {
+        throw new Error(data.error || "Failed to create checkout");
+      }
+
+      // Also create local orders for demo tracking
+      onPlaceOrder({
+        memberName: name.trim(),
+        memberPhone: phone,
+        fulfillmentType: fulfillment,
+        notes: notes.trim(),
+      });
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.checkout_url;
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Payment setup failed. Please try again.");
+      setPlacing(false);
+    }
   };
 
   if (success) {
@@ -208,7 +246,10 @@ export function CheckoutSheet({
             {placing ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              `Place Order · $${total.toFixed(2)}`
+              <>
+                <CreditCard size={16} className="mr-1.5" />
+                Pay ${total.toFixed(2)}
+              </>
             )}
           </button>
         </div>
