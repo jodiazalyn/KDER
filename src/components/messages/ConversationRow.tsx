@@ -2,8 +2,22 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { formatDistanceToNow } from "date-fns";
 import type { Conversation } from "@/lib/messages-store";
+
+function shortTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = now - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return new Date(dateStr).toLocaleDateString([], { weekday: "short" });
+  return new Date(dateStr).toLocaleDateString([], { month: "short", day: "numeric" });
+}
 
 interface ConversationRowProps {
   conversation: Conversation;
@@ -25,9 +39,7 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
       ? lastMessage.slice(0, 40) + "..."
       : lastMessage;
 
-  const timeAgo = formatDistanceToNow(new Date(lastMessageAt), {
-    addSuffix: false,
-  });
+  const timeAgo = shortTimeAgo(lastMessageAt);
 
   return (
     <Link

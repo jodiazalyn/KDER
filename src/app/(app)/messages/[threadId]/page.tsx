@@ -47,9 +47,9 @@ export default function MessageThreadPage({
   }, [decoded]);
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0A0A0A]">
+    <main className="fixed inset-0 flex flex-col bg-[#0A0A0A] z-40">
       {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm">
         <button
           type="button"
           onClick={() => router.back()}
