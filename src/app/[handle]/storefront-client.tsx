@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ShoppingCart, UtensilsCrossed, MessageCircle } from "lucide-react";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/sheet";
 import { getCreatorProfile, type CreatorProfile } from "@/lib/creator-store";
 import { getListingsByStatus } from "@/lib/listings-store";
-import { sendMessage } from "@/lib/messages-store";
+import { sendMessage, getThreadMessages } from "@/lib/messages-store";
+import { Send, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   getCart,
   addToCart,
@@ -43,6 +45,16 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
+  const [chatMessages, setChatMessages] = useState<import("@/types").Message[]>([]);
+  const [memberIdRef] = useState(() => {
+    if (typeof window === "undefined") return "member_anon";
+    const stored = sessionStorage.getItem(`kder_member_id_${handle}`);
+    if (stored) return stored;
+    const id = `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    sessionStorage.setItem(`kder_member_id_${handle}`, id);
+    return id;
+  });
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -116,6 +128,17 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
     },
     [cart, handle]
   );
+
+  // Load chat messages when sheet opens
+  useEffect(() => {
+    if (!messageOpen) return;
+    const frame = requestAnimationFrame(() => {
+      const msgs = getThreadMessages("demo_creator", memberIdRef);
+      setChatMessages(msgs);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messageOpen, memberIdRef]);
 
   // Derive categories from active listings
   const allCategories = Array.from(
@@ -243,40 +266,106 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
         onPlaceOrder={handlePlaceOrder}
       />
 
-      {/* Message Creator sheet */}
+      {/* Message Creator sheet — full chat thread */}
       <Sheet open={messageOpen} onOpenChange={setMessageOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[80vh] flex flex-col"
         >
           <SheetHeader>
             <SheetTitle className="text-white">
               Message {creator.display_name}
             </SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4 pb-6">
-            <textarea
+
+          {/* Chat history */}
+          <div className="mt-3 flex-1 overflow-y-auto space-y-2 min-h-[120px] max-h-[45vh] px-1">
+            {chatMessages.length === 0 ? (
+              <p className="text-center text-xs text-white/30 py-8">
+                No messages yet. Say hello to {creator.display_name}!
+              </p>
+            ) : (
+              chatMessages.map((msg) => {
+                const isMine = msg.sender_id === memberIdRef;
+                return (
+                  <div
+                    key={msg.id}
+                    className={cn("flex", isMine ? "justify-end" : "justify-start")}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm",
+                        isMine
+                          ? "bg-green-900/[0.40] border border-green-400/[0.25] text-white"
+                          : "bg-white/[0.06] border border-white/[0.12] text-white/90"
+                      )}
+                    >
+                      <p>{msg.body}</p>
+                      <div className={cn(
+                        "mt-1 flex items-center gap-1 text-[10px]",
+                        isMine ? "text-green-300/50 justify-end" : "text-white/30"
+                      )}>
+                        <span>
+                          {new Date(msg.created_at).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        {isMine && !msg.read_at && (
+                          <span className="flex items-center gap-0.5 text-orange-300/60">
+                            <Clock size={9} />
+                            Pending
+                          </span>
+                        )}
+                        {isMine && msg.read_at && (
+                          <span className="text-green-400/60">✓ Read</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input bar */}
+          <div className="mt-3 flex items-center gap-2 pb-4">
+            <input
+              type="text"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              placeholder={`Ask ${creator.display_name} a question...`}
-              rows={3}
-              className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/60 focus:outline-none resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!messageText.trim()) return;
+                  const msg = sendMessage(memberIdRef, "demo_creator", messageText.trim());
+                  setChatMessages((prev) => [...prev, msg]);
+                  setMessageText("");
+                  setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                }
+              }}
+              placeholder={`Message ${creator.display_name}...`}
+              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
             />
             <button
               type="button"
               onClick={() => {
                 if (!messageText.trim()) return;
-                const memberId = `member_${Date.now()}`;
-                sendMessage(memberId, "demo_creator", messageText.trim());
-                toast.success("Message sent to " + creator.display_name);
+                const msg = sendMessage(memberIdRef, "demo_creator", messageText.trim());
+                setChatMessages((prev) => [...prev, msg]);
                 setMessageText("");
-                setMessageOpen(false);
+                setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
               }}
               disabled={!messageText.trim()}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform disabled:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
+                messageText.trim()
+                  ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
+                  : "bg-white/10 text-white/30 cursor-not-allowed"
+              )}
             >
-              <MessageCircle size={16} />
-              Send Message
+              <Send size={18} />
             </button>
           </div>
         </SheetContent>
