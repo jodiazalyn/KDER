@@ -113,8 +113,28 @@ export default function TermsPage() {
       new Date().toISOString()
     );
 
-    // In production, this would save all onboarding data to Supabase.
-    // For now, navigate to dashboard.
+    // Save all onboarding data to Supabase
+    const profileRaw = sessionStorage.getItem("kder_onboarding_profile");
+    const handle = sessionStorage.getItem("kder_onboarding_handle");
+    const profile = profileRaw ? JSON.parse(profileRaw) : {};
+
+    try {
+      await fetch("/api/v1/creators/onboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          display_name: profile.display_name || "Creator",
+          handle: handle || "mystore",
+          photo_url: profile.photo_url || null,
+          bio: profile.bio || null,
+          zips: zips.map((z) => z.zip),
+        }),
+      });
+    } catch {
+      // Non-blocking — sessionStorage fallback still works
+      console.error("Failed to save onboarding to Supabase");
+    }
+
     toast.success("Welcome to KDER! Let's create your first plate.");
     router.push("/dashboard");
   };

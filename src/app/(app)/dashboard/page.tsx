@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Pause, Play } from "lucide-react";
 import { StorefrontHeader } from "@/components/dashboard/StorefrontHeader";
 import { ShareLinkCard } from "@/components/dashboard/ShareLinkCard";
 import { QuickStats } from "@/components/dashboard/QuickStats";
 import { ActivePlatesPreview } from "@/components/dashboard/ActivePlatesPreview";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
-import { getCreatorProfile, setStorefrontActive } from "@/lib/creator-store";
+import { getCreatorProfileAsync, setStorefrontActive } from "@/lib/creator-store";
 import { getListingsByStatus } from "@/lib/listings-store";
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing } from "@/types";
@@ -19,18 +19,21 @@ export default function DashboardPage() {
   const [activePlates, setActivePlates] = useState<Listing[]>([]);
   const [activeCount, setActiveCount] = useState(0);
 
-  const loadData = useCallback(() => {
-    const p = getCreatorProfile();
-    setProfile(p);
-    const plates = getListingsByStatus("active");
-    setActivePlates(plates);
-    setActiveCount(plates.length);
-  }, []);
-
   useEffect(() => {
-    const frame = requestAnimationFrame(() => loadData());
-    return () => cancelAnimationFrame(frame);
-  }, [loadData]);
+    let cancelled = false;
+
+    async function load() {
+      const p = await getCreatorProfileAsync();
+      if (cancelled) return;
+      setProfile(p);
+      const plates = getListingsByStatus("active");
+      setActivePlates(plates);
+      setActiveCount(plates.length);
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   if (!profile) {
     return (

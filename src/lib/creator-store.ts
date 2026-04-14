@@ -1,9 +1,10 @@
 /**
- * Demo mode store for creator profile data.
- * Reads from sessionStorage (set during onboarding).
+ * Creator profile store.
+ * Reads from Supabase in production, falls back to sessionStorage.
  */
 
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
+import { createClient } from "@/lib/supabase/client";
 
 export interface CreatorProfile {
   display_name: string;
@@ -16,6 +17,59 @@ export interface CreatorProfile {
   total_orders: number;
 }
 
+/**
+ * Async profile loader — tries Supabase first, falls back to sessionStorage.
+ */
+export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: member } = await (supabase as any)
+        .from("members")
+        .select("display_name, handle, photo_url, bio")
+        .eq("id", user.id)
+        .single();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: creator } = await (supabase as any)
+        .from("creators")
+        .select("service_zip_codes, storefront_active, vibe_score")
+        .eq("member_id", user.id)
+        .single();
+
+      if (member) {
+        const zips: string[] = creator?.service_zip_codes || [];
+        const neighborhoods = resolveZips(zips);
+
+        return {
+          display_name: member.display_name || "Creator",
+          bio: member.bio || null,
+          photo_url: member.photo_url || null,
+          handle: member.handle || "mystore",
+          neighborhoods,
+          storefront_active: creator?.storefront_active ?? true,
+          vibe_score: creator?.vibe_score
+            ? Number(creator.vibe_score)
+            : null,
+          total_orders: 0,
+        };
+      }
+    }
+  } catch {
+    // Fall through to sessionStorage
+  }
+
+  return getCreatorProfile();
+}
+
+/**
+ * Sync profile loader — reads from sessionStorage (demo/onboarding fallback).
+ */
 export function getCreatorProfile(): CreatorProfile {
   if (typeof window === "undefined") {
     return defaultProfile();
@@ -28,13 +82,7 @@ export function getCreatorProfile(): CreatorProfile {
 
   const profile = profileRaw ? JSON.parse(profileRaw) : {};
   const zips: string[] = zipsRaw ? JSON.parse(zipsRaw) : [];
-
-  const neighborhoods = zips
-    .map((zip) => {
-      const resolved = resolveZipToNeighborhood(zip);
-      return resolved ? { name: resolved.neighborhood, zip } : null;
-    })
-    .filter(Boolean) as { name: string; zip: string }[];
+  const neighborhoods = resolveZips(zips);
 
   return {
     display_name: profile.display_name || "Creator",
@@ -46,6 +94,20 @@ export function getCreatorProfile(): CreatorProfile {
     vibe_score: null,
     total_orders: 0,
   };
+}
+
+function resolveZips(zips: string[]): { name: string; zip: string }[] {
+  return zips
+    .map((zip) => {
+      const resolved = resolveZipToNeighborhood(zip);
+      // If it's a Houston zip, use the neighborhood name; otherwise use the zip itself
+      return resolved
+        ? { name: resolved.neighborhood, zip }
+        : zip.length === 5
+          ? { name: zip, zip }
+          : null;
+    })
+    .filter(Boolean) as { name: string; zip: string }[];
 }
 
 export function setStorefrontActive(active: boolean) {
