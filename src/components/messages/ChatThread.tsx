@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Camera, Check, CheckCheck } from "lucide-react";
+import { Send, Camera, Check, CheckCheck, Image as ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { isDemoMode } from "@/lib/demo";
 import {
@@ -108,8 +108,11 @@ export function ChatThread({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showTyping, setShowTyping] = useState(false);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
   const loadMessages = useCallback(() => {
@@ -200,15 +203,67 @@ export function ChatThread({
     el.style.height = `${Math.min(el.scrollHeight, 100)}px`;
   }, [input]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are supported.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Max 5MB.");
+      return;
+    }
+
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
+  };
+
+  const clearMedia = () => {
+    setMediaFile(null);
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSend = async () => {
     const body = input.trim();
-    if (!body || sending) return;
+    if ((!body && !mediaFile) || sending) return;
     setSending(true);
 
+    let mediaUrl: string | null = null;
+
+    // Upload media first if present
+    if (mediaFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", mediaFile);
+        const uploadRes = await fetch("/api/v1/messages/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          mediaUrl = uploadData.data?.url || null;
+        } else {
+          toast.error("Failed to upload image.");
+          setSending(false);
+          return;
+        }
+      } catch {
+        toast.error("Failed to upload image.");
+        setSending(false);
+        return;
+      }
+    }
+
     if (isDemoMode()) {
-      const msg = demoSendMessage(currentUserId, partnerId, body, orderId);
+      const msg = demoSendMessage(currentUserId, partnerId, body || "📷 Photo", orderId);
+      if (mediaUrl) (msg as Message & { media_url: string | null }).media_url = mediaUrl;
       setMessages((prev) => [...prev, msg]);
       setInput("");
+      clearMedia();
       setSending(false);
 
       // Simulate typing indicator
@@ -223,8 +278,9 @@ export function ChatThread({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipient_id: partnerId,
-          body,
+          body: body || "📷 Photo",
           order_id: orderId || null,
+          media_url: mediaUrl,
         }),
       });
 
@@ -232,6 +288,22 @@ export function ChatThread({
         toast.error("Couldn't send message. Try again.");
       } else {
         setInput("");
+        clearMedia();
+        // Optimistic: add message to local state
+        const now = new Date().toISOString();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `opt-${Date.now()}`,
+            sender_id: currentUserId,
+            recipient_id: partnerId,
+            body: body || "📷 Photo",
+            media_url: mediaUrl,
+            order_id: orderId || null,
+            read_at: null,
+            created_at: now,
+          },
+        ]);
       }
     } catch {
       toast.error("Couldn't send message. Check your connection.");
@@ -313,7 +385,18 @@ export function ChatThread({
                                 : "bg-white/[0.08] backdrop-blur-[8px] border border-white/[0.10] text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.25)]"
                             )}
                           >
-                            <p className="whitespace-pre-wrap break-words">{msg.body}</p>
+                            {msg.media_url && (
+                              <img
+                                src={msg.media_url}
+                                alt="Shared photo"
+                                className="rounded-xl mb-1.5 max-w-full h-auto"
+                                style={{ maxHeight: 240 }}
+                                loading="lazy"
+                              />
+                            )}
+                            {msg.body && msg.body !== "📷 Photo" && (
+                              <p className="whitespace-pre-wrap break-words">{msg.body}</p>
+                            )}
                           </div>
                         </div>
                       );
@@ -361,14 +444,43 @@ export function ChatThread({
         )}
       </div>
 
+      {/* Media preview */}
+      {mediaPreview && (
+        <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#1a1a1a] px-3 pt-2">
+          <div className="relative inline-block">
+            <img
+              src={mediaPreview}
+              alt="Preview"
+              className="h-20 w-20 rounded-xl object-cover border border-white/[0.12]"
+            />
+            <button
+              type="button"
+              onClick={clearMedia}
+              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-lg"
+              aria-label="Remove photo"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input bar — iOS style */}
       <div className="flex-shrink-0 border-t border-white/[0.15] bg-[#1a1a1a] px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div className="flex items-end gap-2">
-          {/* Camera/attachment placeholder */}
+          {/* Camera/attachment — opens native file picker */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
           <button
             type="button"
             className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/40 mb-0.5 active:scale-90 transition-transform"
-            onClick={() => toast.info("Photo sharing — coming soon")}
+            onClick={() => fileInputRef.current?.click()}
             aria-label="Attach photo"
           >
             <Camera size={18} />

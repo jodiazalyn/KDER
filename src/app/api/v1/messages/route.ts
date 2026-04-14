@@ -27,7 +27,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { recipient_id, body, order_id } = await request.json();
+    const { recipient_id, body, order_id, media_url } = await request.json();
 
     if (!recipient_id || !body) {
       return apiError("Recipient and message body are required.", 400);
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         recipient_id,
         body: body.trim(),
         order_id: order_id || null,
+        media_url: media_url || null,
       })
       .select()
       .single();

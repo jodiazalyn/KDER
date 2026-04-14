@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS messages (
   sender_id UUID REFERENCES members(id) NOT NULL,
   recipient_id UUID REFERENCES members(id) NOT NULL,
   body TEXT NOT NULL,
+  media_url TEXT,
   read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now()
 );
