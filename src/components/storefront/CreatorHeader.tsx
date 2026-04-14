@@ -1,13 +1,20 @@
 "use client";
 
-import { MapPin, Star, ShoppingBag } from "lucide-react";
+import { MapPin, Star, ShoppingBag, Flame, Zap, Trophy, Package, Gem } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
+import type { Badge, Streak } from "@/types";
+import { TIER_COLORS } from "@/lib/badges-store";
+
+const ICON_MAP: Record<string, typeof Star> = { Flame, Zap, Trophy, Star, Package, Gem };
 
 interface CreatorHeaderProps {
   creator: CreatorProfile;
+  streak?: Streak;
+  badges?: Badge[];
 }
 
-export function CreatorHeader({ creator }: CreatorHeaderProps) {
+export function CreatorHeader({ creator, streak, badges }: CreatorHeaderProps) {
+  const earnedBadges = badges?.filter((b) => b.earnedAt) || [];
   return (
     <div className="relative">
       {/* Background gradient */}
@@ -63,7 +70,32 @@ export function CreatorHeader({ creator }: CreatorHeaderProps) {
               {creator.total_orders} orders
             </span>
           )}
+          {streak && streak.currentStreak > 0 && (
+            <span className="flex items-center gap-1 text-orange-400">
+              <Flame size={12} />
+              {streak.currentStreak}d streak
+            </span>
+          )}
         </div>
+
+        {/* Badges */}
+        {earnedBadges.length > 0 && (
+          <div className="mt-3 flex gap-1.5 flex-wrap">
+            {earnedBadges.map((badge) => {
+              const Icon = ICON_MAP[badge.icon] || Star;
+              return (
+                <div
+                  key={badge.id}
+                  className={`flex items-center gap-1 rounded-full border bg-gradient-to-r px-2 py-0.5 text-[10px] font-medium text-white/80 ${TIER_COLORS[badge.tier]}`}
+                  title={badge.description}
+                >
+                  <Icon size={10} />
+                  {badge.name}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

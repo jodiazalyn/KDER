@@ -146,6 +146,36 @@ export interface Message {
   created_at: string;
 }
 
+// --- Gamification types ---
+
+export interface Streak {
+  currentStreak: number;
+  longestStreak: number;
+  lastOrderDate: string | null;
+  isActive: boolean; // true if streak is still alive (order today or yesterday)
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string; // lucide icon name
+  tier: "bronze" | "silver" | "gold" | "diamond";
+  earnedAt: string | null; // null = not earned
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  creatorId: string;
+  displayName: string;
+  handle: string;
+  photoUrl: string | null;
+  vibeScore: number;
+  totalOrders: number;
+  currentStreak: number;
+  isCurrentUser: boolean;
+}
+
 // --- API ---
 
 export interface ApiResponse<T> {

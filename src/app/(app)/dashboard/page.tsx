@@ -9,8 +9,14 @@ import { ActivePlatesPreview } from "@/components/dashboard/ActivePlatesPreview"
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { getCreatorProfileAsync, setStorefrontActive } from "@/lib/creator-store";
 import { getListingsByStatus } from "@/lib/listings-store";
+import { getStreak } from "@/lib/streak-store";
+import { getBadges } from "@/lib/badges-store";
+import { getOrders } from "@/lib/orders-store";
+import { StreakBanner } from "@/components/dashboard/StreakBanner";
+import { BadgeShelf } from "@/components/dashboard/BadgeShelf";
+import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import type { CreatorProfile } from "@/lib/creator-store";
-import type { Listing } from "@/types";
+import type { Listing, Streak, Badge } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -18,6 +24,8 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<CreatorProfile | null>(null);
   const [activePlates, setActivePlates] = useState<Listing[]>([]);
   const [activeCount, setActiveCount] = useState(0);
+  const [streak, setStreak] = useState<Streak>({ currentStreak: 0, longestStreak: 0, lastOrderDate: null, isActive: false });
+  const [badges, setBadges] = useState<Badge[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +37,18 @@ export default function DashboardPage() {
       const plates = getListingsByStatus("active");
       setActivePlates(plates);
       setActiveCount(plates.length);
+
+      const s = getStreak();
+      setStreak(s);
+
+      const completedOrders = getOrders().filter((o) => o.status === "completed").length;
+      const b = getBadges({
+        streak: s,
+        totalOrders: completedOrders,
+        vibeScore: p.vibe_score,
+        leaderboardRank: null,
+      });
+      setBadges(b);
     }
 
     load();
@@ -114,6 +134,12 @@ export default function DashboardPage() {
         {/* Share your link */}
         <ShareLinkCard handle={profile.handle} />
 
+        {/* Streak Banner */}
+        <StreakBanner streak={streak} />
+
+        {/* Badges */}
+        <BadgeShelf badges={badges} />
+
         {/* Quick stats */}
         <QuickStats
           activePlates={activeCount}
@@ -123,6 +149,18 @@ export default function DashboardPage() {
 
         {/* Active plates preview */}
         <ActivePlatesPreview plates={activePlates} />
+
+        {/* Leaderboard */}
+        <Leaderboard
+          currentUser={{
+            displayName: profile.display_name,
+            handle: profile.handle,
+            photoUrl: profile.photo_url,
+            vibeScore: profile.vibe_score || 0,
+            totalOrders: getOrders().filter((o) => o.status === "completed").length,
+            currentStreak: streak.currentStreak,
+          }}
+        />
 
         {/* Recent orders */}
         <RecentOrders handle={profile.handle} />
