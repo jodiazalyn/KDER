@@ -91,6 +91,29 @@ export function getActiveOrderCount(): number {
   ).length;
 }
 
+/**
+ * Auto-decline any pending orders past their auto_decline_at timestamp.
+ * Returns the number of orders that were auto-declined.
+ */
+export function autoDeclineExpired(): number {
+  const orders = getOrders();
+  const now = new Date();
+  let count = 0;
+
+  for (const order of orders) {
+    if (
+      order.status === "pending" &&
+      order.auto_decline_at &&
+      new Date(order.auto_decline_at) <= now
+    ) {
+      updateOrderStatus(order.id, "declined");
+      count++;
+    }
+  }
+
+  return count;
+}
+
 function seedDemoOrdersIfNeeded() {
   if (typeof window === "undefined") return;
   if (localStorage.getItem(SEEDED_KEY)) return;

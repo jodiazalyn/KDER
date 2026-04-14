@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
         {
           id: user.id,
           phone: user.phone || "",
-          display_name: trimmedName,
+          display_name: trimmedName.replace(/<[^>]*>/g, ""),
           handle: trimmedHandle,
-          photo_url: photo_url?.trim() || null,
-          bio: bio?.trim() || null,
+          photo_url: photo_url?.trim()?.startsWith("javascript:") ? null : (photo_url?.trim() || null),
+          bio: bio?.trim()?.replace(/<[^>]*>/g, "") || null,
           role: "creator",
           updated_at: new Date().toISOString(),
         },

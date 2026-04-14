@@ -55,16 +55,23 @@ export async function POST(request: NextRequest) {
     // Build origin URL for redirects
     const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+    // Generate order ID for webhook correlation
+    const orderId = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // Sanitize notes
+    const sanitizedNotes = (notes || "").trim().replace(/<[^>]*>/g, "");
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
       metadata: {
+        order_id: orderId,
         creator_handle,
-        member_name,
-        member_phone,
+        member_name: member_name.trim(),
+        member_phone: member_phone.trim(),
         fulfillment_type,
-        notes: notes || "",
+        notes: sanitizedNotes,
         platform_fee_cents: String(platformFeeCents),
         item_ids: items.map((i) => i.listing_id).join(","),
       },

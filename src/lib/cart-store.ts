@@ -23,14 +23,18 @@ function saveCart(handle: string, items: CartItem[]) {
   sessionStorage.setItem(cartKey(handle), JSON.stringify(items));
 }
 
+const MAX_UNIQUE_ITEMS = 20;
+const MAX_QTY_PER_ITEM = 99;
+
 export function addToCart(handle: string, listing: Listing, qty = 1): CartItem[] {
   const cart = getCart(handle);
   const existing = cart.find((item) => item.listing.id === listing.id);
 
   if (existing) {
-    existing.quantity += qty;
+    existing.quantity = Math.min(existing.quantity + qty, MAX_QTY_PER_ITEM);
   } else {
-    cart.push({ listing, quantity: qty });
+    if (cart.length >= MAX_UNIQUE_ITEMS) return cart; // silently cap
+    cart.push({ listing, quantity: Math.min(qty, MAX_QTY_PER_ITEM) });
   }
 
   saveCart(handle, cart);
@@ -43,7 +47,7 @@ export function updateCartQty(handle: string, listingId: string, qty: number): C
     cart = cart.filter((item) => item.listing.id !== listingId);
   } else {
     const item = cart.find((item) => item.listing.id === listingId);
-    if (item) item.quantity = qty;
+    if (item) item.quantity = Math.min(qty, MAX_QTY_PER_ITEM);
   }
   saveCart(handle, cart);
   return cart;

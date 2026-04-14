@@ -36,6 +36,7 @@ export function EarningsHero({
           <button
             type="button"
             onClick={onStandardPayout}
+            aria-label="Request standard payout, free, 2 to 3 business days"
             className="flex h-12 flex-1 flex-col items-center justify-center rounded-full border border-white/25 bg-white/[0.08] text-white hover:bg-white/[0.12] active:scale-95 transition-all"
           >
             <span className="text-sm font-bold">Standard</span>
@@ -45,6 +46,7 @@ export function EarningsHero({
           <button
             type="button"
             onClick={onInstantPayout}
+            aria-label="Request instant payout, 1 percent fee, within 30 minutes"
             className="flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all"
           >
             <span className="flex items-center gap-1 text-sm font-bold">
