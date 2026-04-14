@@ -62,9 +62,18 @@ export function updateOrderStatus(
   id: string,
   status: OrderStatus
 ): Order | null {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { isValidTransition } = require("@/lib/order-state-machine");
+
   const orders = getOrders();
   const index = orders.findIndex((o) => o.id === id);
   if (index === -1) return null;
+
+  const current = orders[index].status;
+  if (!isValidTransition(current, status)) {
+    console.error(`Invalid order transition: ${current} → ${status}`);
+    return null;
+  }
 
   orders[index] = {
     ...orders[index],

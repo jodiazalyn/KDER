@@ -8,7 +8,7 @@ export async function PUT(
   try {
     const { id } = await params;
     // TODO: ready order ${id}
-    return apiSuccess({ order_id: id, status: "readyed" });
+    return apiSuccess({ order_id: id, status: "ready" });
   } catch {
     return apiError("Failed to ready order", 500);
   }

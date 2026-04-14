@@ -6,8 +6,19 @@ export async function POST(request: NextRequest) {
     const { display_name, handle, photo_url, bio, zips } =
       await request.json();
 
-    if (!display_name || !handle) {
+    const trimmedName = display_name?.trim();
+    const trimmedHandle = handle?.trim()?.toLowerCase();
+
+    if (!trimmedName || !trimmedHandle) {
       return apiError("Display name and handle are required.", 400);
+    }
+
+    if (!/^[a-z0-9_]{3,30}$/.test(trimmedHandle)) {
+      return apiError("Invalid handle format.", 400);
+    }
+
+    if (!Array.isArray(zips)) {
+      return apiError("Zips must be an array.", 400);
     }
 
     const { createClient } = await import("@/lib/supabase/server");
@@ -30,10 +41,10 @@ export async function POST(request: NextRequest) {
         {
           id: user.id,
           phone: user.phone || "",
-          display_name,
-          handle,
-          photo_url: photo_url || null,
-          bio: bio || null,
+          display_name: trimmedName,
+          handle: trimmedHandle,
+          photo_url: photo_url?.trim() || null,
+          bio: bio?.trim() || null,
           role: "creator",
           updated_at: new Date().toISOString(),
         },

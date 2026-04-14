@@ -8,7 +8,7 @@ export async function PUT(
   try {
     const { id } = await params;
     // TODO: decline order ${id}
-    return apiSuccess({ order_id: id, status: "declineed" });
+    return apiSuccess({ order_id: id, status: "declined" });
   } catch {
     return apiError("Failed to decline order", 500);
   }

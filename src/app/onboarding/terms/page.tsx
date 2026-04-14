@@ -114,9 +114,15 @@ export default function TermsPage() {
     );
 
     // Save all onboarding data to Supabase
-    const profileRaw = sessionStorage.getItem("kder_onboarding_profile");
-    const handle = sessionStorage.getItem("kder_onboarding_handle");
-    const profile = profileRaw ? JSON.parse(profileRaw) : {};
+    let profile: Record<string, string> = {};
+    let handle = "mystore";
+    try {
+      const profileRaw = sessionStorage.getItem("kder_onboarding_profile");
+      profile = profileRaw ? JSON.parse(profileRaw) : {};
+      handle = sessionStorage.getItem("kder_onboarding_handle") || "mystore";
+    } catch {
+      // sessionStorage read/parse failed — use defaults
+    }
 
     try {
       await fetch("/api/v1/creators/onboard", {

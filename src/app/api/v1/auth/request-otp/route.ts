@@ -8,8 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     const { phone } = await request.json();
 
-    if (!phone) return apiError("Phone number is required.", 400);
-    if (!US_PHONE_REGEX.test(phone)) {
+    if (!phone || !String(phone).trim()) return apiError("Phone number is required.", 400);
+    if (!US_PHONE_REGEX.test(String(phone).trim())) {
       return apiError("Enter a valid US phone number.", 400);
     }
 

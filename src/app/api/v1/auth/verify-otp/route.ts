@@ -6,11 +6,11 @@ export async function POST(request: NextRequest) {
   try {
     const { phone, code } = await request.json();
 
-    if (!phone || !code) {
+    if (!phone || !String(phone).trim() || !code || !String(code).trim()) {
       return apiError("Phone and code are required.", 400);
     }
 
-    if (!/^\d{6}$/.test(code)) {
+    if (!/^\d{6}$/.test(String(code).trim())) {
       return apiError("Incorrect code. Try again.", 400);
     }
 

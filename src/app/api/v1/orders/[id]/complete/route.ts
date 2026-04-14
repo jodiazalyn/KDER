@@ -8,7 +8,7 @@ export async function PUT(
   try {
     const { id } = await params;
     // TODO: complete order ${id}
-    return apiSuccess({ order_id: id, status: "completeed" });
+    return apiSuccess({ order_id: id, status: "completed" });
   } catch {
     return apiError("Failed to complete order", 500);
   }
