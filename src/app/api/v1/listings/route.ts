@@ -59,13 +59,25 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) return apiError("Unauthorized.", 401);
 
-    const { data, error } = await supabase
+    // Whitelist allowed fields — prevent mass assignment
+    const allowed = {
+      name: body.name,
+      description: body.description || null,
+      price: Number(body.price),
+      quantity: Number(body.quantity),
+      category_tags: Array.isArray(body.category_tags) ? body.category_tags : [],
+      allergen_flags: Array.isArray(body.allergen_flags) ? body.allergen_flags : [],
+      fulfillment_type: body.fulfillment_type || "pickup",
+      photo_url: body.photo_url || null,
+      min_order_amount: body.min_order_amount ? Number(body.min_order_amount) : null,
+      creator_id: user.id,
+      status: body.status === "active" ? "active" : "draft",
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
       .from("listings")
-      .insert({
-        ...body,
-        creator_id: user.id,
-        status: body.status || "draft",
-      })
+      .insert(allowed)
       .select()
       .single();
 

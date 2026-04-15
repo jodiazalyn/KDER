@@ -1,6 +1,8 @@
 import { getOrders } from "./orders-store";
 import type { Order } from "@/types";
 
+const PAYOUTS_KEY = "kder_payouts";
+
 export interface Transaction {
   id: string;
   date: string;
@@ -12,8 +14,17 @@ export interface Transaction {
   status: "paid" | "pending" | "held";
 }
 
+export interface PayoutRecord {
+  id: string;
+  amount: number;
+  type: "standard" | "instant";
+  fee: number;
+  created_at: string;
+}
+
 export interface EarningsSummary {
   availableBalance: number;
+  totalPaidOut: number;
   thisWeek: number;
   thisMonth: number;
   allTime: number;
@@ -31,6 +42,37 @@ function orderToTransaction(order: Order): Transaction {
     netPayout: order.creator_payout,
     status: order.status === "completed" ? "paid" : "held",
   };
+}
+
+export function getPayouts(): PayoutRecord[] {
+  try {
+    const raw = localStorage.getItem(PAYOUTS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordPayout(
+  amount: number,
+  type: "standard" | "instant",
+  fee: number
+): PayoutRecord {
+  const payouts = getPayouts();
+  const record: PayoutRecord = {
+    id: `payout_${Date.now()}`,
+    amount,
+    type,
+    fee,
+    created_at: new Date().toISOString(),
+  };
+  payouts.push(record);
+  try {
+    localStorage.setItem(PAYOUTS_KEY, JSON.stringify(payouts));
+  } catch {
+    // localStorage full or unavailable
+  }
+  return record;
 }
 
 export function getEarnings(): EarningsSummary {
@@ -51,6 +93,11 @@ export function getEarnings(): EarningsSummary {
     .filter((o) => new Date(o.created_at) >= monthAgo)
     .reduce((sum, o) => sum + o.creator_payout, 0);
 
+  // Subtract payouts from available balance
+  const payouts = getPayouts();
+  const totalPaidOut = payouts.reduce((sum, p) => sum + p.amount, 0);
+  const availableBalance = Math.max(0, allTime - totalPaidOut);
+
   const transactions = completed
     .sort(
       (a, b) =>
@@ -59,7 +106,8 @@ export function getEarnings(): EarningsSummary {
     .map(orderToTransaction);
 
   return {
-    availableBalance: allTime,
+    availableBalance,
+    totalPaidOut,
     thisWeek,
     thisMonth,
     allTime,

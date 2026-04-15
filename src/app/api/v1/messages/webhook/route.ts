@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { validateRequest } from "twilio";
 
 /**
  * Twilio incoming SMS webhook.
@@ -13,6 +14,31 @@ import { NextRequest } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
+
+    // Verify Twilio signature to prevent forged requests
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const signature = request.headers.get("X-Twilio-Signature") || "";
+    const url =
+      process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/messages/webhook`
+        : request.url;
+
+    if (authToken) {
+      const params: Record<string, string> = {};
+      formData.forEach((value, key) => {
+        params[key] = String(value);
+      });
+
+      const isValid = validateRequest(authToken, signature, url, params);
+      if (!isValid) {
+        console.error("Twilio webhook signature verification failed");
+        return new Response("<Response></Response>", {
+          status: 403,
+          headers: { "Content-Type": "text/xml" },
+        });
+      }
+    }
+
     const from = formData.get("From") as string;
     const body = formData.get("Body") as string;
 

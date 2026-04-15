@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import type { OrderStatus } from "@/types";
+import { isValidTransition } from "@/lib/order-state-machine";
 
 // NOTE: We use (supabase as any) because the payment-related columns
 // (stripe_payment_intent_id, paid_at, refund_amount, etc.) and tables
@@ -20,11 +22,29 @@ export async function handleCheckoutCompleted(
 
   const supabase = await createClient();
 
+  // Fetch current order status to validate transition
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: order } = await (supabase as any)
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single() as { data: { status: OrderStatus } | null };
+
+  const currentStatus = order?.status || "pending";
+  const targetStatus: OrderStatus = "accepted";
+
+  if (!isValidTransition(currentStatus, targetStatus)) {
+    console.warn(
+      `[webhook] Skipping invalid transition ${currentStatus} → ${targetStatus} for order ${orderId}`
+    );
+    return;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("orders")
     .update({
-      status: "accepted",
+      status: targetStatus,
       stripe_payment_intent_id: session.payment_intent as string,
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -63,11 +83,29 @@ export async function handleChargeRefunded(charge: Stripe.Charge) {
   const supabase = await createClient();
   const refundAmount = charge.amount_refunded / 100;
 
+  // Fetch current order status to validate transition
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: order } = await (supabase as any)
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single() as { data: { status: OrderStatus } | null };
+
+  const currentStatus = order?.status || "accepted";
+  const targetStatus: OrderStatus = "cancelled";
+
+  if (!isValidTransition(currentStatus, targetStatus)) {
+    console.warn(
+      `[webhook] Skipping invalid refund transition ${currentStatus} → ${targetStatus} for order ${orderId}`
+    );
+    return;
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("orders")
     .update({
-      status: "cancelled",
+      status: targetStatus,
       refund_amount: refundAmount,
       refunded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

@@ -45,7 +45,10 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const senderId = user?.id || "demo_creator";
+    if (!user) {
+      return apiError("Unauthorized. Please sign in.", 401);
+    }
+    const senderId = user.id;
 
     // Insert message to Supabase
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
