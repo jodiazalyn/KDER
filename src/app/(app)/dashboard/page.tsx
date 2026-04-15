@@ -14,7 +14,7 @@ import { getBadges } from "@/lib/badges-store";
 import { getOrders } from "@/lib/orders-store";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { BadgeShelf } from "@/components/dashboard/BadgeShelf";
-import { Leaderboard } from "@/components/dashboard/Leaderboard";
+// Leaderboard moved to floating button in layout
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing, Streak, Badge } from "@/types";
 import { cn } from "@/lib/utils";
@@ -149,18 +149,6 @@ export default function DashboardPage() {
 
         {/* Active plates preview */}
         <ActivePlatesPreview plates={activePlates} />
-
-        {/* Leaderboard */}
-        <Leaderboard
-          currentUser={{
-            displayName: profile.display_name,
-            handle: profile.handle,
-            photoUrl: profile.photo_url,
-            vibeScore: profile.vibe_score || 0,
-            totalOrders: getOrders().filter((o) => o.status === "completed").length,
-            currentStreak: streak.currentStreak,
-          }}
-        />
 
         {/* Recent orders */}
         <RecentOrders handle={profile.handle} />
