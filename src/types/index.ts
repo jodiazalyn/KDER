@@ -126,6 +126,11 @@ export interface Order {
   auto_decline_at: string;
   created_at: string;
   updated_at: string;
+  // Address fields
+  delivery_address: string | null;
+  delivery_zip: string | null;
+  pickup_address: string | null; // creator's address, revealed after accept
+  member_phone: string | null;
   // Denormalized for display
   member_name: string;
   member_photo: string | null;

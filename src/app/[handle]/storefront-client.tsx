@@ -120,6 +120,10 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
           member_photo: null,
           listing_name: item.listing.name,
           listing_photo: item.listing.photos[0] || null,
+          delivery_address: details.deliveryAddress || null,
+          delivery_zip: null,
+          pickup_address: null,
+          member_phone: details.memberPhone || null,
         });
       }
 

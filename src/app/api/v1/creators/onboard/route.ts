@@ -3,7 +3,7 @@ import { apiSuccess, apiError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
   try {
-    const { display_name, handle, photo_url, bio, zips } =
+    const { display_name, handle, photo_url, bio, zips, pickup_address } =
       await request.json();
 
     const trimmedName = display_name?.trim();
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
         {
           member_id: user.id,
           service_zip_codes: zips || [],
+          pickup_address: pickup_address?.trim()?.replace(/<[^>]*>/g, "") || null,
         },
         { onConflict: "member_id" }
       )

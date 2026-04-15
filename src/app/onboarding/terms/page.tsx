@@ -30,6 +30,7 @@ export default function TermsPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showAddMore, setShowAddMore] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pickupAddress, setPickupAddress] = useState("");
 
   const isValid = zips.length > 0 && termsAccepted;
 
@@ -112,6 +113,12 @@ export default function TermsPage() {
       "kder_onboarding_terms_accepted",
       new Date().toISOString()
     );
+    // Save pickup address to profile in sessionStorage
+    try {
+      const existingProfile = JSON.parse(sessionStorage.getItem("kder_onboarding_profile") || "{}");
+      existingProfile.pickup_address = pickupAddress.trim() || null;
+      sessionStorage.setItem("kder_onboarding_profile", JSON.stringify(existingProfile));
+    } catch { /* ignore */ }
 
     // Save all onboarding data to Supabase
     let profile: Record<string, string> = {};
@@ -134,6 +141,7 @@ export default function TermsPage() {
           photo_url: profile.photo_url || null,
           bio: profile.bio || null,
           zips: zips.map((z) => z.zip),
+          pickup_address: pickupAddress.trim() || null,
         }),
       });
     } catch {
@@ -251,6 +259,21 @@ export default function TermsPage() {
               Enter your zip code to set your service area
             </p>
           )}
+        </div>
+
+        {/* Pickup address */}
+        <div className="mt-6">
+          <h2 className="text-lg font-bold text-white mb-1">Your pickup address</h2>
+          <p className="text-xs text-white/40 mb-3">
+            Shared with customers after you confirm a pickup order
+          </p>
+          <input
+            type="text"
+            value={pickupAddress}
+            onChange={(e) => setPickupAddress(e.target.value)}
+            placeholder="1234 Main St, Houston, TX 77001"
+            className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/50 focus:outline-none focus:ring-0 transition-colors"
+          />
         </div>
 
         {/* Terms section */}

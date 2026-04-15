@@ -152,6 +152,10 @@ function seedDemoOrdersIfNeeded() {
       member_photo: demoMembers[0].photo,
       listing_name: pendingListing.name,
       listing_photo: pendingListing.photos[0] || null,
+      delivery_address: null,
+      delivery_zip: null,
+      pickup_address: null,
+      member_phone: null,
     });
   }
 
@@ -177,6 +181,10 @@ function seedDemoOrdersIfNeeded() {
       member_photo: demoMembers[1].photo,
       listing_name: pendingListing.name,
       listing_photo: pendingListing.photos[0] || null,
+      delivery_address: null,
+      delivery_zip: null,
+      pickup_address: null,
+      member_phone: null,
     });
   }
 
@@ -202,6 +210,10 @@ function seedDemoOrdersIfNeeded() {
       member_photo: demoMembers[2].photo,
       listing_name: pendingListing.name,
       listing_photo: pendingListing.photos[0] || null,
+      delivery_address: null,
+      delivery_zip: null,
+      pickup_address: null,
+      member_phone: null,
     });
   }
 

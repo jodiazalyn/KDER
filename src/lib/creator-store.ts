@@ -15,6 +15,7 @@ export interface CreatorProfile {
   storefront_active: boolean;
   vibe_score: number | null;
   total_orders: number;
+  pickup_address: string | null;
 }
 
 /**
@@ -57,6 +58,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
             ? Number(creator.vibe_score)
             : null,
           total_orders: 0,
+          pickup_address: creator?.pickup_address || null,
         };
       }
     }
@@ -93,6 +95,7 @@ export function getCreatorProfile(): CreatorProfile {
     storefront_active: storefrontActive !== "false",
     vibe_score: null,
     total_orders: 0,
+    pickup_address: profile.pickup_address || null,
   };
 }
 
@@ -124,5 +127,6 @@ function defaultProfile(): CreatorProfile {
     storefront_active: true,
     vibe_score: null,
     total_orders: 0,
+    pickup_address: null,
   };
 }

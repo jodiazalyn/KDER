@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2, CreditCard } from "lucide-react";
+import { Loader2, CheckCircle2, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -27,6 +27,7 @@ export interface OrderDetails {
   memberPhone: string;
   fulfillmentType: FulfillmentType;
   notes: string;
+  deliveryAddress: string | null;
 }
 
 const FULFILLMENT_OPTIONS: { value: FulfillmentType; label: string }[] = [
@@ -45,11 +46,13 @@ export function CheckoutSheet({
   const [phone, setPhone] = useState("");
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("pickup");
   const [notes, setNotes] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const total = getCartTotal(items);
-  const canPlace = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 10;
+  const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
+  const canPlace = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 10 && !needsAddress;
 
   const handlePlace = async () => {
     setPlacing(true);
@@ -86,6 +89,7 @@ export function CheckoutSheet({
         memberPhone: phone,
         fulfillmentType: fulfillment,
         notes: notes.trim(),
+        deliveryAddress: fulfillment === "delivery" ? deliveryAddress.trim() : null,
       });
 
       // Redirect to Stripe Checkout
@@ -192,6 +196,58 @@ export function CheckoutSheet({
           </div>
 
           {/* Notes */}
+          {/* Delivery address or Pickup note */}
+          {fulfillment === "delivery" ? (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-white/50">
+                Delivery address *
+              </label>
+              <input
+                type="text"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder="123 Main St, Houston, TX 77001"
+                className="w-full rounded-xl border border-white/[0.15] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/50 focus:outline-none transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    toast.error("Location not supported on this device");
+                    return;
+                  }
+                  navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                      try {
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`
+                        );
+                        const data = await res.json();
+                        if (data.display_name) {
+                          setDeliveryAddress(data.display_name);
+                          toast.success("Address found!");
+                        }
+                      } catch {
+                        toast.error("Could not resolve location");
+                      }
+                    },
+                    () => toast.error("Location access denied")
+                  );
+                }}
+                className="mt-2 flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
+              >
+                <MapPin size={12} />
+                Use my location
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
+              <p className="text-xs text-white/50">
+                The creator&apos;s pickup address will be sent to your phone via SMS after they confirm your order.
+              </p>
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-xs font-medium text-white/50">
               Special instructions (optional)
