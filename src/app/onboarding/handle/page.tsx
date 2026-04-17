@@ -73,6 +73,21 @@ export default function HandlePage() {
     };
   }, []);
 
+  // Restore handle from sessionStorage if the user entered one on the landing page
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("kder_onboarding_handle");
+      if (saved && HANDLE_REGEX.test(saved)) {
+        setHandle(saved);
+        checkAvailability(saved);
+      }
+    } catch {
+      // sessionStorage blocked — no-op
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleContinue = () => {
     if (!canContinue || loading) return;
     setLoading(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,8 +10,91 @@ import {
   Wallet,
   Users,
   ArrowRight,
+  Loader2,
+  Check,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+const HANDLE_REGEX = /^[a-z0-9_]{3,30}$/;
+const HANDLE_DEBOUNCE_MS = 400;
+
+type HandleStatus = "idle" | "checking" | "available" | "taken";
+
+function HandleInput({
+  handle,
+  onChange,
+  status,
+  canClaim,
+  claiming,
+  onClaim,
+}: {
+  handle: string;
+  onChange: (value: string) => void;
+  status: HandleStatus;
+  canClaim: boolean;
+  claiming: boolean;
+  onClaim: () => void;
+}) {
+  const borderClass =
+    status === "available"
+      ? "border-green-400/50 shadow-[0_0_24px_rgba(74,222,128,0.15)]"
+      : status === "taken"
+        ? "border-red-400/50"
+        : "border-white/15 focus-within:border-white/40";
+
+  return (
+    <div
+      className={`mt-8 flex w-full max-w-[520px] flex-col items-stretch gap-2 rounded-[28px] border bg-white/[0.04] p-1.5 backdrop-blur-[12px] transition-colors sm:flex-row sm:items-center sm:rounded-full ${borderClass}`}
+    >
+      <div className="flex flex-1 items-center gap-1 px-4 py-2 sm:py-0">
+        <span className="select-none whitespace-nowrap text-sm font-medium text-white/40">
+          kder.club/@
+        </span>
+        <input
+          id="hero-handle"
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          placeholder="yourhandle"
+          value={handle}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canClaim) onClaim();
+          }}
+          aria-describedby="handle-status"
+          className="h-12 flex-1 bg-transparent text-base font-medium text-white placeholder:text-white/25 focus:outline-none sm:h-10"
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={onClaim}
+        disabled={!canClaim}
+        aria-label={
+          handle
+            ? `Claim handle ${handle}`
+            : "Enter a handle to claim"
+        }
+        className="group inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-[#1B5E20] px-6 text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.45)] transition-all enabled:hover:bg-[#207024] enabled:active:scale-95 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/40 disabled:shadow-none sm:h-10 sm:min-w-[120px]"
+      >
+        {claiming ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <>
+            Claim
+            <ArrowRight
+              size={16}
+              className="transition-transform group-enabled:group-hover:translate-x-0.5"
+            />
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
 
 type FeatureCard = {
   icon: typeof ChefHat;
@@ -46,6 +129,14 @@ export default function LandingPage() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
 
+  // Handle input state
+  const [handle, setHandle] = useState("");
+  const [handleStatus, setHandleStatus] = useState<HandleStatus>("idle");
+  const [claiming, setClaiming] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+
   useEffect(() => {
     let cancelled = false;
 
@@ -75,6 +166,62 @@ export default function LandingPage() {
       cancelled = true;
     };
   }, [router]);
+
+  // Debounced availability check for typed handle
+  const checkAvailability = useCallback(async (value: string) => {
+    if (!HANDLE_REGEX.test(value)) {
+      setHandleStatus("idle");
+      return;
+    }
+    setHandleStatus("checking");
+    try {
+      const res = await fetch(
+        `/api/v1/handles/check?handle=${encodeURIComponent(value)}`
+      );
+      const json = await res.json();
+      if (json.data?.available) {
+        setHandleStatus("available");
+      } else {
+        setHandleStatus("taken");
+      }
+    } catch {
+      setHandleStatus("idle");
+    }
+  }, []);
+
+  const onHandleChange = (raw: string) => {
+    const sanitized = raw.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 30);
+    setHandle(sanitized);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!sanitized || sanitized.length < 3) {
+      setHandleStatus("idle");
+      return;
+    }
+    debounceRef.current = setTimeout(
+      () => checkAvailability(sanitized),
+      HANDLE_DEBOUNCE_MS
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const canClaim = handleStatus === "available" && !claiming;
+
+  const handleClaim = () => {
+    if (!canClaim) return;
+    setClaiming(true);
+    try {
+      sessionStorage.setItem("kder_onboarding_handle", handle);
+    } catch {
+      // sessionStorage blocked — still proceed to signup
+    }
+    router.push("/signup");
+  };
 
   // Brief loading veil while we check the session — avoids flash of landing
   // for signed-in users who are about to redirect to /dashboard.
@@ -189,39 +336,71 @@ export default function LandingPage() {
               />
             </div>
 
-            <h1 className="animate-in fade-in slide-in-from-bottom-4 bg-gradient-to-b from-white via-white to-white/70 bg-clip-text text-5xl font-black leading-[1.05] tracking-tight text-transparent duration-700 lg:text-7xl">
+            <h1 className="animate-in fade-in slide-in-from-bottom-4 bg-gradient-to-b from-white via-white to-white/70 bg-clip-text text-5xl font-black leading-[1.05] tracking-[-0.03em] text-transparent duration-700 lg:text-7xl">
               Your kitchen.
               <br />
               Your customers.
             </h1>
 
             <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 animate-in fade-in slide-in-from-bottom-4 duration-1000 lg:text-lg">
-              The sovereign marketplace for Houston food creators.
-              <span className="text-green-300"> Keep 95% of every sale.</span>
+              Claim your storefront link. Sell plates.{" "}
+              <span className="text-green-300">Keep 95% of every sale.</span>
             </p>
 
-            {/* CTAs */}
-            <div className="mt-8 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <Link
-                href="/signup"
-                className="group inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-[#1B5E20] px-7 text-sm font-bold text-white shadow-[0_0_28px_rgba(27,94,32,0.55)] transition-all hover:bg-[#207024] active:scale-95 sm:min-w-[220px]"
-              >
-                Start selling — it&apos;s free
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-0.5"
-                />
-              </Link>
+            {/* Handle input — Uber-inspired hero form */}
+            <label htmlFor="hero-handle" className="sr-only">
+              Your KDER handle
+            </label>
+            <HandleInput
+              handle={handle}
+              onChange={onHandleChange}
+              status={handleStatus}
+              canClaim={canClaim}
+              claiming={claiming}
+              onClaim={handleClaim}
+            />
 
-              <button
-                type="button"
-                onClick={scrollToFeatures}
-                className="inline-flex h-12 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-7 text-sm font-semibold text-white/90 backdrop-blur-[8px] transition-colors hover:border-white/40 hover:bg-white/[0.08] active:scale-95 sm:min-w-[160px]"
-              >
-                How it works
-              </button>
+            {/* Availability status line */}
+            <div
+              className="mt-3 h-5 text-xs"
+              role="status"
+              aria-live="polite"
+            >
+              {handleStatus === "idle" && handle.length > 0 && handle.length < 3 && (
+                <span className="text-white/40">
+                  3–30 characters · letters, numbers, underscores
+                </span>
+              )}
+              {handleStatus === "checking" && (
+                <span className="inline-flex items-center gap-1.5 text-white/50">
+                  <Loader2 size={12} className="animate-spin" />
+                  Checking availability…
+                </span>
+              )}
+              {handleStatus === "available" && (
+                <span className="inline-flex items-center gap-1.5 text-green-400">
+                  <Check size={12} />
+                  <strong className="font-semibold">@{handle}</strong> is
+                  yours. Click claim to continue.
+                </span>
+              )}
+              {handleStatus === "taken" && (
+                <span className="inline-flex items-center gap-1.5 text-red-400">
+                  <X size={12} />
+                  <strong className="font-semibold">@{handle}</strong> is
+                  already taken. Try another.
+                </span>
+              )}
             </div>
 
+            {/* Secondary action */}
+            <button
+              type="button"
+              onClick={scrollToFeatures}
+              className="mt-5 text-xs font-medium text-white/50 underline-offset-4 transition-colors hover:text-white/90 hover:underline"
+            >
+              How KDER works →
+            </button>
           </div>
         </section>
 
