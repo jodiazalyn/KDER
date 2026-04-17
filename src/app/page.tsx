@@ -10,7 +10,6 @@ import {
   Wallet,
   Users,
   ArrowRight,
-  ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -223,30 +222,7 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Trust strip */}
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] text-white/50">
-              <span className="inline-flex items-center gap-1.5">
-                <ShieldCheck size={12} className="text-green-400" />
-                No monthly fees
-              </span>
-              <span className="h-1 w-1 rounded-full bg-white/20" aria-hidden />
-              <span>Paid out in 1 day</span>
-              <span className="h-1 w-1 rounded-full bg-white/20" aria-hidden />
-              <span>Keep 95%</span>
-            </div>
           </div>
-
-          {/* Scroll hint */}
-          <button
-            type="button"
-            onClick={scrollToFeatures}
-            aria-label="Scroll to features"
-            className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-white/30 transition-colors hover:text-white/60"
-          >
-            <div className="flex h-8 w-5 items-start justify-center rounded-full border border-white/20 p-1">
-              <span className="block h-1.5 w-0.5 animate-bounce rounded-full bg-white/60" />
-            </div>
-          </button>
         </section>
 
         {/* ── Features ──────────────────────────────────────── */}
