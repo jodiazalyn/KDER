@@ -3,25 +3,26 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://kder.club"),
   title: "KDER — Feed the city. Own your income.",
   description:
     "A hospitality sovereignty platform for Houston food creators. List your plates, manage orders, and get paid — all from your phone.",
   manifest: "/manifest.json",
-  icons: {
-    icon: "/icons/app-icon-512.png",
-    apple: "/icons/apple-touch-icon.png",
-  },
+  // Favicon + apple-touch-icon are auto-discovered from
+  // src/app/icon.png and src/app/apple-icon.png (Next.js file convention).
+  // Likewise opengraph-image.png and twitter-image.png are auto-wired.
   openGraph: {
     title: "KDER — Feed the city. Own your income.",
     description: "Houston's hospitality marketplace for food creators.",
     type: "website",
-    images: [{ url: "/icons/app-icon-512.png", width: 128, height: 128 }],
+    siteName: "KDER",
+    locale: "en_US",
+    url: "https://kder.club",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "KDER — Feed the city. Own your income.",
     description: "Houston's hospitality marketplace for food creators.",
-    images: ["/icons/app-icon-512.png"],
   },
 };
 
