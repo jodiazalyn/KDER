@@ -194,14 +194,13 @@ export async function handleAccountUpdated(account: Stripe.Account) {
 
   const supabase = await createClient();
 
+  // Column names must match schema.sql: stripe_connect_id + kyc_status enum
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("creators")
     .update({
-      stripe_account_id: account.id,
-      kyc_verified: isVerified,
-      kyc_updated_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      stripe_connect_id: account.id,
+      kyc_status: isVerified ? "verified" : "pending",
     })
     .eq("id", creatorId);
 

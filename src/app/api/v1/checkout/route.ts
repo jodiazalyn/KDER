@@ -125,43 +125,66 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_APP_URL ||
       "http://localhost:3000";
 
-    // Generate order ID for webhook correlation
-    const orderId = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
     // Sanitize notes
     const sanitizedNotes = (notes || "").trim().replace(/<[^>]*>/g, "");
 
-    // ── Fix 8: Create order record BEFORE Stripe session ────────
+    // Order ID — demo uses random, production uses DB-generated UUID
+    let orderId = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // ── Create order record BEFORE Stripe session (production) ──
     if (!isDemoMode()) {
       const { createClient } = await import("@/lib/supabase/server");
       const supabase = await createClient();
+
+      // Resolve creator by handle — orders.creator_id is NOT NULL
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: creatorRow } = await (supabase as any)
+        .from("creators")
+        .select("id, members!inner(handle)")
+        .eq("members.handle", creator_handle)
+        .single() as { data: { id: string } | null };
+
+      if (!creatorRow) {
+        return apiError("Creator not found", 404);
+      }
 
       const totalAmount = subtotalCents / 100;
       const platformFee = platformFeeCents / 100;
       const creatorPayout = totalAmount - platformFee;
 
+      // Let Postgres generate the UUID via DEFAULT gen_random_uuid()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from("orders").insert({
-        id: orderId,
-        creator_handle,
-        member_name: member_name.trim(),
-        member_phone: member_phone.trim(),
-        fulfillment_type,
-        delivery_address: delivery_address?.trim() || null,
-        notes: sanitizedNotes || null,
-        total_amount: totalAmount,
-        platform_fee: platformFee,
-        creator_payout: creatorPayout,
-        status: "pending",
-        items: verifiedItems.map((i) => ({
-          listing_id: i.listing_id,
-          name: i.name,
-          price: i.price,
-          quantity: i.quantity,
-        })),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const { data: insertedOrder, error: orderErr } = await (supabase as any)
+        .from("orders")
+        .insert({
+          creator_id: creatorRow.id,
+          creator_handle,
+          member_name: member_name.trim(),
+          member_phone: member_phone.trim(),
+          fulfillment_type,
+          delivery_address: delivery_address?.trim() || null,
+          notes: sanitizedNotes || null,
+          quantity: verifiedItems.reduce((s, i) => s + i.quantity, 0),
+          total_amount: totalAmount,
+          platform_fee: platformFee,
+          creator_payout: creatorPayout,
+          status: "pending",
+          items: verifiedItems.map((i) => ({
+            listing_id: i.listing_id,
+            name: i.name,
+            price: i.price,
+            quantity: i.quantity,
+          })),
+        })
+        .select("id")
+        .single() as { data: { id: string } | null; error: { message: string } | null };
+
+      if (orderErr || !insertedOrder) {
+        console.error("Failed to create order:", orderErr?.message);
+        return apiError("Failed to create order", 500);
+      }
+
+      orderId = insertedOrder.id;
     }
 
     // Create Stripe Checkout Session
