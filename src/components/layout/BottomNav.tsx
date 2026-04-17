@@ -16,6 +16,9 @@ const tabs = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  // Hide on fullscreen chat thread pages — matches Apple Messages / Instagram DMs pattern
+  if (/^\/messages\/[^/]+/.test(pathname)) return null;
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08] bg-[#0A0A0A]/95 backdrop-blur-[24px] pb-[env(safe-area-inset-bottom)]"

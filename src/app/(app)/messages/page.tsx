@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { MessageCircle, Mail } from "lucide-react";
+import { MessageCircle, Mail, PenSquare } from "lucide-react";
 import { ConversationRow } from "@/components/messages/ConversationRow";
+import { ComposeSheet } from "@/components/messages/ComposeSheet";
 import { getConversations, type Conversation } from "@/lib/messages-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ export default function MessagesPage() {
   const [general, setGeneral] = useState<Conversation[]>([]);
   const [orders, setOrders] = useState<Conversation[]>([]);
   const [inboxActive, setInboxActive] = useState(true);
+  const [composeOpen, setComposeOpen] = useState(false);
 
   const refresh = useCallback(() => {
     if (!currentUser) return;
@@ -110,8 +112,8 @@ export default function MessagesPage() {
           </div>
           {activeTab === "general" ? (
             <p className="text-center text-sm text-white/50">
-              No messages yet. Members can reach you from your storefront
-              link.
+              No messages yet. Tap the compose button below to start a new
+              conversation with a past customer.
             </p>
           ) : (
             <p className="text-center text-sm text-white/50">
@@ -121,6 +123,22 @@ export default function MessagesPage() {
           )}
         </div>
       )}
+
+      {/* Floating compose button — sits above the bottom nav */}
+      <button
+        type="button"
+        onClick={() => setComposeOpen(true)}
+        aria-label="New message"
+        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E20] text-white shadow-[0_8px_28px_rgba(27,94,32,0.55)] ring-1 ring-green-400/20 transition-all hover:bg-[#207024] active:scale-90"
+      >
+        <PenSquare size={20} />
+      </button>
+
+      <ComposeSheet
+        open={composeOpen}
+        onOpenChange={setComposeOpen}
+        currentUserId={currentUser?.id || "demo_creator"}
+      />
     </main>
   );
 }

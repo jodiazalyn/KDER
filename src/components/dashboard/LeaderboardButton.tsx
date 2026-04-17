@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Crown } from "lucide-react";
 import { LeaderboardPanel } from "./Leaderboard";
 import { getStreak } from "@/lib/streak-store";
@@ -14,6 +15,7 @@ interface LeaderboardButtonProps {
 }
 
 export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [bestRank, setBestRank] = useState<number | null>(null);
   const [userData, setUserData] = useState<{
@@ -55,6 +57,9 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
     load();
     return () => { cancelled = true; };
   }, [anonymous]);
+
+  // Hide on fullscreen chat thread pages — a crown over a chat is distracting
+  if (/^\/messages\/[^/]+/.test(pathname)) return null;
 
   return (
     <>
