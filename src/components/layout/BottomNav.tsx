@@ -18,7 +18,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed right-3 top-1/2 z-50 -translate-y-1/2 flex flex-col gap-1 rounded-2xl border border-white/[0.12] bg-white/[0.10] px-1.5 py-2 backdrop-blur-[40px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+      className="fixed right-3 top-1/2 z-50 -translate-y-1/2 flex flex-col gap-2"
       role="navigation"
       aria-label="Main navigation"
     >
@@ -28,15 +28,26 @@ export function BottomNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={cn(
-              "flex h-12 w-12 flex-col items-center justify-center rounded-xl transition-all",
-              isActive
-                ? "bg-green-900/50 text-green-400 shadow-[0_0_12px_rgba(74,222,128,0.2)]"
-                : "text-white/40 hover:text-white/70 hover:bg-white/[0.06]"
-            )}
+            aria-label={tab.label}
+            className="flex flex-col items-center gap-0.5"
           >
-            <tab.icon size={20} />
-            <span className="mt-0.5 text-[9px] font-medium leading-none">
+            <span
+              className={cn(
+                "flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-md transition-all",
+                isActive
+                  ? "bg-green-900/70 text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.4)]"
+                  : "bg-black/50 text-white/70 hover:bg-black/70"
+              )}
+            >
+              <tab.icon size={20} />
+            </span>
+            <span
+              className={cn(
+                "text-[10px] font-medium leading-none",
+                isActive ? "text-green-300" : "text-white/70"
+              )}
+              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
+            >
               {tab.label}
             </span>
           </Link>
