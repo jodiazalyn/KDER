@@ -374,8 +374,8 @@ export function PlateForm({ listing }: PlateFormProps) {
         </div>
       </div>
 
-      {/* Sticky bottom action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
+      {/* Sticky bottom action bar — sits above the bottom nav */}
+      <div className="fixed bottom-20 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto flex max-w-lg gap-3">
           <button
             type="button"

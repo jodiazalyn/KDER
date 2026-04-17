@@ -18,41 +18,35 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed right-3 top-1/2 z-50 -translate-y-1/2 flex flex-col gap-2"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08] bg-[#0A0A0A]/95 backdrop-blur-[24px] pb-[env(safe-area-inset-bottom)]"
       role="navigation"
       aria-label="Main navigation"
     >
-      {tabs.map((tab) => {
-        const isActive = pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            aria-label={tab.label}
-            className="flex flex-col items-center gap-0.5"
-          >
-            <span
-              className={cn(
-                "flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-md transition-all",
-                isActive
-                  ? "bg-green-900/70 text-green-300 shadow-[0_0_16px_rgba(74,222,128,0.4)]"
-                  : "bg-black/50 text-white/70 hover:bg-black/70"
-              )}
-            >
-              <tab.icon size={20} />
-            </span>
-            <span
-              className={cn(
-                "text-[10px] font-medium leading-none",
-                isActive ? "text-green-300" : "text-white/70"
-              )}
-              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
-            >
-              {tab.label}
-            </span>
-          </Link>
-        );
-      })}
+      <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
+        {tabs.map((tab) => {
+          const isActive = pathname.startsWith(tab.href);
+          return (
+            <li key={tab.href} className="flex-1">
+              <Link
+                href={tab.href}
+                aria-label={tab.label}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex h-14 flex-col items-center justify-center gap-0.5 rounded-xl transition-all",
+                  isActive
+                    ? "text-green-300"
+                    : "text-white/50 hover:text-white/80"
+                )}
+              >
+                <tab.icon size={22} strokeWidth={isActive ? 2.4 : 2} />
+                <span className="text-[10px] font-medium leading-none">
+                  {tab.label}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
