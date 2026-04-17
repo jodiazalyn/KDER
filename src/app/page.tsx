@@ -336,14 +336,18 @@ export default function LandingPage() {
               />
             </div>
 
+            <span className="mb-5 inline-block rounded-full border border-green-400/20 bg-green-900/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-green-300 animate-in fade-in slide-in-from-bottom-2 duration-700">
+              A Food Club on KDER
+            </span>
+
             <h1 className="animate-in fade-in slide-in-from-bottom-4 bg-gradient-to-b from-white via-white to-white/70 bg-clip-text text-5xl font-black leading-[1.05] tracking-[-0.03em] text-transparent duration-700 lg:text-7xl">
               Your kitchen.
               <br />
-              Your customers.
+              Your club.
             </h1>
 
             <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 animate-in fade-in slide-in-from-bottom-4 duration-1000 lg:text-lg">
-              Claim your storefront link. Sell plates.{" "}
+              Claim your club link. Sell plates.{" "}
               <span className="text-green-300">Keep 95% of every sale.</span>
             </p>
 
