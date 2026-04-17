@@ -407,38 +407,38 @@ export default function LandingPage() {
         {/* ── Features ──────────────────────────────────────── */}
         <section
           id="features"
-          className="mx-auto max-w-7xl scroll-mt-20 px-6 py-20 lg:py-28"
+          className="mx-auto max-w-7xl scroll-mt-20 px-6 py-24 lg:py-40"
           aria-labelledby="features-heading"
         >
-          <div className="mb-10 max-w-xl">
-            <span className="mb-3 inline-block rounded-full border border-green-400/20 bg-green-900/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-green-300">
+          <div className="mb-14 max-w-xl lg:mb-20">
+            <span className="mb-4 inline-block rounded-full border border-green-400/20 bg-green-900/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-green-300">
               How it works
             </span>
             <h2
               id="features-heading"
-              className="text-3xl font-black leading-tight text-white lg:text-5xl"
+              className="text-3xl font-black leading-tight tracking-[-0.02em] text-white lg:text-5xl"
             >
               Everything you need to grow your food empire.
             </h2>
-            <p className="mt-3 text-sm text-white/60 lg:text-base">
+            <p className="mt-5 text-base leading-relaxed text-white/60 lg:text-lg">
               No middlemen. No algorithms to fight. Just the tools to sell what
               you make.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <article
                 key={title}
-                className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] lg:p-6"
+                className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] lg:p-8"
               >
-                <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-green-900/40 text-green-300 transition-colors group-hover:bg-green-800/60">
-                  <Icon size={20} strokeWidth={2.2} />
+                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-900/40 text-green-300 transition-colors group-hover:bg-green-800/60">
+                  <Icon size={22} strokeWidth={2.2} />
                 </div>
-                <h3 className="mb-1.5 text-sm font-bold text-white lg:text-base">
+                <h3 className="mb-2 text-base font-bold text-white lg:text-lg">
                   {title}
                 </h3>
-                <p className="text-xs leading-relaxed text-white/60 lg:text-sm">
+                <p className="text-sm leading-relaxed text-white/60">
                   {body}
                 </p>
               </article>
@@ -448,10 +448,10 @@ export default function LandingPage() {
 
         {/* ── Community CTA ─────────────────────────────────── */}
         <section
-          className="mx-auto max-w-7xl px-6 pb-20"
+          className="mx-auto max-w-7xl px-6 pb-24 pt-8 lg:pb-32 lg:pt-12"
           aria-labelledby="community-heading"
         >
-          <div className="relative overflow-hidden rounded-3xl border border-green-400/20 bg-gradient-to-br from-[#1B5E20] via-[#164A1A] to-[#0B2F0E] p-8 lg:p-14">
+          <div className="relative overflow-hidden rounded-3xl border border-green-400/20 bg-gradient-to-br from-[#1B5E20] via-[#164A1A] to-[#0B2F0E] p-10 lg:p-20">
             {/* Decorative blurred glow (from inspiration) */}
             <div
               aria-hidden="true"
@@ -463,22 +463,22 @@ export default function LandingPage() {
             />
 
             <div className="relative z-10 max-w-2xl">
-              <span className="mb-4 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+              <span className="mb-5 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
                 Community Choice
               </span>
               <h2
                 id="community-heading"
-                className="text-3xl font-black leading-tight text-white lg:text-5xl"
+                className="text-3xl font-black leading-tight tracking-[-0.02em] text-white lg:text-5xl"
               >
                 Built for Houston food creators.
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/80 lg:text-lg">
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 lg:text-lg">
                 Every order on KDER supports a home chef in your community. No
                 gatekeepers, no 30% commissions. Join the movement.
               </p>
               <Link
                 href="/signup"
-                className="mt-7 inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-white px-7 text-sm font-bold text-[#1B5E20] shadow-[0_8px_32px_rgba(255,255,255,0.15)] transition-all hover:shadow-[0_12px_40px_rgba(255,255,255,0.25)] active:scale-95"
+                className="mt-10 inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-white px-8 text-sm font-bold text-[#1B5E20] shadow-[0_8px_32px_rgba(255,255,255,0.15)] transition-all hover:shadow-[0_12px_40px_rgba(255,255,255,0.25)] active:scale-95"
               >
                 Claim your handle
                 <ArrowRight size={16} />
