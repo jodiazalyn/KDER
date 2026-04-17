@@ -348,7 +348,7 @@ export default function LandingPage() {
 
             <p className="mt-5 max-w-lg text-base leading-relaxed text-white/70 animate-in fade-in slide-in-from-bottom-4 duration-1000 lg:text-lg">
               Claim your club link.{" "}
-              <span className="text-green-300">Monetize your kitchen.</span>
+              <span className="text-green-300">Monetize your kitchen by sharing food.</span>
             </p>
 
             {/* Handle input — Uber-inspired hero form */}
