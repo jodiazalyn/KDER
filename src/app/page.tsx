@@ -426,21 +426,37 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:gap-8">
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <article
                 key={title}
-                className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] lg:p-8"
+                className="group flex flex-col gap-5 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] sm:flex-row sm:items-center sm:gap-7 lg:p-9"
               >
-                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-900/40 text-green-300 transition-colors group-hover:bg-green-800/60">
-                  <Icon size={22} strokeWidth={2.2} />
+                {/* Text block */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="mb-2 text-base font-bold text-white lg:text-xl">
+                    {title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-white/60 lg:text-[15px]">
+                    {body}
+                  </p>
                 </div>
-                <h3 className="mb-2 text-base font-bold text-white lg:text-lg">
-                  {title}
-                </h3>
-                <p className="text-sm leading-relaxed text-white/60">
-                  {body}
-                </p>
+
+                {/* Visual cue — large icon tile with decorative glow */}
+                <div className="relative order-first shrink-0 sm:order-last">
+                  {/* Decorative glow behind the tile */}
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 -z-10 rounded-full bg-gradient-to-br from-green-400/20 via-green-500/5 to-transparent blur-xl"
+                  />
+                  <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl border border-green-400/20 bg-gradient-to-br from-green-900/60 to-green-950/40 text-green-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-transform group-hover:scale-105 lg:h-24 lg:w-24">
+                    <Icon
+                      size={36}
+                      strokeWidth={1.75}
+                      className="lg:h-11 lg:w-11"
+                    />
+                  </div>
+                </div>
               </article>
             ))}
           </div>
