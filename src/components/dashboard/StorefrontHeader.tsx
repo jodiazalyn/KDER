@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, type ChangeEvent } from "react";
+import Link from "next/link";
 import Image from "next/image";
-import { Star, MapPin, Camera } from "lucide-react";
+import { Star, MapPin, Camera, Settings } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
 import { toast } from "sonner";
 
@@ -117,6 +118,15 @@ export function StorefrontHeader({ profile, heroImage, onPhotoChange }: Storefro
                 </p>
               )}
             </div>
+
+            {/* Edit profile */}
+            <Link
+              href="/settings"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/[0.15] bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white active:scale-90 transition-all"
+              aria-label="Edit profile"
+            >
+              <Settings size={16} />
+            </Link>
           </div>
 
           {/* Bottom row: service areas + stats */}
