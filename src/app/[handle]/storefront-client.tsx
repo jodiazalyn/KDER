@@ -205,10 +205,10 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
         </div>
       )}
 
-      {/* Plates grid */}
+      {/* Plates list — single-column vertical scroll */}
       <div className="mt-4 px-4">
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mx-auto flex max-w-lg flex-col gap-4">
             {filtered.map((listing) => {
               const inCart = cart.find((c) => c.listing.id === listing.id);
               return (
