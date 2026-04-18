@@ -634,8 +634,18 @@ export default function LandingPage() {
               Houston.
             </p>
             <div className="flex gap-5">
-              <span className="text-white/30">Privacy</span>
-              <span className="text-white/30">Terms</span>
+              <Link
+                href="/privacy"
+                className="text-white/50 transition-colors hover:text-green-300"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="text-white/50 transition-colors hover:text-green-300"
+              >
+                Terms
+              </Link>
             </div>
           </div>
         </div>
