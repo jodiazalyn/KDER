@@ -528,10 +528,6 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* CC-BY attribution (required by license) — subtle corner credit */}
-            <p className="absolute bottom-3 right-5 z-10 text-[9px] text-white/40">
-              Photo: Katie Haugland Bowen (CC BY)
-            </p>
           </div>
         </section>
       </main>

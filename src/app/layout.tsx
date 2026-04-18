@@ -24,6 +24,11 @@ export const metadata: Metadata = {
     title: "KDER — Feed the city. Own your income.",
     description: "Houston's hospitality marketplace for food creators.",
   },
+  // Image attribution (moved here from visible page credit)
+  other: {
+    "image-credits":
+      "Community hero photo based on Houston 2014 by Katie Haugland Bowen (CC BY 2.0), adapted by KDER.",
+  },
 };
 
 export const viewport: Viewport = {
