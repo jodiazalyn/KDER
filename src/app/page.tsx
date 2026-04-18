@@ -100,6 +100,7 @@ type FeatureCard = {
   icon: typeof ChefHat;
   title: string;
   body: string;
+  backgroundImage?: string;
 };
 
 const FEATURES: FeatureCard[] = [
@@ -107,21 +108,25 @@ const FEATURES: FeatureCard[] = [
     icon: ChefHat,
     title: "List plates",
     body: "Upload photos, set your price. Publish in 60 seconds.",
+    backgroundImage: "/images/list-plates-bg.jpg",
   },
   {
     icon: Share2,
     title: "Share your link",
     body: "One URL for Instagram, WhatsApp, and everywhere.",
+    backgroundImage: "/images/share-link-bg.jpg",
   },
   {
     icon: Wallet,
     title: "Get paid fast",
     body: "Payouts to your bank in 1 business day. 95% to you.",
+    backgroundImage: "/images/get-paid-bg.jpg",
   },
   {
     icon: Users,
     title: "Own your audience",
     body: "No algorithm. Your regulars, your data, your community.",
+    backgroundImage: "/images/own-audience-bg.jpg",
   },
 ];
 
@@ -431,13 +436,32 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:gap-8">
-            {FEATURES.map(({ icon: Icon, title, body }) => (
+            {FEATURES.map(({ icon: Icon, title, body, backgroundImage }) => (
               <article
                 key={title}
-                className="group flex flex-col gap-5 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] sm:flex-row sm:items-center sm:gap-7 lg:p-9"
+                className="group relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-green-400/20 hover:bg-white/[0.06] sm:flex-row sm:items-center sm:gap-7 lg:p-9"
               >
+                {backgroundImage && (
+                  <>
+                    {/* Fill background photo */}
+                    <Image
+                      src={backgroundImage}
+                      alt=""
+                      fill
+                      sizes="(max-width: 640px) 100vw, 50vw"
+                      className="object-cover"
+                      aria-hidden="true"
+                    />
+                    {/* Brand-green tint + dark overlay for KDER palette + text contrast */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1B5E20]/70 via-[#0B2F0E]/75 to-black/80"
+                    />
+                  </>
+                )}
+
                 {/* Text block */}
-                <div className="min-w-0 flex-1">
+                <div className="relative z-10 min-w-0 flex-1">
                   <h3 className="mb-2 text-base font-bold text-white lg:text-xl">
                     {title}
                   </h3>
@@ -447,7 +471,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* Visual cue — large icon tile with decorative glow */}
-                <div className="relative order-first shrink-0 sm:order-last">
+                <div className="relative z-10 order-first shrink-0 sm:order-last">
                   {/* Decorative glow behind the tile */}
                   <div
                     aria-hidden="true"
