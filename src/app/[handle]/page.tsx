@@ -26,8 +26,8 @@ interface CreatorRow {
 function resolveZips(zips: string[]) {
   const resolved: { name: string; zip: string }[] = [];
   for (const zip of zips) {
-    const name = resolveZipToNeighborhood(zip);
-    if (name) resolved.push({ name, zip });
+    const match = resolveZipToNeighborhood(zip);
+    if (match) resolved.push({ name: match.neighborhood, zip });
   }
   return resolved;
 }
