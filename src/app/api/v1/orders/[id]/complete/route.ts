@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 import { isValidTransition } from "@/lib/order-state-machine";
 
 export async function PUT(
@@ -9,10 +8,6 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-
-    if (isDemoMode()) {
-      return apiSuccess({ order_id: id, status: "completed", demo: true });
-    }
 
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();

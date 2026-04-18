@@ -1,14 +1,9 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 import { sendSms } from "@/lib/twilio";
 
 export async function GET() {
   try {
-    if (isDemoMode()) {
-      return apiSuccess({ threads: [], demo: true });
-    }
-
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
@@ -31,10 +26,6 @@ export async function POST(request: NextRequest) {
 
     if (!recipient_id || !body) {
       return apiError("Recipient and message body are required.", 400);
-    }
-
-    if (isDemoMode()) {
-      return apiSuccess({ message_id: "demo", demo: true });
     }
 
     const { createClient } = await import("@/lib/supabase/server");

@@ -133,9 +133,12 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vibe_ratings ENABLE ROW LEVEL SECURITY;
 
--- Members: users can read all profiles, update only their own
+-- Members: users can read all profiles, insert and update only their own
 CREATE POLICY "Public profiles are viewable by everyone" ON members
   FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert own profile" ON members
+  FOR INSERT WITH CHECK (auth.uid()::text = id::text);
 
 CREATE POLICY "Users can update own profile" ON members
   FOR UPDATE USING (auth.uid()::text = id::text);

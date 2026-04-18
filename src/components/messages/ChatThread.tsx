@@ -3,12 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Camera, Check, CheckCheck, Image as ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoMode } from "@/lib/demo";
-import {
-  getThreadMessages,
-  sendMessage as demoSendMessage,
-  markThreadRead,
-} from "@/lib/messages-store";
 import type { Message } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -116,13 +110,6 @@ export function ChatThread({
   const supabase = createClient();
 
   const loadMessages = useCallback(() => {
-    if (isDemoMode()) {
-      const msgs = getThreadMessages(partnerId, currentUserId, orderId);
-      setMessages(msgs);
-      markThreadRead(partnerId, currentUserId, orderId);
-      return;
-    }
-
     const load = async () => {
       let query = supabase
         .from("messages")
@@ -151,8 +138,6 @@ export function ChatThread({
 
   // Realtime subscription
   useEffect(() => {
-    if (isDemoMode()) return;
-
     const channel = supabase
       .channel(`chat-${partnerId}-${orderId || "general"}`)
       .on(
@@ -256,20 +241,6 @@ export function ChatThread({
         setSending(false);
         return;
       }
-    }
-
-    if (isDemoMode()) {
-      const msg = demoSendMessage(currentUserId, partnerId, body || "📷 Photo", orderId);
-      if (mediaUrl) (msg as Message & { media_url: string | null }).media_url = mediaUrl;
-      setMessages((prev) => [...prev, msg]);
-      setInput("");
-      clearMedia();
-      setSending(false);
-
-      // Simulate typing indicator
-      setShowTyping(true);
-      setTimeout(() => setShowTyping(false), 2500);
-      return;
     }
 
     try {

@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 import { checkRateLimit, OTP_VERIFY_LIMIT } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
@@ -32,12 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Demo mode — accept any 6-digit code
-    if (isDemoMode()) {
-      return apiSuccess({ verified: true, isNewUser: true, demo: true });
-    }
-
-    // Production: verify with Supabase Auth
+    // Verify with Supabase Auth
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 

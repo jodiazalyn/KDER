@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 import { checkRateLimit, OTP_REQUEST_LIMIT } from "@/lib/rate-limiter";
 
 const US_PHONE_REGEX = /^\+1\d{10}$/;
@@ -29,12 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Demo mode — skip real OTP, just acknowledge
-    if (isDemoMode()) {
-      return apiSuccess({ sent: true, demo: true });
-    }
-
-    // Production: use Supabase Auth phone OTP
+    // Use Supabase Auth phone OTP
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, UtensilsCrossed } from "lucide-react";
+import { Plus, UtensilsCrossed, Loader2 } from "lucide-react";
 import { PlateCard } from "@/components/listings/PlateCard";
 import {
   Sheet,
@@ -11,12 +11,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  getListingsByStatus,
-  updateListing,
-  duplicateListing,
-  getListings,
-} from "@/lib/listings-store";
 import { LISTING_STATUS, type Listing, type ListingStatus } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -28,76 +22,128 @@ const TABS: { key: ListingStatus; label: string }[] = [
   { key: "archived", label: "Archived" },
 ];
 
+async function patchListing(id: string, body: Record<string, unknown>) {
+  const res = await fetch(`/api/v1/listings/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || "Request failed");
+  return json.data?.listing as Listing;
+}
+
+async function postListing(body: Record<string, unknown>) {
+  const res = await fetch("/api/v1/listings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error || "Request failed");
+  return json.data?.listing as Listing;
+}
+
 export default function ListingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ListingStatus>("active");
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [allCounts, setAllCounts] = useState<Record<string, number>>({});
+  const [all, setAll] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [menuListing, setMenuListing] = useState<Listing | null>(null);
 
-  const refresh = useCallback(() => {
-    setListings(getListingsByStatus(activeTab));
-    const all = getListings();
-    const counts: Record<string, number> = {};
-    for (const tab of TABS) {
-      counts[tab.key] = all.filter((l) => l.status === tab.key).length;
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/listings?mine=true");
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json?.error || "Failed to load listings.");
+        setAll([]);
+        return;
+      }
+      setAll((json.data?.listings ?? []) as Listing[]);
+    } catch {
+      setError("Failed to load listings. Check your connection.");
+      setAll([]);
+    } finally {
+      setLoading(false);
     }
-    setAllCounts(counts);
-  }, [activeTab]);
+  }, []);
 
-  // Load data on tab change — use requestAnimationFrame to avoid
-  // the synchronous setState-in-effect lint rule
   useEffect(() => {
-    const frame = requestAnimationFrame(() => refresh());
-    return () => cancelAnimationFrame(frame);
+    refresh();
   }, [refresh]);
 
-  const handleAction = (action: string) => {
-    if (!menuListing) return;
+  const listings = all.filter((l) => l.status === activeTab);
+  const allCounts: Record<string, number> = {};
+  for (const tab of TABS) {
+    allCounts[tab.key] = all.filter((l) => l.status === tab.key).length;
+  }
 
-    switch (action) {
-      case "edit":
-        router.push(`/listings/${menuListing.id}/edit`);
-        break;
-      case "pause":
-        updateListing(menuListing.id, { status: LISTING_STATUS.PAUSED });
-        toast.success("Plate paused.");
-        break;
-      case "resume":
-        updateListing(menuListing.id, { status: LISTING_STATUS.ACTIVE });
-        toast.success("Plate is live again!");
-        break;
-      case "publish":
-        if (menuListing.photos.length === 0) {
-          toast.error("Add at least 1 photo before publishing.");
+  const handleAction = async (action: string) => {
+    if (!menuListing) return;
+    const listing = menuListing;
+    setMenuListing(null);
+
+    try {
+      switch (action) {
+        case "edit":
+          router.push(`/listings/${listing.id}/edit`);
+          return;
+        case "pause":
+          await patchListing(listing.id, { status: LISTING_STATUS.PAUSED });
+          toast.success("Plate paused.");
+          break;
+        case "resume":
+          await patchListing(listing.id, { status: LISTING_STATUS.ACTIVE });
+          toast.success("Plate is live again!");
+          break;
+        case "publish":
+          if (!listing.photos || listing.photos.length === 0) {
+            toast.error("Add at least 1 photo before publishing.");
+            return;
+          }
+          await patchListing(listing.id, { status: LISTING_STATUS.ACTIVE });
+          toast.success("Plate published!");
+          break;
+        case "duplicate": {
+          const payload = {
+            name: `${listing.name} (Copy)`.slice(0, 60),
+            description: listing.description,
+            price: listing.price,
+            quantity: listing.quantity,
+            min_order: listing.min_order,
+            photos: [...(listing.photos ?? [])],
+            video: listing.video,
+            fulfillment_type: listing.fulfillment_type,
+            status: "draft",
+            category_tags: [...(listing.category_tags ?? [])],
+            allergens: [...(listing.allergens ?? [])],
+          };
+          await postListing(payload);
+          toast.success("Plate duplicated as draft.");
           break;
         }
-        updateListing(menuListing.id, { status: LISTING_STATUS.ACTIVE });
-        toast.success("Plate published!");
-        break;
-      case "duplicate":
-        duplicateListing(menuListing.id);
-        toast.success("Plate duplicated as draft.");
-        break;
-      case "archive":
-        updateListing(menuListing.id, { status: LISTING_STATUS.ARCHIVED });
-        toast.success("Plate archived.");
-        break;
+        case "archive":
+          await patchListing(listing.id, { status: LISTING_STATUS.ARCHIVED });
+          toast.success("Plate archived.");
+          break;
+      }
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Action failed.");
     }
-
-    setMenuListing(null);
-    refresh();
   };
 
-  const totalListings = Object.values(allCounts).reduce((a, b) => a + b, 0);
-  const isEmpty = totalListings === 0;
+  const totalListings = all.length;
+  const isEmpty = !loading && totalListings === 0 && !error;
 
   return (
     <main className="relative px-4 pb-4 pt-6">
-      {/* Header */}
       <h1 className="text-3xl font-black text-white">Plates</h1>
 
-      {/* FAB — Add plate */}
       <Link
         href="/listings/new"
         className="fixed right-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-green-900/40 border border-green-400/25 backdrop-blur-[20px] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-90 transition-transform"
@@ -106,8 +152,23 @@ export default function ListingsPage() {
         <Plus size={22} />
       </Link>
 
-      {isEmpty ? (
-        /* Empty state */
+      {loading ? (
+        <div className="flex flex-col items-center justify-center gap-3 pt-32">
+          <Loader2 size={28} className="text-white/40 animate-spin" />
+          <p className="text-sm text-white/50">Loading your plates…</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center gap-3 pt-32">
+          <p className="text-center text-sm text-red-300">{error}</p>
+          <button
+            type="button"
+            onClick={refresh}
+            className="rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/[0.06]"
+          >
+            Try again
+          </button>
+        </div>
+      ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-4 pt-32">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.06]">
             <UtensilsCrossed size={36} className="text-white/20" />
@@ -125,7 +186,6 @@ export default function ListingsPage() {
         </div>
       ) : (
         <>
-          {/* Tab bar */}
           <div className="mt-4 flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-1">
             {TABS.map((tab) => {
               const count = allCounts[tab.key] || 0;
@@ -151,7 +211,6 @@ export default function ListingsPage() {
             })}
           </div>
 
-          {/* Card grid */}
           {listings.length > 0 ? (
             <div className="mt-4 grid grid-cols-2 gap-3">
               {listings.map((listing) => (
@@ -172,7 +231,6 @@ export default function ListingsPage() {
         </>
       )}
 
-      {/* Action menu sheet */}
       <Sheet
         open={!!menuListing}
         onOpenChange={(open) => {
