@@ -58,8 +58,9 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
     return () => { cancelled = true; };
   }, [anonymous]);
 
-  // Hide on fullscreen chat thread pages — a crown over a chat is distracting
-  if (/^\/messages\/[^/]+/.test(pathname)) return null;
+  // Hide on messages and plates (listings) surfaces — crown overlaps their top-right UI
+  if (/^\/messages(\/|$)/.test(pathname)) return null;
+  if (/^\/listings(\/|$)/.test(pathname)) return null;
 
   return (
     <>
