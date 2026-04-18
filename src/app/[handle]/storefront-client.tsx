@@ -13,8 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { getCreatorProfile, type CreatorProfile } from "@/lib/creator-store";
-import { getListingsByStatus } from "@/lib/listings-store";
+import { type CreatorProfile } from "@/lib/creator-store";
 import { sendMessage, getThreadMessages } from "@/lib/messages-store";
 import { Send, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,11 +33,17 @@ import { toast } from "sonner";
 
 interface StorefrontClientProps {
   handle: string;
+  initialCreator: CreatorProfile | null;
+  initialListings: Listing[];
 }
 
-export function StorefrontClient({ handle }: StorefrontClientProps) {
-  const [creator, setCreator] = useState<CreatorProfile | null>(null);
-  const [listings, setListings] = useState<Listing[]>([]);
+export function StorefrontClient({
+  handle,
+  initialCreator,
+  initialListings,
+}: StorefrontClientProps) {
+  const [creator] = useState<CreatorProfile | null>(initialCreator);
+  const [listings] = useState<Listing[]>(initialListings);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -55,19 +60,11 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
     return id;
   });
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [loaded, setLoaded] = useState(false);
 
+  // Hydrate cart from sessionStorage on mount (client-only state)
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      // In demo mode, load from localStorage/sessionStorage
-      const profile = getCreatorProfile();
-      setCreator(profile);
-
-      const active = getListingsByStatus("active");
-      setListings(active);
-
       setCart(getCart(handle));
-      setLoaded(true);
     });
     return () => cancelAnimationFrame(frame);
   }, [handle]);
@@ -156,8 +153,6 @@ export function StorefrontClient({ handle }: StorefrontClientProps) {
 
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
-
-  if (!loaded) return null;
 
   if (!creator) {
     return (

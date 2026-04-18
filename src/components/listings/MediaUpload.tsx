@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, type ChangeEvent } from "react";
-import { ImagePlus, X, Film } from "lucide-react";
+import { useRef, useState, type ChangeEvent } from "react";
+import { ImagePlus, X, Film, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 
@@ -22,8 +22,9 @@ export function MediaUpload({
 }: MediaUploadProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingCount, setUploadingCount] = useState(0);
 
-  const handlePhotoSelect = (e: ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const remaining = maxPhotos - photos.length;
 
@@ -31,24 +32,49 @@ export function MediaUpload({
       toast.error(`You can add ${remaining} more photo${remaining === 1 ? "" : "s"}.`);
     }
 
-    const toAdd = files.slice(0, remaining);
-
-    toAdd.forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("That photo is too large. Use a photo under 10MB.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        onPhotosChange([...photos, reader.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
+    const toAdd = files
+      .slice(0, remaining)
+      .filter((file) => {
+        if (!file.type.startsWith("image/")) return false;
+        if (file.size > 8 * 1024 * 1024) {
+          toast.error("That photo is too large. Use a photo under 8MB.");
+          return false;
+        }
+        return true;
+      });
 
     // Reset input so same file can be re-selected
     e.target.value = "";
+
+    // Upload in parallel, then append all resolved URLs in one setter call.
+    setUploadingCount((n) => n + toAdd.length);
+    const uploadedUrls: string[] = [];
+    await Promise.all(
+      toAdd.map(async (file) => {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/v1/listings/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const body = await res.json();
+          if (!res.ok || !body?.data?.url) {
+            toast.error(body?.error || "Upload failed.");
+            return;
+          }
+          uploadedUrls.push(body.data.url);
+        } catch {
+          toast.error("Upload failed. Check your connection.");
+        } finally {
+          setUploadingCount((n) => Math.max(0, n - 1));
+        }
+      })
+    );
+
+    if (uploadedUrls.length > 0) {
+      onPhotosChange([...photos, ...uploadedUrls]);
+    }
   };
 
   const handleVideoSelect = (e: ChangeEvent<HTMLInputElement>) => {
@@ -147,11 +173,21 @@ export function MediaUpload({
           <button
             type="button"
             onClick={() => photoInputRef.current?.click()}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] text-white/40 hover:border-green-400/40 hover:bg-white/[0.08] hover:text-white/60 active:scale-95 transition-all"
+            disabled={uploadingCount > 0}
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] text-white/40 hover:border-green-400/40 hover:bg-white/[0.08] hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add photo"
           >
-            <ImagePlus size={24} />
-            <span className="text-[10px]">Photo</span>
+            {uploadingCount > 0 ? (
+              <>
+                <Loader2 size={24} className="animate-spin" />
+                <span className="text-[10px]">Uploading…</span>
+              </>
+            ) : (
+              <>
+                <ImagePlus size={24} />
+                <span className="text-[10px]">Photo</span>
+              </>
+            )}
           </button>
         )}
 

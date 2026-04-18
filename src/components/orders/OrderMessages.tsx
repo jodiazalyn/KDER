@@ -3,11 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { isDemoMode } from "@/lib/demo";
-import {
-  getThreadMessages,
-  sendMessage as demoSendMessage,
-} from "@/lib/messages-store";
 import type { Message } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -32,12 +27,6 @@ export function OrderMessages({
   // Load existing messages
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (isDemoMode()) {
-        const msgs = getThreadMessages(recipientId, currentUserId, orderId);
-        setMessages(msgs);
-        return;
-      }
-
       const load = async () => {
         const { data, error } = await supabase
           .from("messages")
@@ -56,8 +45,6 @@ export function OrderMessages({
 
   // Subscribe to new messages via Realtime
   useEffect(() => {
-    if (isDemoMode()) return;
-
     const channel = supabase
       .channel(`order-messages-${orderId}`)
       .on(
@@ -96,14 +83,6 @@ export function OrderMessages({
     if (!body || sending) return;
 
     setSending(true);
-
-    if (isDemoMode()) {
-      const demoMsg = demoSendMessage(currentUserId, recipientId, body, orderId);
-      setMessages((prev) => [...prev, demoMsg]);
-      setInput("");
-      setSending(false);
-      return;
-    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("messages") as any).insert({

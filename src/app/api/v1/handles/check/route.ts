@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 
 // Reserved handles that can't be claimed
 const RESERVED_HANDLES = new Set([
@@ -52,15 +51,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Demo mode — all non-reserved handles are available
-    if (isDemoMode()) {
-      return apiSuccess({
-        handle: normalized,
-        available: true,
-      });
-    }
-
-    // Production: check Supabase
+    // Check Supabase for existing handle
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 

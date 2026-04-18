@@ -1,23 +1,35 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { isDemoMode } from "@/lib/demo";
 
 export async function GET(request: NextRequest) {
   try {
     const status = request.nextUrl.searchParams.get("status");
+    const mine = request.nextUrl.searchParams.get("mine") === "true";
 
-    // Demo mode — listings managed client-side via localStorage
-    if (isDemoMode()) {
-      return apiSuccess({ listings: [], demo: true });
-    }
-
-    // Production: fetch from Supabase
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
     let query = supabase.from("listings").select("*");
 
-    if (status) {
+    if (mine) {
+      // Scope to the authenticated creator's listings (all statuses)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return apiError("Unauthorized.", 401);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: creator } = await (supabase as any)
+        .from("creators")
+        .select("id")
+        .eq("member_id", user.id)
+        .single() as { data: { id: string } | null };
+
+      if (!creator) return apiSuccess({ listings: [] });
+
+      query = query.eq("creator_id", creator.id);
+      if (status) query = query.eq("status", status);
+    } else if (status) {
       query = query.eq("status", status);
     } else {
       query = query.eq("status", "active");
@@ -45,12 +57,6 @@ export async function POST(request: NextRequest) {
       return apiError("Name, price, and quantity are required.", 400);
     }
 
-    // Demo mode — listings managed client-side
-    if (isDemoMode()) {
-      return apiSuccess({ listing: body, demo: true });
-    }
-
-    // Production: insert to Supabase
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 

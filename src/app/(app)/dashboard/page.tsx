@@ -8,7 +8,6 @@ import { QuickStats } from "@/components/dashboard/QuickStats";
 import { ActivePlatesPreview } from "@/components/dashboard/ActivePlatesPreview";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { getCreatorProfileAsync, setStorefrontActive } from "@/lib/creator-store";
-import { getListingsByStatus } from "@/lib/listings-store";
 import { getStreak } from "@/lib/streak-store";
 import { getBadges } from "@/lib/badges-store";
 import { getOrders } from "@/lib/orders-store";
@@ -34,9 +33,19 @@ export default function DashboardPage() {
       const p = await getCreatorProfileAsync();
       if (cancelled) return;
       setProfile(p);
-      const plates = getListingsByStatus("active");
-      setActivePlates(plates);
-      setActiveCount(plates.length);
+
+      // Fetch active plates from Supabase for the authenticated creator
+      try {
+        const res = await fetch("/api/v1/listings?mine=true&status=active");
+        const json = await res.json();
+        if (!cancelled && res.ok) {
+          const plates = (json.data?.listings ?? []) as Listing[];
+          setActivePlates(plates);
+          setActiveCount(plates.length);
+        }
+      } catch {
+        // Non-fatal — dashboard still renders
+      }
 
       const s = getStreak();
       setStreak(s);

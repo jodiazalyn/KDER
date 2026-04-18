@@ -15,7 +15,6 @@ import {
   type FulfillmentType,
   type ListingStatus,
 } from "@/types";
-import { createListing, updateListing } from "@/lib/listings-store";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -160,13 +159,30 @@ export function PlateForm({ listing }: PlateFormProps) {
     setSaving(true);
 
     try {
-      if (isEditing && listing) {
-        updateListing(listing.id, buildListingData(status));
+      const payload = buildListingData(status);
+      const url = isEditing && listing
+        ? `/api/v1/listings/${listing.id}`
+        : "/api/v1/listings";
+      const method = isEditing && listing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const body = await res.json();
+
+      if (!res.ok) {
+        toast.error(body?.error || "Failed to save plate. Try again.");
+        return;
+      }
+
+      if (isEditing) {
         toast.success(
           status === LISTING_STATUS.ACTIVE ? "Plate published!" : "Draft saved."
         );
       } else {
-        createListing(buildListingData(status));
         toast.success(
           status === LISTING_STATUS.ACTIVE
             ? "Plate published! Share your link to get orders."
