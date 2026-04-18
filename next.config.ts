@@ -16,6 +16,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        // Supabase Storage public URLs
+        // e.g. https://<project>.supabase.co/storage/v1/object/public/<bucket>/<path>
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
+        // Unsplash (used for seeded demo photos)
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
     ],
   },
 };
