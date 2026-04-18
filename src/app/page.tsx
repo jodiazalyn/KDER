@@ -482,27 +482,47 @@ export default function LandingPage() {
               className="pointer-events-none absolute -bottom-16 -left-10 h-40 w-40 rounded-full bg-green-300/10 blur-3xl"
             />
 
-            <div className="relative z-10 max-w-2xl">
-              <span className="mb-5 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-                Community Choice
-              </span>
-              <h2
-                id="community-heading"
-                className="text-3xl font-black leading-tight tracking-[-0.02em] text-white lg:text-5xl"
-              >
-                Built for Houston food creators.
-              </h2>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 lg:text-lg">
-                Every order on KDER supports a home chef in your community. No
-                gatekeepers, no 30% commissions. Join the movement.
-              </p>
-              <Link
-                href="/signup"
-                className="mt-10 inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-white px-8 text-sm font-bold text-[#1B5E20] shadow-[0_8px_32px_rgba(255,255,255,0.15)] transition-all hover:shadow-[0_12px_40px_rgba(255,255,255,0.25)] active:scale-95"
-              >
-                Claim your handle
-                <ArrowRight size={16} />
-              </Link>
+            <div className="relative z-10 grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-16">
+              {/* Text column */}
+              <div className="max-w-xl">
+                <span className="mb-5 inline-block rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+                  Community Choice
+                </span>
+                <h2
+                  id="community-heading"
+                  className="text-3xl font-black leading-tight tracking-[-0.02em] text-white lg:text-5xl"
+                >
+                  Built for Houston food creators.
+                </h2>
+                <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 lg:text-lg">
+                  Every order on KDER supports a home chef in your community.
+                  No gatekeepers, no 30% commissions. Join the movement.
+                </p>
+                <Link
+                  href="/signup"
+                  className="mt-10 inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-white px-8 text-sm font-bold text-[#1B5E20] shadow-[0_8px_32px_rgba(255,255,255,0.15)] transition-all hover:shadow-[0_12px_40px_rgba(255,255,255,0.25)] active:scale-95"
+                >
+                  Claim your handle
+                  <ArrowRight size={16} />
+                </Link>
+              </div>
+
+              {/* Image column */}
+              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-green-300/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <Image
+                  src="/images/community-houston.jpg"
+                  alt="Houston photograph"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
+                {/* CC-BY attribution (required by license) */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 py-2">
+                  <p className="text-[10px] text-white/70">
+                    Photo: Katie Haugland Bowen (CC BY)
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
