@@ -121,16 +121,37 @@ export async function POST(request: NextRequest) {
     // Sanitize notes
     const sanitizedNotes = (notes || "").trim().replace(/<[^>]*>/g, "");
 
-    // Resolve creator by handle — orders.creator_id is NOT NULL
+    // Resolve creator by handle — orders.creator_id is NOT NULL.
+    // Also pull stripe_connect_id + kyc_status so we can (a) route the
+    // payment split to the right connected account and (b) defensively
+    // block checkout if somehow the creator isn't Connect-verified.
+    // (Phase B gates plate activation on kyc_status = 'verified', so this
+    // branch should never fire in practice — belt-and-suspenders.)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: creatorRow } = await (supabase as any)
       .from("creators")
-      .select("id, members!inner(handle)")
+      .select("id, stripe_connect_id, kyc_status, members!inner(handle)")
       .eq("members.handle", creator_handle)
-      .single() as { data: { id: string } | null };
+      .single() as {
+        data: {
+          id: string;
+          stripe_connect_id: string | null;
+          kyc_status: string | null;
+        } | null;
+      };
 
     if (!creatorRow) {
       return apiError("Creator not found", 404);
+    }
+
+    if (
+      !creatorRow.stripe_connect_id ||
+      creatorRow.kyc_status !== "verified"
+    ) {
+      return apiError(
+        "This creator isn't set up to receive payments yet.",
+        503
+      );
     }
 
     const totalAmount = subtotalCents / 100;
@@ -188,11 +209,19 @@ export async function POST(request: NextRequest) {
       },
       success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&handle=${encodeURIComponent(creator_handle)}`,
       cancel_url: `${origin}/@${creator_handle}`,
-      // When Stripe Connect is active, uncomment:
-      // payment_intent_data: {
-      //   application_fee_amount: platformFeeCents,
-      //   transfer_data: { destination: creatorStripeAccountId },
-      // },
+      // Stripe splits the payment at charge time:
+      //  - application_fee_amount cents go to KDER's platform balance
+      //  - the rest (minus Stripe's processing fee) lands on the creator's
+      //    connected account
+      // Stripe then pays out KDER's platform balance to our bank on the
+      // default schedule (2-day rolling ACH).
+      // PLATFORM_FEE_PERCENT = 2.5 (set via STRIPE_PLATFORM_FEE_PERCENT env var).
+      payment_intent_data: {
+        application_fee_amount: platformFeeCents,
+        transfer_data: {
+          destination: creatorRow.stripe_connect_id,
+        },
+      },
     });
 
     return NextResponse.json({ checkout_url: session.url });

@@ -65,15 +65,25 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) return apiError("Unauthorized.", 401);
 
-    // Look up the creator row linked to this auth user
+    // Look up the creator row linked to this auth user.
+    // We also pull kyc_status so we can gate activation on Stripe Connect being done.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: creator } = await (supabase as any)
       .from("creators")
-      .select("id")
+      .select("id, kyc_status")
       .eq("member_id", user.id)
-      .single() as { data: { id: string } | null };
+      .single() as { data: { id: string; kyc_status: string | null } | null };
 
     if (!creator) return apiError("Creator profile not found.", 404);
+
+    // Connect KYC gate: only verified creators can create an ACTIVE plate.
+    // Drafts, paused, archived are fine for everyone.
+    if (body.status === "active" && creator.kyc_status !== "verified") {
+      return apiError(
+        "Complete Stripe Connect setup before activating plates.",
+        403
+      );
+    }
 
     // Normalize photo: accept single photo_url or photos[] array, store as photos[]
     const photos: string[] = Array.isArray(body.photos)

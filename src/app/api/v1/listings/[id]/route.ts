@@ -57,11 +57,20 @@ export async function PATCH(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: creator } = await (supabase as any)
       .from("creators")
-      .select("id")
+      .select("id, kyc_status")
       .eq("member_id", user.id)
-      .single() as { data: { id: string } | null };
+      .single() as { data: { id: string; kyc_status: string | null } | null };
 
     if (!creator) return apiError("Creator profile not found.", 404);
+
+    // Connect KYC gate: only verified creators can set a listing to ACTIVE.
+    // Transitions back to draft/paused/archived are always allowed.
+    if (body.status === "active" && creator.kyc_status !== "verified") {
+      return apiError(
+        "Complete Stripe Connect setup before activating plates.",
+        403
+      );
+    }
 
     // Whitelist allowed update fields. Never let clients change creator_id,
     // id, timestamps, or order_count.
