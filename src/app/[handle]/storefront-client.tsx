@@ -23,7 +23,6 @@ import {
   addToCart,
   updateCartQty,
   removeFromCart,
-  clearCart,
   getCartTotal,
   getCartCount,
   type CartItem,
@@ -137,10 +136,12 @@ export function StorefrontClient({
         });
       }
 
-      clearCart(handle);
-      setCart([]);
+      // NOTE: intentionally do NOT clear the cart here. The cart must persist
+      // until Stripe confirms payment — otherwise a customer who taps back on
+      // the Stripe page loses everything they added. The cart is cleared on
+      // the /order-confirmation page after successful payment.
     },
-    [cart, handle]
+    [cart]
   );
 
   // Auto-open cart / message sheet on ?action=<checkout|message> after signup redirect
@@ -374,6 +375,7 @@ export function StorefrontClient({
         onOpenChange={setCheckoutOpen}
         items={cart}
         creatorHandle={handle}
+        creatorName={creator.display_name}
         onPlaceOrder={handlePlaceOrder}
       />
 
