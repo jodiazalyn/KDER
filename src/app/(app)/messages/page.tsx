@@ -37,7 +37,10 @@ export default function MessagesPage() {
   }, [currentUser]);
 
   useEffect(() => {
-    refresh();
+    const id = setTimeout(() => {
+      refresh();
+    }, 0);
+    return () => clearTimeout(id);
   }, [refresh]);
 
   const conversations = activeTab === "general" ? general : orders;
