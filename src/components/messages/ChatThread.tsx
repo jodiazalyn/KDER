@@ -109,6 +109,18 @@ export function ChatThread({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
+  // Fire-and-forget: mark any unread messages from partnerId as read for this
+  // user + thread. Relies on the "Recipient can mark read" RLS policy.
+  const markRead = useCallback(() => {
+    fetch("/api/v1/messages/mark-read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partner_id: partnerId, order_id: orderId ?? null }),
+    }).catch(() => {
+      /* best-effort; sender's UI will re-sync via Realtime UPDATE or next mount */
+    });
+  }, [partnerId, orderId]);
+
   const loadMessages = useCallback(() => {
     const load = async () => {
       let query = supabase
@@ -127,16 +139,21 @@ export function ChatThread({
 
       const { data } = await query;
       if (data) setMessages(data as Message[]);
+      // The thread is now visible to the user — mark any unread incoming
+      // messages from the partner as read.
+      markRead();
     };
     load();
-  }, [partnerId, currentUserId, orderId, supabase]);
+  }, [partnerId, currentUserId, orderId, supabase, markRead]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => loadMessages());
     return () => cancelAnimationFrame(frame);
   }, [loadMessages]);
 
-  // Realtime subscription
+  // Realtime subscription — listen for both INSERT and UPDATE events so the
+  // sender's UI can flip from "Pending" to "Read" when the recipient opens
+  // the thread (UPDATE sets messages.read_at).
   useEffect(() => {
     const channel = supabase
       .channel(`chat-${partnerId}-${orderId || "general"}`)
@@ -160,9 +177,54 @@ export function ChatThread({
           if (!orderId && newMsg.order_id) return;
 
           setMessages((prev) => {
+            // Skip if we already have this real id.
             if (prev.some((m) => m.id === newMsg.id)) return prev;
+            // Reconcile optimistic row (temporary opt-* id) with the real row.
+            const optIdx = prev.findIndex(
+              (p) =>
+                p.id.startsWith("opt-") &&
+                p.sender_id === newMsg.sender_id &&
+                p.recipient_id === newMsg.recipient_id &&
+                p.body === newMsg.body &&
+                Math.abs(
+                  new Date(p.created_at).getTime() -
+                    new Date(newMsg.created_at).getTime()
+                ) < 10_000
+            );
+            if (optIdx !== -1) {
+              const next = prev.slice();
+              next[optIdx] = newMsg;
+              return next;
+            }
             return [...prev, newMsg];
           });
+          // If the incoming message is from the partner, mark it read — the
+          // thread is mounted and visible to this user.
+          if (newMsg.sender_id === partnerId) markRead();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const updated = payload.new as Message;
+          const isRelevant =
+            (updated.sender_id === partnerId &&
+              updated.recipient_id === currentUserId) ||
+            (updated.sender_id === currentUserId &&
+              updated.recipient_id === partnerId);
+          if (!isRelevant) return;
+          if (orderId && updated.order_id !== orderId) return;
+          if (!orderId && updated.order_id) return;
+          // Merge server-updated fields (typically read_at) into local state
+          // so the sender's "Pending" badge flips to "Read".
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m))
+          );
         }
       )
       .subscribe();
@@ -170,7 +232,7 @@ export function ChatThread({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partnerId, currentUserId, orderId, supabase]);
+  }, [partnerId, currentUserId, orderId, supabase, markRead]);
 
   // Auto-scroll
   useEffect(() => {
@@ -219,7 +281,8 @@ export function ChatThread({
 
     let mediaUrl: string | null = null;
 
-    // Upload media first if present
+    // Upload media first if present. We can't optimistically render until the
+    // upload finishes because we need the URL, so this stays pre-optimistic.
     if (mediaFile) {
       try {
         const formData = new FormData();
@@ -243,41 +306,58 @@ export function ChatThread({
       }
     }
 
+    // Optimistic insert — render immediately, reconcile when server responds.
+    const optimisticId = `opt-${Date.now()}`;
+    const displayBody = body || "📷 Photo";
+    const optimistic: Message = {
+      id: optimisticId,
+      order_id: orderId || null,
+      sender_id: currentUserId,
+      recipient_id: partnerId,
+      body: displayBody,
+      media_url: mediaUrl,
+      read_at: null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    setInput("");
+    clearMedia();
+
     try {
       const res = await fetch("/api/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           recipient_id: partnerId,
-          body: body || "📷 Photo",
+          body: displayBody,
           order_id: orderId || null,
           media_url: mediaUrl,
         }),
       });
 
+      const json = await res.json().catch(() => null);
+
       if (!res.ok) {
         toast.error("Couldn't send message. Try again.");
-      } else {
-        setInput("");
-        clearMedia();
-        // Optimistic: add message to local state
-        const now = new Date().toISOString();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `opt-${Date.now()}`,
-            sender_id: currentUserId,
-            recipient_id: partnerId,
-            body: body || "📷 Photo",
-            media_url: mediaUrl,
-            order_id: orderId || null,
-            read_at: null,
-            created_at: now,
-          },
-        ]);
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+        if (!mediaFile) setInput(body);
+        return;
+      }
+
+      // Swap optimistic row with the real server row as soon as it's back.
+      const serverMsg: Message | undefined = json?.data?.message;
+      if (serverMsg) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === serverMsg.id)) {
+            return prev.filter((m) => m.id !== optimisticId);
+          }
+          return prev.map((m) => (m.id === optimisticId ? serverMsg : m));
+        });
       }
     } catch {
       toast.error("Couldn't send message. Check your connection.");
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      if (!mediaFile) setInput(body);
     }
 
     setSending(false);

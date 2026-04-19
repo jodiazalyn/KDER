@@ -72,7 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return apiSuccess({ message_id: msg.id });
+    // Return the full inserted row so the client can reconcile its optimistic
+    // insert immediately, rather than waiting for Realtime to echo the message.
+    return apiSuccess({ message: msg, message_id: msg.id });
   } catch {
     return apiError("Failed to send message.", 500);
   }

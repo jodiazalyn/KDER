@@ -166,6 +166,18 @@ export function StorefrontClient({
     if (!messageOpen || !currentUserId || !creator?.member_id) return;
     const partnerId = creator.member_id;
 
+    const markRead = () => {
+      // Fire-and-forget. The RLS "Recipient can mark read" policy scopes this
+      // to our incoming rows from partnerId in the general (order_id IS NULL) thread.
+      fetch("/api/v1/messages/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partner_id: partnerId, order_id: null }),
+      }).catch(() => {
+        /* best-effort; Realtime UPDATE will re-sync on next open if this fails */
+      });
+    };
+
     let cancelled = false;
     (async () => {
       const { data } = await supabase
@@ -179,6 +191,9 @@ export function StorefrontClient({
       if (cancelled) return;
       setChatMessages((data as Message[]) ?? []);
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      // Mark any unread incoming messages from this partner as read now that
+      // the sheet is visible and the user can see them.
+      markRead();
     })();
 
     const channel = supabase
@@ -196,8 +211,54 @@ export function StorefrontClient({
             (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
             (m.sender_id === partnerId && m.recipient_id === currentUserId);
           if (!involvesMe || m.order_id) return;
-          setChatMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
+          setChatMessages((prev) => {
+            // Skip if we already have this real id.
+            if (prev.some((p) => p.id === m.id)) return prev;
+            // Reconcile: if an optimistic row matches (same sender, body, and
+            // was created within 10s), replace it with the real row so the
+            // temporary opt-* id doesn't linger.
+            const optIdx = prev.findIndex(
+              (p) =>
+                p.id.startsWith("opt-") &&
+                p.sender_id === m.sender_id &&
+                p.recipient_id === m.recipient_id &&
+                p.body === m.body &&
+                Math.abs(
+                  new Date(p.created_at).getTime() -
+                    new Date(m.created_at).getTime()
+                ) < 10_000
+            );
+            if (optIdx !== -1) {
+              const next = prev.slice();
+              next[optIdx] = m;
+              return next;
+            }
+            return [...prev, m];
+          });
+          // If the incoming message is from the partner (not our own echo),
+          // mark it read immediately — the sheet is open and visible.
+          if (m.sender_id === partnerId) markRead();
           setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const m = payload.new as Message;
+          const involvesMe =
+            (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
+            (m.sender_id === partnerId && m.recipient_id === currentUserId);
+          if (!involvesMe || m.order_id) return;
+          // Merge server-updated fields (typically read_at) into the matching
+          // message so the sender's UI flips from "Pending" to "✓ Read".
+          setChatMessages((prev) =>
+            prev.map((p) => (p.id === m.id ? { ...p, ...m } : p))
+          );
         }
       )
       .subscribe();
@@ -222,25 +283,57 @@ export function StorefrontClient({
     const body = messageText.trim();
     if (!body || sending || !currentUserId || !creator?.member_id) return;
     setSending(true);
+
+    // Optimistic insert — render the message immediately so the user sees
+    // their send confirmed. The opt-* id will be reconciled when the server
+    // responds (or when Realtime echoes the insert, whichever wins the race).
+    const optimisticId = `opt-${Date.now()}`;
+    const partnerId = creator.member_id;
+    const optimistic: Message = {
+      id: optimisticId,
+      order_id: null,
+      sender_id: currentUserId,
+      recipient_id: partnerId,
+      body,
+      media_url: null,
+      read_at: null,
+      created_at: new Date().toISOString(),
+    };
+    setChatMessages((prev) => [...prev, optimistic]);
+    setMessageText("");
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+
     try {
       const res = await fetch("/api/v1/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recipient_id: creator.member_id,
+          recipient_id: partnerId,
           body,
         }),
       });
       const json = await res.json();
       if (!res.ok) {
         toast.error(json.error || "Couldn't send message. Try again.");
+        setChatMessages((prev) => prev.filter((p) => p.id !== optimisticId));
+        setMessageText(body);
         return;
       }
-      setMessageText("");
-      // Realtime subscription will append the message; no optimistic insert
-      // to avoid duplicates.
+      // Swap the optimistic row with the real server row as soon as it's back.
+      const serverMsg: Message | undefined = json?.data?.message;
+      if (serverMsg) {
+        setChatMessages((prev) => {
+          // If Realtime already reconciled it, don't re-add.
+          if (prev.some((p) => p.id === serverMsg.id)) {
+            return prev.filter((p) => p.id !== optimisticId);
+          }
+          return prev.map((p) => (p.id === optimisticId ? serverMsg : p));
+        });
+      }
     } catch {
       toast.error("Couldn't send message. Check your connection.");
+      setChatMessages((prev) => prev.filter((p) => p.id !== optimisticId));
+      setMessageText(body);
     } finally {
       setSending(false);
     }
