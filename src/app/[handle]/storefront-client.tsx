@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingCart, UtensilsCrossed, MessageCircle } from "lucide-react";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
@@ -14,7 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { type CreatorProfile } from "@/lib/creator-store";
-import { sendMessage, getThreadMessages } from "@/lib/messages-store";
+import { createClient } from "@/lib/supabase/client";
 import { Send, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +29,7 @@ import {
   type CartItem,
 } from "@/lib/cart-store";
 import { createOrder } from "@/lib/orders-store";
-import type { Listing } from "@/types";
+import type { Listing, Message } from "@/types";
 import { toast } from "sonner";
 
 interface StorefrontClientProps {
@@ -42,6 +43,8 @@ export function StorefrontClient({
   initialCreator,
   initialListings,
 }: StorefrontClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -50,16 +53,26 @@ export function StorefrontClient({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
-  const [chatMessages, setChatMessages] = useState<import("@/types").Message[]>([]);
-  const [memberIdRef] = useState(() => {
-    if (typeof window === "undefined") return "member_anon";
-    const stored = sessionStorage.getItem(`kder_member_id_${handle}`);
-    if (stored) return stored;
-    const id = `member_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    sessionStorage.setItem(`kder_member_id_${handle}`, id);
-    return id;
-  });
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
+
+  // Resolve current auth user on mount so the Message/Checkout buttons
+  // can gate unauthenticated customers into the signup flow.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!cancelled) setCurrentUserId(user?.id ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   // Hydrate cart from sessionStorage on mount (client-only state)
   useEffect(() => {
@@ -130,16 +143,107 @@ export function StorefrontClient({
     [cart, handle]
   );
 
-  // Load chat messages when sheet opens
+  // Auto-open cart / message sheet on ?action=<checkout|message> after signup redirect
   useEffect(() => {
-    if (!messageOpen) return;
-    const frame = requestAnimationFrame(() => {
-      const msgs = getThreadMessages("demo_creator", memberIdRef);
-      setChatMessages(msgs);
+    const action = searchParams.get("action") || sessionStorage.getItem("kder_signup_action");
+    if (!action || !currentUserId) return;
+
+    if (action === "message") {
+      setMessageOpen(true);
+    } else if (action === "checkout") {
+      setCartOpen(true);
+    }
+    // Consume the hint so reloads don't re-open.
+    sessionStorage.removeItem("kder_signup_action");
+    if (searchParams.get("action")) {
+      router.replace(`/@${handle}`);
+    }
+  }, [currentUserId, searchParams, router, handle]);
+
+  // Load chat messages + subscribe to realtime when the message sheet opens.
+  useEffect(() => {
+    if (!messageOpen || !currentUserId || !creator?.member_id) return;
+    const partnerId = creator.member_id;
+
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("*")
+        .or(
+          `and(sender_id.eq.${currentUserId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${currentUserId})`
+        )
+        .is("order_id", null)
+        .order("created_at", { ascending: true });
+      if (cancelled) return;
+      setChatMessages((data as Message[]) ?? []);
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [messageOpen, memberIdRef]);
+    })();
+
+    const channel = supabase
+      .channel(`storefront-chat-${currentUserId}-${partnerId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const m = payload.new as Message;
+          const involvesMe =
+            (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
+            (m.sender_id === partnerId && m.recipient_id === currentUserId);
+          if (!involvesMe || m.order_id) return;
+          setChatMessages((prev) => (prev.some((p) => p.id === m.id) ? prev : [...prev, m]));
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [messageOpen, currentUserId, creator?.member_id, supabase]);
+
+  const handleMessageClick = useCallback(() => {
+    if (!currentUserId) {
+      router.push(
+        `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=message`
+      );
+      return;
+    }
+    setMessageOpen(true);
+  }, [currentUserId, router, handle]);
+
+  const handleSendMessage = useCallback(async () => {
+    const body = messageText.trim();
+    if (!body || sending || !currentUserId || !creator?.member_id) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient_id: creator.member_id,
+          body,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error || "Couldn't send message. Try again.");
+        return;
+      }
+      setMessageText("");
+      // Realtime subscription will append the message; no optimistic insert
+      // to avoid duplicates.
+    } catch {
+      toast.error("Couldn't send message. Check your connection.");
+    } finally {
+      setSending(false);
+    }
+  }, [messageText, sending, currentUserId, creator?.member_id]);
 
   // Derive categories from active listings
   const allCategories = Array.from(
@@ -181,7 +285,7 @@ export function StorefrontClient({
       <div className="mt-4 px-4">
         <button
           type="button"
-          onClick={() => setMessageOpen(true)}
+          onClick={handleMessageClick}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/[0.15] bg-white/[0.06] text-sm font-medium text-white/70 hover:bg-white/[0.10] active:scale-95 transition-all"
         >
           <MessageCircle size={16} />
@@ -251,6 +355,14 @@ export function StorefrontClient({
         onUpdateQty={handleUpdateQty}
         onRemove={handleRemove}
         onCheckout={() => {
+          if (!currentUserId) {
+            // Gate unauthenticated checkout — redirect to signup, come back
+            // with action=checkout so the cart auto-opens after verify.
+            router.push(
+              `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
+            );
+            return;
+          }
           setCartOpen(false);
           setCheckoutOpen(true);
         }}
@@ -285,7 +397,7 @@ export function StorefrontClient({
               </p>
             ) : (
               chatMessages.map((msg) => {
-                const isMine = msg.sender_id === memberIdRef;
+                const isMine = msg.sender_id === currentUserId;
                 return (
                   <div
                     key={msg.id}
@@ -337,29 +449,20 @@ export function StorefrontClient({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  if (!messageText.trim()) return;
-                  const msg = sendMessage(memberIdRef, "demo_creator", messageText.trim());
-                  setChatMessages((prev) => [...prev, msg]);
-                  setMessageText("");
-                  setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+                  handleSendMessage();
                 }
               }}
               placeholder={`Message ${creator.display_name}...`}
-              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
+              disabled={sending}
+              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors disabled:opacity-50"
             />
             <button
               type="button"
-              onClick={() => {
-                if (!messageText.trim()) return;
-                const msg = sendMessage(memberIdRef, "demo_creator", messageText.trim());
-                setChatMessages((prev) => [...prev, msg]);
-                setMessageText("");
-                setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-              }}
-              disabled={!messageText.trim()}
+              onClick={handleSendMessage}
+              disabled={!messageText.trim() || sending}
               className={cn(
                 "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
-                messageText.trim()
+                messageText.trim() && !sending
                   ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
                   : "bg-white/10 text-white/30 cursor-not-allowed"
               )}

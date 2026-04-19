@@ -11,6 +11,8 @@ export interface CreatorProfile {
   bio: string | null;
   photo_url: string | null;
   handle: string;
+  /** Creator's user id (members.id). Used as recipient_id for messaging. */
+  member_id: string | null;
   neighborhoods: { name: string; zip: string }[];
   storefront_active: boolean;
   vibe_score: number | null;
@@ -52,6 +54,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           bio: member.bio || null,
           photo_url: member.photo_url || null,
           handle: member.handle || "mystore",
+          member_id: user.id,
           neighborhoods,
           storefront_active: creator?.storefront_active ?? true,
           vibe_score: creator?.vibe_score
@@ -91,6 +94,7 @@ export function getCreatorProfile(): CreatorProfile {
     bio: profile.bio || null,
     photo_url: profile.photo_url || null,
     handle: handle || "mystore",
+    member_id: null,
     neighborhoods,
     storefront_active: storefrontActive !== "false",
     vibe_score: null,
@@ -123,6 +127,7 @@ function defaultProfile(): CreatorProfile {
     bio: null,
     photo_url: null,
     handle: "mystore",
+    member_id: null,
     neighborhoods: [],
     storefront_active: true,
     vibe_score: null,

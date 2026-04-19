@@ -41,9 +41,18 @@ export async function POST(request: NextRequest) {
       return apiError("Name and phone are required", 400);
     }
 
-    // Verify prices server-side against Supabase
+    // Require authenticated customer. The client-side gate should have
+    // redirected to /signup?mode=customer before reaching here, but enforce
+    // server-side so API callers can't create anonymous orders.
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return apiError("Sign in to place an order.", 401);
+    }
 
     const listingIds = items.map((i) => i.listing_id);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,6 +144,7 @@ export async function POST(request: NextRequest) {
       .insert({
         creator_id: creatorRow.id,
         creator_handle,
+        member_id: user.id,
         member_name: member_name.trim(),
         member_phone: member_phone.trim(),
         fulfillment_type,

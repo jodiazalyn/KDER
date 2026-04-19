@@ -74,6 +74,7 @@ async function loadStorefront(handle: string): Promise<{
     bio: member.bio,
     photo_url: member.photo_url,
     handle: member.handle,
+    member_id: member.id,
     neighborhoods: resolveZips(creatorRow.service_zip_codes ?? []),
     storefront_active: creatorRow.storefront_active ?? true,
     vibe_score:

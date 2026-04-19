@@ -88,7 +88,14 @@ export default function VerifyPage() {
 
         // Clear stored phone
         sessionStorage.removeItem("kder_signup_phone");
-        router.push("/onboarding/profile");
+
+        // Branch on signup mode set on /signup?mode=customer
+        const mode = sessionStorage.getItem("kder_signup_mode");
+        if (mode === "customer") {
+          router.push("/onboarding/customer");
+        } else {
+          router.push("/onboarding/profile");
+        }
       } catch {
         setError(true);
         setErrorKey((k) => k + 1);
