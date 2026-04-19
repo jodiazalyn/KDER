@@ -1,18 +1,11 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ChatThread } from "@/components/messages/ChatThread";
 import { useCurrentUser } from "@/hooks/use-current-user";
-
-const DEMO_NAMES: Record<string, string> = {
-  member_demo_1: "Marcus J.",
-  member_demo_2: "Tasha R.",
-  member_demo_3: "Devon W.",
-  member_general_1: "Keisha M.",
-  member_general_2: "Andre T.",
-};
+import { createClient } from "@/lib/supabase/client";
 
 export default function MessageThreadPage({
   params,
@@ -25,26 +18,44 @@ export default function MessageThreadPage({
   const decoded = decodeURIComponent(threadId);
 
   // Parse threadId format: "general_{partnerId}" or "order_{orderId}_{partnerId}"
-  const { partnerId, orderId, partnerName } = useMemo(() => {
+  const { partnerId, orderId } = useMemo(() => {
     if (decoded.startsWith("order_")) {
       const parts = decoded.split("_");
       // order_{orderId}_{partnerId} — orderId may contain underscores
       const pId = parts[parts.length - 1];
       const oId = parts.slice(1, -1).join("_");
-      return {
-        partnerId: pId,
-        orderId: oId,
-        partnerName: DEMO_NAMES[pId] || `Member ${pId.slice(-4)}`,
-      };
+      return { partnerId: pId, orderId: oId };
     }
     // general_{partnerId} — only strip the "general_" prefix (first occurrence)
-    const pId = decoded.slice("general_".length);
     return {
-      partnerId: pId,
-      orderId: null,
-      partnerName: DEMO_NAMES[pId] || `Member ${pId.slice(-4)}`,
+      partnerId: decoded.slice("general_".length),
+      orderId: null as string | null,
     };
   }, [decoded]);
+
+  // Fetch the partner's real display_name from the members table. Previously
+  // this page derived a "Member {uuid-suffix}" string from the URL slug, which
+  // showed up in the chat header and input placeholder. We now hydrate from
+  // the DB so creators see the actual customer's name.
+  const [partnerName, setPartnerName] = useState<string>("");
+  useEffect(() => {
+    if (!partnerId) return;
+    const supabase = createClient();
+    let cancelled = false;
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = (await (supabase as any)
+        .from("members")
+        .select("display_name")
+        .eq("id", partnerId)
+        .maybeSingle()) as { data: { display_name: string } | null };
+      if (cancelled) return;
+      if (data?.display_name) setPartnerName(data.display_name);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [partnerId]);
 
   return (
     <main className="fixed inset-0 z-[60] flex flex-col bg-[#0A0A0A]">
@@ -59,7 +70,9 @@ export default function MessageThreadPage({
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-base font-bold text-white">{partnerName}</h1>
+          <h1 className="text-base font-bold text-white">
+            {partnerName || "…"}
+          </h1>
           {orderId && (
             <p className="text-[10px] text-green-400/60">Order thread</p>
           )}
