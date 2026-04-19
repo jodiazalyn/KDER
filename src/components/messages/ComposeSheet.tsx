@@ -1,103 +1,118 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, User2, MessageCircleMore } from "lucide-react";
+import { Search, User2, MessageCircleMore, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { getOrders } from "@/lib/orders-store";
-import { getConversations } from "@/lib/messages-store";
 
 interface ComposeSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentUserId: string;
+  // currentUserId retained for backward compatibility with callers; not used
+  // now that data comes from the authenticated /api/v1/messages/conversations
+  // endpoint which derives the current user from the session.
+  currentUserId?: string;
 }
 
 interface Recipient {
   id: string;
   name: string;
   photoUrl: string | null;
-  lastOrderAmount: number | null;
-  lastOrderAt: string | null;
   hasExistingThread: boolean;
   lastMessagePreview: string | null;
+  lastMessageAt: string | null;
 }
 
-export function ComposeSheet({
-  open,
-  onOpenChange,
-  currentUserId,
-}: ComposeSheetProps) {
+interface ConversationOut {
+  threadId: string;
+  partnerId: string;
+  partnerName: string;
+  partnerPhoto: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  orderId: string | null;
+}
+
+export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
   const router = useRouter();
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const recipients = useMemo<Recipient[]>(() => {
-    if (!open) return [];
+  // Fetch real conversations whenever the sheet opens. This uses the same
+  // endpoint the inbox page consumes, so the partner names come from
+  // `members.display_name` (with an "Unknown" fallback server-side) — no more
+  // stale "Member xxxx" strings from the old demo store.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/messages/conversations");
+        const json = await res.json();
+        if (cancelled) return;
+        const general: ConversationOut[] = json?.data?.general ?? [];
+        const orders: ConversationOut[] = json?.data?.orders ?? [];
 
-    const byId = new Map<string, Recipient>();
+        // Dedupe by partner — if a partner has both order + general threads we
+        // show a single row. Keep the entry with the newer lastMessageAt.
+        const byId = new Map<string, Recipient>();
+        for (const conv of [...general, ...orders]) {
+          const existing = byId.get(conv.partnerId);
+          const incomingAt = new Date(conv.lastMessageAt).getTime();
+          const existingAt = existing?.lastMessageAt
+            ? new Date(existing.lastMessageAt).getTime()
+            : 0;
+          if (!existing || incomingAt > existingAt) {
+            byId.set(conv.partnerId, {
+              id: conv.partnerId,
+              name: conv.partnerName,
+              photoUrl: conv.partnerPhoto,
+              hasExistingThread: true,
+              lastMessagePreview: conv.lastMessage,
+              lastMessageAt: conv.lastMessageAt,
+            });
+          }
+        }
 
-    // 1. Pull unique members from past orders (creators can reach their customers)
-    try {
-      const orders = getOrders();
-      for (const order of orders) {
-        if (!order.member_id) continue;
-        const existing = byId.get(order.member_id);
-        const orderAt = order.created_at;
-        const isNewer =
-          !existing?.lastOrderAt ||
-          new Date(orderAt).getTime() >
-            new Date(existing.lastOrderAt).getTime();
-
-        byId.set(order.member_id, {
-          id: order.member_id,
-          name: order.member_name || existing?.name || `Member`,
-          photoUrl: order.member_photo || existing?.photoUrl || null,
-          lastOrderAmount: isNewer
-            ? order.total_amount
-            : (existing?.lastOrderAmount ?? null),
-          lastOrderAt: isNewer ? orderAt : (existing?.lastOrderAt ?? null),
-          hasExistingThread: existing?.hasExistingThread ?? false,
-          lastMessagePreview: existing?.lastMessagePreview ?? null,
+        const list = Array.from(byId.values()).sort((a, b) => {
+          const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+          return tb - ta;
         });
+        setRecipients(list);
+      } catch {
+        if (!cancelled) setRecipients([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      // no-op
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
-    // 2. Merge in existing conversation partners
-    try {
-      const { general, orders: orderThreads } = getConversations(currentUserId);
-      for (const conv of [...general, ...orderThreads]) {
-        const existing = byId.get(conv.partnerId);
-        byId.set(conv.partnerId, {
-          id: conv.partnerId,
-          name: conv.partnerName || existing?.name || `Member`,
-          photoUrl: conv.partnerPhoto ?? existing?.photoUrl ?? null,
-          lastOrderAmount: existing?.lastOrderAmount ?? null,
-          lastOrderAt: existing?.lastOrderAt ?? null,
-          hasExistingThread: true,
-          lastMessagePreview:
-            conv.lastMessage ?? existing?.lastMessagePreview ?? null,
-        });
-      }
-    } catch {
-      // no-op
-    }
+  // Reset search when the sheet closes so the next open starts clean.
+  useEffect(() => {
+    if (!open) setQuery("");
+  }, [open]);
 
-    // Sort: existing threads first, then by most recent order
-    return Array.from(byId.values()).sort((a, b) => {
-      if (a.hasExistingThread !== b.hasExistingThread) {
-        return a.hasExistingThread ? -1 : 1;
-      }
-      const ta = a.lastOrderAt ? new Date(a.lastOrderAt).getTime() : 0;
-      const tb = b.lastOrderAt ? new Date(b.lastOrderAt).getTime() : 0;
-      return tb - ta;
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recipients;
+    return recipients.filter((r) => {
+      const name = r.name.toLowerCase();
+      const preview = (r.lastMessagePreview ?? "").toLowerCase();
+      return name.includes(q) || preview.includes(q);
     });
-  }, [open, currentUserId]);
+  }, [recipients, query]);
 
   const openThread = (partnerId: string) => {
     onOpenChange(false);
@@ -115,30 +130,44 @@ export function ComposeSheet({
         </SheetHeader>
 
         <div className="mt-4 flex h-[70vh] flex-col pb-[env(safe-area-inset-bottom)]">
-          {/* Search placeholder (non-functional for now, visual affordance) */}
-          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4">
+          {/* Real search input — filters the list below by name or last-message preview. */}
+          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 focus-within:border-green-400/40">
             <Search size={16} className="text-white/40" />
-            <span className="text-sm text-white/30">
-              Your customers &amp; conversations
-            </span>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Your customers & conversations"
+              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+              aria-label="Filter conversations"
+            />
           </div>
 
-          {recipients.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-1 items-center justify-center">
+              <Loader2 size={20} className="animate-spin text-white/40" />
+            </div>
+          ) : recipients.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
                 <MessageCircleMore size={24} className="text-white/30" />
               </div>
-              <p className="text-sm text-white/50">
-                No customers yet.
-              </p>
+              <p className="text-sm text-white/50">No customers yet.</p>
               <p className="text-xs text-white/30 max-w-[240px]">
                 Once someone orders from your storefront, you&apos;ll be able
                 to message them here.
               </p>
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+              <p className="text-sm text-white/50">No matches.</p>
+              <p className="text-xs text-white/30">
+                Try a different name or message.
+              </p>
+            </div>
           ) : (
             <ul className="flex-1 space-y-1 overflow-y-auto">
-              {recipients.map((r) => (
+              {filtered.map((r) => (
                 <li key={r.id}>
                   <button
                     type="button"
@@ -175,11 +204,7 @@ export function ComposeSheet({
                         )}
                       </div>
                       <p className="truncate text-xs text-white/50">
-                        {r.lastMessagePreview
-                          ? r.lastMessagePreview
-                          : r.lastOrderAmount !== null
-                            ? `Last order: $${r.lastOrderAmount.toFixed(2)}`
-                            : "Past customer"}
+                        {r.lastMessagePreview ?? "Past customer"}
                       </p>
                     </div>
                   </button>
