@@ -1,14 +1,25 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { clearCart } from "@/lib/cart-store";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const handle = searchParams.get("handle");
+
+  // Clear the creator-scoped cart now that payment is confirmed.
+  // The cart is intentionally NOT cleared when the customer taps "Pay" so
+  // that backing out of Stripe preserves their selection.
+  useEffect(() => {
+    if (handle) {
+      clearCart(handle);
+    }
+  }, [handle]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0A] px-6">

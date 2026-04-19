@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         platform_fee_cents: String(platformFeeCents),
         item_ids: verifiedItems.map((i) => i.listing_id).join(","),
       },
-      success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&handle=${encodeURIComponent(creator_handle)}`,
       cancel_url: `${origin}/@${creator_handle}`,
       // When Stripe Connect is active, uncomment:
       // payment_intent_data: {

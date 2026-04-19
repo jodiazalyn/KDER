@@ -19,6 +19,7 @@ interface CheckoutSheetProps {
   onOpenChange: (open: boolean) => void;
   items: CartItem[];
   creatorHandle: string;
+  creatorName: string;
   onPlaceOrder: (details: OrderDetails) => void;
 }
 
@@ -40,6 +41,7 @@ export function CheckoutSheet({
   onOpenChange,
   items,
   creatorHandle,
+  creatorName,
   onPlaceOrder,
 }: CheckoutSheetProps) {
   const [name, setName] = useState("");
@@ -114,7 +116,7 @@ export function CheckoutSheet({
             </div>
             <h2 className="text-xl font-bold text-white">Order Placed!</h2>
             <p className="text-center text-sm text-white/50">
-              Your order has been sent to @{creatorHandle}. They&apos;ll confirm it shortly.
+              Your order has been sent to {creatorName}. They&apos;ll confirm it shortly.
             </p>
             <button
               type="button"
@@ -139,7 +141,7 @@ export function CheckoutSheet({
         className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[85vh]"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">Checkout</SheetTitle>
+          <SheetTitle className="text-white">Order from {creatorName}</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
