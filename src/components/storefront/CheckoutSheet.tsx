@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,6 +14,15 @@ import type { CartItem } from "@/lib/cart-store";
 import { getCartTotal } from "@/lib/cart-store";
 import type { FulfillmentType } from "@/types";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/use-current-user";
+
+/** Formats a stored E.164 US phone (+13235550123) as (323) 555-0123. */
+function formatPhone(phone: string): string {
+  if (!phone) return "";
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length !== 10) return phone;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
 
 interface CheckoutSheetProps {
   open: boolean;
@@ -44,19 +54,43 @@ export function CheckoutSheet({
   creatorName,
   onPlaceOrder,
 }: CheckoutSheetProps) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const router = useRouter();
+  const currentUser = useCurrentUser();
+  const [authChecked, setAuthChecked] = useState(false);
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("pickup");
   const [notes, setNotes] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  // Give the hook a beat to resolve; once it has (user or null), mark auth as checked.
+  // This lets us distinguish "still loading" from "truly anonymous" before redirecting.
+  useEffect(() => {
+    if (currentUser !== null) {
+      setAuthChecked(true);
+      return;
+    }
+    const timer = setTimeout(() => setAuthChecked(true), 800);
+    return () => clearTimeout(timer);
+  }, [currentUser]);
+
+  // Defensive: if the sheet is open but no authenticated user resolved, send them
+  // to customer signup. The Place Order button on the storefront already gates
+  // this upstream; this is belt-and-suspenders.
+  useEffect(() => {
+    if (open && authChecked && !currentUser) {
+      onOpenChange(false);
+      const next = encodeURIComponent(`/@${creatorHandle}`);
+      router.push(`/signup?mode=customer&next=${next}&action=checkout`);
+    }
+  }, [open, authChecked, currentUser, creatorHandle, onOpenChange, router]);
+
   const total = getCartTotal(items);
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
-  const canPlace = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 10 && !needsAddress;
+  const canPlace = !!currentUser && !needsAddress;
 
   const handlePlace = async () => {
+    if (!currentUser) return;
     setPlacing(true);
     try {
       // Create Stripe Checkout Session
@@ -71,8 +105,8 @@ export function CheckoutSheet({
             quantity: item.quantity,
             photo: item.listing.photos[0] || null,
           })),
-          member_name: name.trim(),
-          member_phone: phone,
+          member_name: currentUser.display_name,
+          member_phone: currentUser.phone,
           fulfillment_type: fulfillment,
           notes: notes.trim(),
           creator_handle: creatorHandle,
@@ -87,8 +121,8 @@ export function CheckoutSheet({
 
       // Also create local orders for demo tracking
       onPlaceOrder({
-        memberName: name.trim(),
-        memberPhone: phone,
+        memberName: currentUser.display_name,
+        memberPhone: currentUser.phone,
         fulfillmentType: fulfillment,
         notes: notes.trim(),
         deliveryAddress: fulfillment === "delivery" ? deliveryAddress.trim() : null,
@@ -145,33 +179,24 @@ export function CheckoutSheet({
         </SheetHeader>
 
         <div className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
-          {/* Name */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/50">
-              Your name *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="First Last"
-              className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/30 focus:border-green-400/60 focus:outline-none"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/50">
-              Phone number *
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="(555) 555-5555"
-              className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/30 focus:border-green-400/60 focus:outline-none"
-            />
-          </div>
+          {/* Ordering-as summary (prefilled from signup — no re-entry) */}
+          {currentUser ? (
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+              <p className="text-xs text-white/50">Ordering as</p>
+              <p className="mt-0.5 text-sm font-medium text-white">
+                {currentUser.display_name}
+              </p>
+              {currentUser.phone && (
+                <p className="text-xs text-white/40">
+                  {formatPhone(currentUser.phone)}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+            </div>
+          )}
 
           {/* Fulfillment */}
           <div>

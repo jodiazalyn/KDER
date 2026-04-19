@@ -8,6 +8,7 @@ export interface CurrentUser {
   display_name: string;
   handle: string;
   photo_url: string | null;
+  phone: string;
 }
 
 /**
@@ -33,17 +34,18 @@ export function useCurrentUser(): CurrentUser | null {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: member } = await (supabase as any)
             .from("members")
-            .select("id, display_name, handle, photo_url")
+            .select("id, display_name, handle, photo_url, phone")
             .eq("id", authUser.id)
             .single();
 
           if (member && !cancelled) {
-            const m = member as { id: string; display_name: string; handle: string | null; photo_url: string | null };
+            const m = member as { id: string; display_name: string; handle: string | null; photo_url: string | null; phone: string | null };
             setUser({
               id: m.id,
               display_name: m.display_name,
               handle: m.handle || "mystore",
               photo_url: m.photo_url,
+              phone: m.phone || authUser.phone || "",
             });
             return;
           }
@@ -59,6 +61,7 @@ export function useCurrentUser(): CurrentUser | null {
               display_name: profile.display_name || "Creator",
               handle: handle || "mystore",
               photo_url: profile.photo_url || null,
+              phone: authUser.phone || "",
             });
             return;
           }
@@ -79,6 +82,7 @@ export function useCurrentUser(): CurrentUser | null {
             display_name: profile.display_name || "Creator",
             handle: handle || "mystore",
             photo_url: profile.photo_url || null,
+            phone: "",
           });
         } else {
           setUser({
@@ -86,6 +90,7 @@ export function useCurrentUser(): CurrentUser | null {
             display_name: "Creator",
             handle: "mystore",
             photo_url: null,
+            phone: "",
           });
         }
       }
