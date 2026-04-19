@@ -1,19 +1,38 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { PhoneInput } from "@/components/auth/PhoneInput";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-export default function SignupPage() {
+function SignupPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   const isValid = phone.length === 10;
+
+  // Stash mode/next/action query params for the verify + onboarding pages.
+  // Customers land here from storefront message/checkout flows with
+  // ?mode=customer&next=/@handle&action=message|checkout
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    const next = searchParams.get("next");
+    const action = searchParams.get("action");
+
+    if (mode) sessionStorage.setItem("kder_signup_mode", mode);
+    else sessionStorage.removeItem("kder_signup_mode");
+
+    if (next) sessionStorage.setItem("kder_signup_next", next);
+    else sessionStorage.removeItem("kder_signup_next");
+
+    if (action) sessionStorage.setItem("kder_signup_action", action);
+    else sessionStorage.removeItem("kder_signup_action");
+  }, [searchParams]);
 
   const handleSendCode = async () => {
     if (!isValid || loading) return;
@@ -117,5 +136,13 @@ export default function SignupPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageInner />
+    </Suspense>
   );
 }

@@ -168,8 +168,9 @@ CREATE POLICY "Order parties can view" ON orders
     creator_id IN (SELECT id FROM creators WHERE member_id::text = auth.uid()::text)
   );
 
-CREATE POLICY "Members can create orders" ON orders
-  FOR INSERT WITH CHECK (member_id::text = auth.uid()::text);
+CREATE POLICY "Authenticated members can create orders" ON orders
+  FOR INSERT TO authenticated
+  WITH CHECK (member_id::text = auth.uid()::text);
 
 CREATE POLICY "Creator can update own orders" ON orders
   FOR UPDATE USING (

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Mail, PenSquare } from "lucide-react";
 import { ConversationRow } from "@/components/messages/ConversationRow";
 import { ComposeSheet } from "@/components/messages/ComposeSheet";
-import { getConversations, type Conversation } from "@/lib/messages-store";
+import type { Conversation } from "@/lib/messages-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -23,16 +23,24 @@ export default function MessagesPage() {
   const [inboxActive, setInboxActive] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (!currentUser) return;
-    const convs = getConversations(currentUser.id);
-    setGeneral(convs.general);
-    setOrders(convs.orders);
+    try {
+      const res = await fetch("/api/v1/messages/conversations");
+      if (!res.ok) return;
+      const json = await res.json();
+      setGeneral((json.data?.general as Conversation[]) ?? []);
+      setOrders((json.data?.orders as Conversation[]) ?? []);
+    } catch {
+      // Non-fatal: leave lists empty, user can refresh
+    }
   }, [currentUser]);
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => refresh());
-    return () => cancelAnimationFrame(frame);
+    const id = setTimeout(() => {
+      refresh();
+    }, 0);
+    return () => clearTimeout(id);
   }, [refresh]);
 
   const conversations = activeTab === "general" ? general : orders;
