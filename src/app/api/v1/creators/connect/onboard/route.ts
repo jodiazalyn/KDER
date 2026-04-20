@@ -49,10 +49,16 @@ export async function POST(request: NextRequest) {
 
     // First-time onboarding: create the Express account and persist the id.
     if (!stripeAccountId) {
+      // Supabase returns an empty string (not null/undefined) for phone-auth
+      // users with no email on file — which Stripe rejects as `email_invalid`.
+      // Use `||` so empty strings fall back to undefined and Stripe collects
+      // the email itself during Express onboarding.
+      const emailOrUndefined = user.email || undefined;
+
       const account = await stripe.accounts.create({
         type: "express",
         country: "US",
-        email: user.email ?? undefined,
+        email: emailOrUndefined,
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
