@@ -10,9 +10,23 @@ import {
 } from "@/lib/stripe/webhook-handlers";
 import type Stripe from "stripe";
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(request: NextRequest) {
+  // Read + trim the secret on every invocation (not at module load) so an
+  // env-var change in Netlify takes effect on the next cold start without
+  // needing code redeployment. Trim guards against whitespace/newlines that
+  // sneak in when pasting the secret into dashboards.
+  const webhookSecret = (process.env.STRIPE_WEBHOOK_SECRET ?? "").trim();
+
+  if (!webhookSecret) {
+    console.error(
+      "[webhook] STRIPE_WEBHOOK_SECRET is not set in the environment"
+    );
+    return new Response(
+      JSON.stringify({ error: "Webhook secret not configured" }),
+      { status: 500 }
+    );
+  }
+
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
     return new Response(
@@ -30,7 +44,16 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Signature verification failed";
-    console.error("[webhook] Verification failed:", message);
+    // Log safe-to-expose diagnostics so Netlify logs reveal whether the
+    // problem is a missing secret, wrong prefix, length mismatch, or body
+    // mutation — without ever logging the secret itself.
+    console.error("[webhook] Verification failed:", message, {
+      secretLength: webhookSecret.length,
+      secretPrefix: webhookSecret.slice(0, 6), // "whsec_" expected
+      secretStartsWithWhsec: webhookSecret.startsWith("whsec_"),
+      bodyLength: body.length,
+      signatureHeaderLength: signature.length,
+    });
     return new Response(JSON.stringify({ error: message }), { status: 400 });
   }
 
