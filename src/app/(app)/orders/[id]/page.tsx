@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { CountdownTimer } from "@/components/orders/CountdownTimer";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,7 @@ export default function OrderDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const currentUser = useCurrentUser();
   const [order, setOrder] = useState<Order | null>(null);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [showTransaction, setShowTransaction] = useState(false);
@@ -376,11 +378,19 @@ export default function OrderDetailPage({
             <MessageCircle size={14} />
             Order Messages
           </h3>
-          <OrderMessages
-            orderId={order.id}
-            currentUserId={order.creator_id}
-            recipientId={order.member_id}
-          />
+          {/* currentUserId MUST be auth.uid() (= members.id for the logged-in
+              creator), NOT order.creator_id (= creators.id). Supabase RLS on
+              the `messages` table requires sender_id = auth.uid() on INSERT,
+              so passing creators.id causes every send to fail signature-like
+              with "Couldn't send message." While the user loads, we render
+              nothing so we never insert with an undefined/wrong id. */}
+          {currentUser && (
+            <OrderMessages
+              orderId={order.id}
+              currentUserId={currentUser.id}
+              recipientId={order.member_id}
+            />
+          )}
         </div>
       </div>
 
