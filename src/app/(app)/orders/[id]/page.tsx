@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { CountdownTimer } from "@/components/orders/CountdownTimer";
 import { OrderMessages } from "@/components/orders/OrderMessages";
-import { getOrder, updateOrderStatus } from "@/lib/orders-store";
 import {
   Dialog,
   DialogContent,
@@ -50,17 +49,34 @@ export default function OrderDetailPage({
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [showTransaction, setShowTransaction] = useState(false);
 
-  const loadOrder = useCallback(() => {
-    const found = getOrder(id);
-    if (!found) {
+  const loadOrder = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/v1/orders/${id}`);
+      if (!res.ok) {
+        // 404 means the order doesn't exist OR the caller isn't its creator.
+        // Either way, kick back to the list.
+        router.replace("/orders");
+        return;
+      }
+      const json = await res.json();
+      const found: Order | undefined = json?.data?.order;
+      if (!found) {
+        router.replace("/orders");
+        return;
+      }
+      setOrder(found);
+    } catch {
       router.replace("/orders");
-      return;
     }
-    setOrder(found);
   }, [id, router]);
 
+  // Wrap in requestAnimationFrame to defer setState outside the synchronous
+  // effect body. Required by React 19 / Next 15 lint rule
+  // react-hooks/set-state-in-effect.
   useEffect(() => {
-    const frame = requestAnimationFrame(() => loadOrder());
+    const frame = requestAnimationFrame(() => {
+      loadOrder();
+    });
     return () => cancelAnimationFrame(frame);
   }, [loadOrder]);
 
@@ -72,9 +88,35 @@ export default function OrderDetailPage({
   const isReady = order.status === "ready";
   const isActive = isPending || isAccepted || isReady;
 
-  const handleAction = (newStatus: string) => {
-    updateOrderStatus(order.id, newStatus as Order["status"]);
-    setOrder({ ...order, status: newStatus as Order["status"] });
+  // Map the target status to the corresponding lifecycle API action slug.
+  const STATUS_TO_ACTION: Record<string, string> = {
+    accepted: "accept",
+    declined: "decline",
+    ready: "ready",
+    completed: "complete",
+  };
+
+  const handleAction = async (newStatus: Order["status"]) => {
+    const action = STATUS_TO_ACTION[newStatus];
+    if (!action) return;
+
+    try {
+      const res = await fetch(`/api/v1/orders/${order.id}/${action}`, {
+        method: "PUT",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json?.error || `Failed to update order.`);
+        return;
+      }
+    } catch {
+      toast.error("Failed to update order.");
+      return;
+    }
+
+    // Refetch the order so we pick up any server-side changes (updated_at,
+    // SMS-side-effect flags, etc.) instead of guessing at the shape locally.
+    await loadOrder();
 
     const messages: Record<string, string> = {
       accepted: "Order accepted! Member has been notified with your address.",

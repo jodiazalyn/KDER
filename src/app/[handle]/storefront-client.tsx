@@ -27,7 +27,6 @@ import {
   getCartCount,
   type CartItem,
 } from "@/lib/cart-store";
-import { createOrder } from "@/lib/orders-store";
 import type { Listing, Message } from "@/types";
 import { toast } from "sonner";
 
@@ -106,43 +105,18 @@ export function StorefrontClient({
     [handle]
   );
 
-  const handlePlaceOrder = useCallback(
-    (details: OrderDetails) => {
-      // Create orders in demo store for each cart item
-      for (const item of cart) {
-        const totalAmount = item.listing.price * item.quantity;
-        const platformFee = +(totalAmount * 0.05).toFixed(2);
-        const creatorPayout = +(totalAmount - platformFee).toFixed(2);
-
-        createOrder({
-          listing_id: item.listing.id,
-          member_id: `member_${Date.now()}`,
-          creator_id: "demo_creator",
-          quantity: item.quantity,
-          fulfillment_type: details.fulfillmentType,
-          status: "pending",
-          total_amount: totalAmount,
-          platform_fee: platformFee,
-          creator_payout: creatorPayout,
-          notes: details.notes || null,
-          member_name: details.memberName,
-          member_photo: null,
-          listing_name: item.listing.name,
-          listing_photo: item.listing.photos[0] || null,
-          delivery_address: details.deliveryAddress || null,
-          delivery_zip: null,
-          pickup_address: null,
-          member_phone: details.memberPhone || null,
-        });
-      }
-
-      // NOTE: intentionally do NOT clear the cart here. The cart must persist
-      // until Stripe confirms payment — otherwise a customer who taps back on
-      // the Stripe page loses everything they added. The cart is cleared on
-      // the /order-confirmation page after successful payment.
-    },
-    [cart]
-  );
+  const handlePlaceOrder = useCallback((_details: OrderDetails) => {
+    // Intentionally a no-op. Order rows are created server-side by
+    // POST /api/v1/checkout BEFORE redirecting to Stripe. The previous
+    // implementation also wrote a duplicate demo order to localStorage via
+    // createOrder() from orders-store; that was redundant with the real
+    // Supabase insert and is removed here.
+    //
+    // We also intentionally do NOT clear the cart here. The cart must persist
+    // until Stripe confirms payment — otherwise a customer who taps back on
+    // the Stripe page loses everything they added. The cart is cleared on
+    // the /order-confirmation page after successful payment.
+  }, []);
 
   // Auto-open cart / message sheet on ?action=<checkout|message> after signup redirect
   useEffect(() => {
