@@ -5,11 +5,6 @@ import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
 import {
-  getOrdersByStatus,
-  updateOrderStatus,
-  getOrders,
-} from "@/lib/orders-store";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -28,37 +23,113 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "declined", label: "Declined" },
 ];
 
+const ACTIVE_STATUSES = new Set<Order["status"]>(["pending", "accepted", "ready"]);
+
+/**
+ * Transition an order via one of the lifecycle API routes. Each endpoint is
+ * PUT (matching the existing route signatures) and returns a 2xx on success.
+ * The caller is expected to refetch the list after a successful call.
+ */
+async function transitionOrder(
+  orderId: string,
+  action: "accept" | "decline" | "ready" | "complete"
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/api/v1/orders/${orderId}/${action}`, {
+      method: "PUT",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: json?.error || `Failed to ${action} order.` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: `Failed to ${action} order.` };
+  }
+}
+
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("active");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [declineId, setDeclineId] = useState<string | null>(null);
 
-  const refresh = useCallback(() => {
-    setOrders(getOrdersByStatus(activeTab));
-    const all = getOrders();
-    setCounts({
-      active: all.filter((o) =>
-        ["pending", "accepted", "ready"].includes(o.status)
-      ).length,
-      completed: all.filter((o) => o.status === "completed").length,
-      declined: all.filter((o) => o.status === "declined").length,
-    });
-  }, [activeTab]);
+  /**
+   * We fetch ALL the creator's orders (capped at 100 server-side) in one
+   * request and partition client-side by tab. This gives us accurate tab
+   * counts without a second request. If volume ever exceeds 100, we'll need
+   * per-tab fetches + a separate counts endpoint.
+   */
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/orders");
+      if (!res.ok) {
+        setAllOrders([]);
+        return;
+      }
+      const json = await res.json();
+      const orders: Order[] = Array.isArray(json?.data?.orders)
+        ? json.data.orders
+        : [];
+      setAllOrders(orders);
+    } catch {
+      setAllOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  // Defer the initial refresh outside the synchronous effect body so the
+  // setState inside doesn't trip react-hooks/set-state-in-effect.
   useEffect(() => {
-    const frame = requestAnimationFrame(() => refresh());
+    const frame = requestAnimationFrame(() => {
+      refresh();
+    });
     return () => cancelAnimationFrame(frame);
   }, [refresh]);
 
-  // Refresh every 10s for countdown updates
+  // Light polling for countdown timers + newly-arrived orders. 15s is enough
+  // that a creator actively fulfilling won't miss an order for long, while
+  // being gentle on the function quota. Realtime subscription is a follow-up.
   useEffect(() => {
-    const interval = setInterval(refresh, 10000);
+    const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const handleAccept = (id: string) => {
-    updateOrderStatus(id, "accepted");
+  // Sort: pending first (most urgent), then by auto_decline_at ascending to
+  // match the old orders-store behavior.
+  const activeOrders = allOrders
+    .filter((o) => ACTIVE_STATUSES.has(o.status))
+    .sort((a, b) => {
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (b.status === "pending" && a.status !== "pending") return 1;
+      return (
+        new Date(a.auto_decline_at).getTime() -
+        new Date(b.auto_decline_at).getTime()
+      );
+    });
+  const completedOrders = allOrders.filter((o) => o.status === "completed");
+  const declinedOrders = allOrders.filter((o) => o.status === "declined");
+
+  const counts: Record<TabKey, number> = {
+    active: activeOrders.length,
+    completed: completedOrders.length,
+    declined: declinedOrders.length,
+  };
+
+  const visibleOrders =
+    activeTab === "active"
+      ? activeOrders
+      : activeTab === "completed"
+        ? completedOrders
+        : declinedOrders;
+
+  const handleAccept = async (id: string) => {
+    const result = await transitionOrder(id, "accept");
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Order accepted!");
     refresh();
   };
@@ -67,29 +138,43 @@ export default function OrdersPage() {
     setDeclineId(id);
   };
 
-  const confirmDecline = () => {
+  const confirmDecline = async () => {
     if (!declineId) return;
-    updateOrderStatus(declineId, "declined");
-    toast.success("Order declined. Member will be refunded.");
+    const id = declineId;
     setDeclineId(null);
+    const result = await transitionOrder(id, "decline");
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Order declined. Member will be refunded.");
     refresh();
   };
 
-  const handleMarkReady = (id: string) => {
-    updateOrderStatus(id, "ready");
+  const handleMarkReady = async (id: string) => {
+    const result = await transitionOrder(id, "ready");
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Marked as ready! Member has been notified.");
     refresh();
   };
 
-  const handleMarkComplete = (id: string) => {
-    updateOrderStatus(id, "completed");
+  const handleMarkComplete = async (id: string) => {
+    const result = await transitionOrder(id, "complete");
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
     toast.success("Order complete! Payout triggered.");
     refresh();
   };
 
-  const handle = typeof window !== "undefined"
-    ? sessionStorage.getItem("kder_onboarding_handle") || "mystore"
-    : "mystore";
+  const handle =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem("kder_onboarding_handle") || "mystore"
+      : "mystore";
 
   return (
     <main className="px-4 pb-4 pt-6">
@@ -127,9 +212,13 @@ export default function OrdersPage() {
       </div>
 
       {/* Orders list */}
-      {orders.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center pt-24">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/60" />
+        </div>
+      ) : visibleOrders.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {orders.map((order) => (
+          {visibleOrders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
