@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, ChevronDown, Loader2, Cloud, CloudOff } from "lucide-react";
 import { MediaUpload } from "./MediaUpload";
 import { QuantityStepper } from "./QuantityStepper";
@@ -92,6 +93,10 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [saving, setSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
 
+  // Stripe Connect readiness — gates the "Publish" button.
+  // null = still loading; server is authoritative regardless.
+  const [connectVerified, setConnectVerified] = useState<boolean | null>(null);
+
   // Collapsible sections
   const [showCategories, setShowCategories] = useState(
     (listing?.category_tags?.length ?? restored?.categories?.length ?? 0) > 0
@@ -100,6 +105,26 @@ export function PlateForm({ listing }: PlateFormProps) {
     (listing?.allergens?.length ?? restored?.allergens?.length ?? 0) > 0
   );
   const [showMinOrder, setShowMinOrder] = useState(!!listing?.min_order || !!restored?.minOrder);
+
+  // Load Connect status once on mount.
+  // UX hint only — the server route also enforces this. A slow fetch
+  // briefly disables the Publish button; acceptable.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/v1/creators/connect/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled) return;
+        const kyc = j?.data?.kyc_status ?? "not_started";
+        setConnectVerified(kyc === "verified");
+      })
+      .catch(() => {
+        if (!cancelled) setConnectVerified(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Auto-save with debounce (new plates only)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,7 +161,10 @@ export function PlateForm({ listing }: PlateFormProps) {
   }, [name, description, price, quantity, minOrder, photos, video, fulfillment, categories, allergens, isEditing, doAutoSave]);
 
   const priceNum = parseFloat(price) || 0;
-  const canPublish = name.trim().length > 0 && priceNum > 0 && quantity >= 1 && photos.length >= 1;
+  const baseCanPublish = name.trim().length > 0 && priceNum > 0 && quantity >= 1 && photos.length >= 1;
+  // Publishing a plate requires Stripe Connect verified so money can flow.
+  // Drafts don't require Connect; creator can build out their menu first.
+  const canPublish = baseCanPublish && connectVerified === true;
   const canDraft = name.trim().length > 0;
 
   const buildListingData = (status: ListingStatus) => ({
@@ -392,34 +420,51 @@ export function PlateForm({ listing }: PlateFormProps) {
 
       {/* Sticky bottom action bar — sits above the bottom nav */}
       <div className="fixed bottom-20 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg gap-3">
-          <button
-            type="button"
-            onClick={() => handleSave(LISTING_STATUS.DRAFT)}
-            disabled={!canDraft || saving}
-            className={cn(
-              "flex h-12 flex-1 items-center justify-center rounded-full border text-sm font-bold transition-all active:scale-95",
-              canDraft && !saving
-                ? "border-white/25 text-white hover:bg-white/[0.08]"
-                : "border-white/10 text-white/30 cursor-not-allowed"
-            )}
-          >
-            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save as Draft"}
-          </button>
+        <div className="mx-auto max-w-lg space-y-2">
+          {/* Connect-not-verified hint: show only once status has loaded
+              and we know they can't publish because of Connect
+              (not because of the baseline form validation). */}
+          {connectVerified === false && baseCanPublish && (
+            <p className="text-center text-xs text-orange-300">
+              Set up payouts to publish plates.{" "}
+              <Link
+                href="/earnings"
+                className="font-semibold underline underline-offset-2 hover:text-orange-200"
+              >
+                Go to Earnings →
+              </Link>
+            </p>
+          )}
 
-          <button
-            type="button"
-            onClick={() => handleSave(LISTING_STATUS.ACTIVE)}
-            disabled={!canPublish || saving}
-            className={cn(
-              "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
-              canPublish && !saving
-                ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                : "bg-white/10 cursor-not-allowed opacity-50"
-            )}
-          >
-            {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Publish"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => handleSave(LISTING_STATUS.DRAFT)}
+              disabled={!canDraft || saving}
+              className={cn(
+                "flex h-12 flex-1 items-center justify-center rounded-full border text-sm font-bold transition-all active:scale-95",
+                canDraft && !saving
+                  ? "border-white/25 text-white hover:bg-white/[0.08]"
+                  : "border-white/10 text-white/30 cursor-not-allowed"
+              )}
+            >
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save as Draft"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSave(LISTING_STATUS.ACTIVE)}
+              disabled={!canPublish || saving}
+              className={cn(
+                "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
+                canPublish && !saving
+                  ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                  : "bg-white/10 cursor-not-allowed opacity-50"
+              )}
+            >
+              {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Publish"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

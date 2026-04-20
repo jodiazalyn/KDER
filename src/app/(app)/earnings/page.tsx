@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { AlertTriangle, DollarSign } from "lucide-react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2, DollarSign, Loader2 } from "lucide-react";
 import { EarningsHero } from "@/components/earnings/EarningsHero";
 import { TransactionRow } from "@/components/earnings/TransactionRow";
 import {
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type PeriodTab = "week" | "month" | "all";
+type ConnectStatus = "not_started" | "pending" | "verified" | "failed";
 
 const TABS: { key: PeriodTab; label: string }[] = [
   { key: "week", label: "This Week" },
@@ -27,18 +29,99 @@ const TABS: { key: PeriodTab; label: string }[] = [
 ];
 
 export default function EarningsPage() {
+  // Next.js 15 requires useSearchParams() consumers to be wrapped in Suspense
+  // so the outer shell can be statically prerendered while the query-param
+  // handling is client-rendered.
+  return (
+    <Suspense fallback={null}>
+      <EarningsPageContent />
+    </Suspense>
+  );
+}
+
+function EarningsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
   const [period, setPeriod] = useState<PeriodTab>("week");
   const [showInstantSheet, setShowInstantSheet] = useState(false);
 
+  // Connect state
+  const [connectStatus, setConnectStatus] =
+    useState<ConnectStatus | null>(null);
+  const [connectLoading, setConnectLoading] = useState(false);
+  const refreshedOnceRef = useRef(false);
+
   const load = useCallback(() => {
     setEarnings(getEarnings());
+  }, []);
+
+  // Fetch current Stripe Connect status
+  const loadConnectStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/creators/connect/status");
+      if (!res.ok) {
+        setConnectStatus("not_started");
+        return;
+      }
+      const json = await res.json();
+      setConnectStatus(
+        (json?.data?.kyc_status as ConnectStatus) ?? "not_started"
+      );
+    } catch {
+      setConnectStatus("not_started");
+    }
+  }, []);
+
+  // Kick off Stripe Connect onboarding → redirect to the hosted link
+  const startConnectOnboarding = useCallback(async () => {
+    setConnectLoading(true);
+    try {
+      const res = await fetch("/api/v1/creators/connect/onboard", {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.data?.url) {
+        toast.error(
+          json?.error ||
+            "Couldn't start Stripe setup. Try again in a moment."
+        );
+        setConnectLoading(false);
+        return;
+      }
+      window.location.href = json.data.url;
+    } catch {
+      toast.error("Couldn't reach Stripe. Check your connection.");
+      setConnectLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => load());
     return () => cancelAnimationFrame(frame);
   }, [load]);
+
+  useEffect(() => {
+    loadConnectStatus();
+  }, [loadConnectStatus]);
+
+  // Handle return-from-Stripe query params
+  useEffect(() => {
+    const connectParam = searchParams.get("connect");
+    if (!connectParam) return;
+
+    if (connectParam === "complete") {
+      toast.success("Payouts set up! You can now activate plates.");
+      // Clean the URL so the toast doesn't re-fire on reload
+      router.replace("/earnings");
+    } else if (connectParam === "refresh" && !refreshedOnceRef.current) {
+      // Stripe redirected us because the previous account link expired.
+      // Mint a fresh one and send the creator back into Stripe.
+      refreshedOnceRef.current = true;
+      startConnectOnboarding();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   if (!earnings) return null;
 
@@ -74,33 +157,114 @@ export default function EarningsPage() {
       <h1 className="text-3xl font-black text-white">Earnings</h1>
 
       <div className="mt-4 space-y-4">
-        {/* KYC Banner — not dismissible per UX Spec */}
-        <div className="rounded-2xl border border-orange-400/20 bg-orange-900/20 p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle
-              size={18}
-              className="mt-0.5 flex-shrink-0 text-orange-400"
-            />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-orange-300">
-                Complete your payout setup to receive earnings
-              </p>
-              <p className="mt-1 text-xs text-white/40">
-                Set up Stripe Connect to start receiving payouts from your
-                orders.
-              </p>
-              <button
-                type="button"
-                onClick={() =>
-                  toast.info("Stripe Connect setup — coming soon")
-                }
-                className="mt-2 rounded-full bg-orange-600/30 px-4 py-1.5 text-xs font-bold text-orange-200 active:scale-95 transition-transform"
-              >
-                Set Up Payouts
-              </button>
+        {/* Connect status banner — state-driven */}
+        {connectStatus === "verified" ? (
+          <div className="rounded-2xl border border-green-400/30 bg-green-900/15 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2
+                size={18}
+                className="mt-0.5 flex-shrink-0 text-green-400"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-300">
+                  Connected with Stripe
+                </p>
+                <p className="mt-1 text-xs text-white/40">
+                  You&apos;re all set to receive payouts. Stripe sends earnings
+                  to your bank on a 2-day rolling schedule.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : connectStatus === "pending" ? (
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-900/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                size={18}
+                className="mt-0.5 flex-shrink-0 text-orange-400"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-orange-300">
+                  Finish your Stripe setup
+                </p>
+                <p className="mt-1 text-xs text-white/40">
+                  Stripe needs a few more details to verify your account
+                  before you can accept orders.
+                </p>
+                <button
+                  type="button"
+                  onClick={startConnectOnboarding}
+                  disabled={connectLoading}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-orange-600/30 px-4 py-1.5 text-xs font-bold text-orange-200 active:scale-95 transition-transform disabled:opacity-60"
+                >
+                  {connectLoading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : null}
+                  Continue Setup
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : connectStatus === "failed" ? (
+          <div className="rounded-2xl border border-red-400/25 bg-red-900/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                size={18}
+                className="mt-0.5 flex-shrink-0 text-red-400"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-300">
+                  Stripe verification needs attention
+                </p>
+                <p className="mt-1 text-xs text-white/40">
+                  Stripe couldn&apos;t verify your info. Retry setup to fix or
+                  update your details.
+                </p>
+                <button
+                  type="button"
+                  onClick={startConnectOnboarding}
+                  disabled={connectLoading}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-600/30 px-4 py-1.5 text-xs font-bold text-red-200 active:scale-95 transition-transform disabled:opacity-60"
+                >
+                  {connectLoading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : null}
+                  Retry Setup
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // not_started (or still loading — show the CTA; it's the safe default)
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-900/20 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                size={18}
+                className="mt-0.5 flex-shrink-0 text-orange-400"
+              />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-orange-300">
+                  Complete your payout setup to receive earnings
+                </p>
+                <p className="mt-1 text-xs text-white/40">
+                  Set up Stripe Connect to start receiving payouts from your
+                  orders.
+                </p>
+                <button
+                  type="button"
+                  onClick={startConnectOnboarding}
+                  disabled={connectLoading}
+                  className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-orange-600/30 px-4 py-1.5 text-xs font-bold text-orange-200 active:scale-95 transition-transform disabled:opacity-60"
+                >
+                  {connectLoading ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : null}
+                  Set Up Payouts
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Earnings Hero */}
         <EarningsHero
