@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
         platform_fee_cents: String(platformFeeCents),
         item_ids: verifiedItems.map((i) => i.listing_id).join(","),
       },
-      success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&handle=${encodeURIComponent(creator_handle)}`,
+      success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&handle=${encodeURIComponent(creator_handle)}&order_id=${orderId}`,
       cancel_url: `${origin}/@${creator_handle}`,
       // Stripe splits the payment at charge time:
       //  - application_fee_amount cents go to KDER's platform balance
