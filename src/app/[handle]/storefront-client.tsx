@@ -89,6 +89,29 @@ export function StorefrontClient({
     [handle]
   );
 
+  const handleBuyNow = useCallback(
+    (listing: Listing, qty: number) => {
+      // Not authenticated -> redirect to customer signup, return with
+      // ?action=checkout so the flow resumes after verify.
+      if (!currentUserId) {
+        router.push(
+          `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
+        );
+        // Still add the plate to cart so it's waiting for them after sign-in.
+        const updated = addToCart(handle, listing, qty);
+        setCart(updated);
+        return;
+      }
+      // Authenticated -> add + jump straight to checkout form. No cart view
+      // detour. CheckoutSheet prefills name + phone from the auth user.
+      const updated = addToCart(handle, listing, qty);
+      setCart(updated);
+      setSelectedPlate(null);
+      setCheckoutOpen(true);
+    },
+    [currentUserId, handle, router]
+  );
+
   const handleUpdateQty = useCallback(
     (listingId: string, qty: number) => {
       const updated = updateCartQty(handle, listingId, qty);
@@ -382,6 +405,7 @@ export function StorefrontClient({
             : 0
         }
         onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
         creator={{
           display_name: creator.display_name,
           handle: creator.handle,
