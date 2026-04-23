@@ -125,6 +125,16 @@ function Stat({ value, label }: { value: string; label: string }) {
       <span className="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">
         {label}
       </span>
+      {/* Subtle KDER flourish under each stat so the column doesn't feel bare.
+          Low opacity + small size keeps the number and label as the focal point. */}
+      <Image
+        src="/icons/kder-logo.png"
+        alt=""
+        width={16}
+        height={16}
+        aria-hidden="true"
+        className="mt-1.5 h-4 w-4 opacity-30"
+      />
     </div>
   );
 }

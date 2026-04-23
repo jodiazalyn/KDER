@@ -18,14 +18,24 @@ interface PlateDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   cartQty: number;
   onAddToCart: (listing: Listing, qty: number) => void;
+  /** Creator whose storefront this plate belongs to — shown as attribution
+   *  so the customer can see WHO they're buying from right at the top of
+   *  the order card. */
+  creator: {
+    display_name: string;
+    handle: string;
+    photo_url: string | null;
+  };
 }
 
 /**
- * Full-detail sheet that opens when a PlateTile is tapped on the IG-style
- * storefront. Mirrors the info PlateCard used to show inline (image, name,
- * description, price, fulfillment, categories, allergens, quantity stepper,
- * Add-to-Cart) but inside a bottom sheet consistent with CartSheet /
- * CheckoutSheet elsewhere in the app.
+ * Order card. Opens when a PlateTile is tapped on the IG-style storefront.
+ *
+ * Layout is deliberately commerce-forward, not Instagram-like, once the user
+ * is inside the sheet: short hero photo at the top, creator attribution so
+ * they know who they're buying from, then name + price + description + tags
+ * scrollable in the middle, and a sticky bottom bar with the quantity stepper
+ * and Add-to-Cart button that's always reachable without scrolling.
  *
  * Quantity state is local and resets when the sheet closes so a user who
  * backs out and re-opens a different plate doesn't carry over the last qty.
@@ -36,6 +46,7 @@ export function PlateDetailSheet({
   onOpenChange,
   cartQty,
   onAddToCart,
+  creator,
 }: PlateDetailSheetProps) {
   const [qty, setQty] = useState(1);
 
@@ -65,10 +76,10 @@ export function PlateDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[90vh] overflow-y-auto rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] p-0 text-white"
+        className="flex max-h-[92vh] flex-col rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] p-0 text-white"
       >
-        {/* Hero image */}
-        <div className="relative h-80 w-full overflow-hidden bg-white/[0.04]">
+        {/* Hero image — shorter than before so price + CTA stay close to the fold */}
+        <div className="relative h-56 w-full flex-shrink-0 overflow-hidden bg-white/[0.04]">
           {photo ? (
             <Image
               src={photo}
@@ -92,21 +103,49 @@ export function PlateDetailSheet({
           )}
         </div>
 
-        <div className="px-5 pb-6 pt-4">
-          <SheetHeader className="space-y-1 text-left">
-            <SheetTitle className="text-2xl font-black text-white">
-              {listing.name}
-            </SheetTitle>
-            <p
-              className="text-2xl font-bold text-green-300"
-              style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-            >
-              ${listing.price.toFixed(2)}
-            </p>
+        {/* Scrollable middle — creator attribution, title, price, description, tags */}
+        <div className="flex-1 overflow-y-auto px-5 pb-4 pt-4">
+          {/* Creator attribution — they know who they're buying from */}
+          <div className="flex items-center gap-2.5 text-xs">
+            {creator.photo_url ? (
+              <Image
+                src={creator.photo_url}
+                alt=""
+                width={28}
+                height={28}
+                className="h-7 w-7 flex-shrink-0 rounded-full border border-white/10 object-cover"
+              />
+            ) : (
+              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-green-900/40 text-xs font-bold text-green-300">
+                {creator.display_name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="flex items-baseline gap-1">
+              <span className="text-white/60">Sold by</span>
+              <span className="font-semibold text-white">
+                {creator.display_name}
+              </span>
+              <span className="text-green-300/70">@{creator.handle}</span>
+            </div>
+          </div>
+
+          {/* Title + price row */}
+          <SheetHeader className="mt-4 space-y-0 text-left">
+            <div className="flex items-start justify-between gap-3">
+              <SheetTitle className="flex-1 text-2xl font-black leading-tight text-white">
+                {listing.name}
+              </SheetTitle>
+              <span
+                className="flex-shrink-0 text-3xl font-black text-green-300"
+                style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
+              >
+                ${listing.price.toFixed(2)}
+              </span>
+            </div>
           </SheetHeader>
 
           {listing.description && (
-            <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-white/70">
+            <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-white/70">
               {listing.description}
             </p>
           )}
@@ -133,59 +172,61 @@ export function PlateDetailSheet({
               </span>
             ))}
           </div>
+        </div>
 
-          {/* Action row */}
-          <div className="mt-6">
-            {soldOut ? (
-              <div className="flex h-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/40">
-                Sold out
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                {/* Qty stepper */}
-                <div className="flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04]">
-                  <button
-                    type="button"
-                    onClick={() => setQty(Math.max(1, qty - 1))}
-                    disabled={qty <= 1}
-                    aria-label="Decrease quantity"
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span className="w-7 text-center text-base font-semibold text-white">
-                    {qty}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQty(Math.min(maxQty, qty + 1))}
-                    disabled={qty >= maxQty}
-                    aria-label="Increase quantity"
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-
+        {/* Sticky bottom bar — qty stepper + Add to Cart always reachable without scrolling */}
+        <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#0A0A0A]/98 px-5 py-4 backdrop-blur-[24px]">
+          {soldOut ? (
+            <div className="flex h-12 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/40">
+              Sold out
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {/* Qty stepper */}
+              <div className="flex flex-shrink-0 items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04]">
                 <button
                   type="button"
-                  onClick={() => {
-                    onAddToCart(listing, qty);
-                    onOpenChange(false);
-                  }}
-                  className={cn(
-                    "flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold text-white transition-all active:scale-95",
-                    cartQty > 0
-                      ? "bg-green-800/60 border border-green-400/30"
-                      : "bg-[#1B5E20] shadow-[0_0_16px_rgba(27,94,32,0.4)]"
-                  )}
+                  onClick={() => setQty(Math.max(1, qty - 1))}
+                  disabled={qty <= 1}
+                  aria-label="Decrease quantity"
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
                 >
-                  <ShoppingCart size={16} />
-                  {cartQty > 0 ? `Add more (in cart: ${cartQty})` : "Add to cart"}
+                  <Minus size={16} />
+                </button>
+                <span className="w-7 text-center text-base font-semibold text-white">
+                  {qty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setQty(Math.min(maxQty, qty + 1))}
+                  disabled={qty >= maxQty}
+                  aria-label="Increase quantity"
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
+                >
+                  <Plus size={16} />
                 </button>
               </div>
-            )}
-          </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onAddToCart(listing, qty);
+                  onOpenChange(false);
+                }}
+                className={cn(
+                  "flex h-12 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold text-white transition-all active:scale-95",
+                  cartQty > 0
+                    ? "bg-green-800/60 border border-green-400/30"
+                    : "bg-[#1B5E20] shadow-[0_0_16px_rgba(27,94,32,0.4)]"
+                )}
+              >
+                <ShoppingCart size={16} />
+                {cartQty > 0
+                  ? `Add more · $${(listing.price * qty).toFixed(2)}`
+                  : `Add to cart · $${(listing.price * qty).toFixed(2)}`}
+              </button>
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>

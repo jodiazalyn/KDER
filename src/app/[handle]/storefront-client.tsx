@@ -382,6 +382,11 @@ export function StorefrontClient({
             : 0
         }
         onAddToCart={handleAddToCart}
+        creator={{
+          display_name: creator.display_name,
+          handle: creator.handle,
+          photo_url: creator.photo_url,
+        }}
       />
 
       {/* Floating cart button */}
