@@ -13,8 +13,6 @@ interface PlateDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   cartQty: number;
   onAddToCart: (listing: Listing, qty: number) => void;
-  /** Creator whose storefront this plate belongs to — shown as a small credit
-   *  at the bottom of the card. */
   creator: {
     display_name: string;
     handle: string;
@@ -23,18 +21,19 @@ interface PlateDetailSheetProps {
 }
 
 /**
- * Plate detail sheet — structured to feel like the pre-IG-redesign PlateCard:
- * one self-contained card flowing top-to-bottom (image → name → description →
- * price → tags → inline qty stepper + Add-to-Cart). Opens as a bottom sheet
- * when a PlateTile is tapped so it integrates with the Instagram-style grid
- * on the storefront without sacrificing the older card's purchase UX.
+ * Plate detail sheet — fits the entire purchase decision above the fold on
+ * a typical mobile viewport (375×812) so customers don't need to scroll to
+ * find the Add-to-Cart button.
  *
- * A small creator credit ("From @handle") sits below the Add-to-Cart so the
- * customer can still see who they're buying from without the header row
- * crowding the plate info itself.
+ * Compact layout:
+ *   - top row: 96×96 thumbnail on the left, name + price stacked on the right
+ *   - description (3-line clamp, like the old PlateCard)
+ *   - fulfillment + category + allergen pills
+ *   - qty stepper + Add to Cart (inline)
+ *   - small "From {creator}" credit at the bottom
  *
- * Quantity state resets when the sheet closes so re-opening a different
- * plate always starts at 1.
+ * This matches the dense, self-contained ordering feel of the pre-IG PlateCard
+ * while staying inside the sheet so the grid-first storefront still works.
  */
 export function PlateDetailSheet({
   listing,
@@ -46,7 +45,6 @@ export function PlateDetailSheet({
 }: PlateDetailSheetProps) {
   const [qty, setQty] = useState(1);
 
-  // Reset qty on open; deferred for React 19's set-state-in-effect rule.
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => setQty(1), 0);
@@ -72,57 +70,61 @@ export function PlateDetailSheet({
         side="bottom"
         className="max-h-[92vh] overflow-y-auto rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] p-0 text-white"
       >
-        <article
-          className={cn(
-            "mx-4 my-4 overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] transition-opacity",
-            soldOut && "opacity-60"
-          )}
-        >
-          {/* Hero photo — same aspect ratio as the original card */}
-          <div className="relative aspect-[16/10] overflow-hidden bg-white/[0.04]">
-            {photo ? (
-              <Image
-                src={photo}
-                alt={listing.name}
-                fill
-                priority
-                sizes="(max-width: 640px) 100vw, 640px"
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <ImageOff size={48} className="text-white/20" />
-              </div>
+        <div className="p-4">
+          <article
+            className={cn(
+              "overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] transition-opacity",
+              soldOut && "opacity-60"
             )}
-            {soldOut && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-white backdrop-blur-md">
-                  Sold out
-                </span>
+          >
+            {/* Top row: compact thumbnail + title & price side-by-side.
+                Keeps everything else (desc, tags, buy button) above the fold. */}
+            <div className="flex gap-3">
+              <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-white/[0.04]">
+                {photo ? (
+                  <Image
+                    src={photo}
+                    alt={listing.name}
+                    fill
+                    priority
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <ImageOff size={28} className="text-white/20" />
+                  </div>
+                )}
+                {soldOut && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-white">
+                      Sold out
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Content — matches the old PlateCard's vertical flow */}
-          <div className="p-4">
-            <SheetTitle className="text-xl font-bold leading-tight text-white">
-              {listing.name}
-            </SheetTitle>
+              <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+                <SheetTitle className="truncate text-xl font-black leading-tight text-white">
+                  {listing.name}
+                </SheetTitle>
+                <p
+                  className="text-3xl font-black text-green-300"
+                  style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
+                >
+                  ${listing.price.toFixed(2)}
+                </p>
+              </div>
+            </div>
 
+            {/* Description — 3-line clamp so the sheet never grows unbounded */}
             {listing.description && (
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70">
+              <p className="mt-3 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-white/70">
                 {listing.description}
               </p>
             )}
 
-            <p
-              className="mt-3 text-2xl font-bold text-green-300"
-              style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-            >
-              ${listing.price.toFixed(2)}
-            </p>
-
-            {/* Tags */}
+            {/* Pills */}
             <div className="mt-3 flex flex-wrap gap-1.5">
               <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70">
                 {fulfillmentLabel}
@@ -145,7 +147,7 @@ export function PlateDetailSheet({
               ))}
             </div>
 
-            {/* Action row — inline qty stepper + Add to Cart */}
+            {/* Action row — inline, always visible because hero is now compact */}
             {soldOut ? (
               <div className="mt-4 flex h-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/40">
                 Sold out
@@ -190,13 +192,14 @@ export function PlateDetailSheet({
                   )}
                 >
                   <ShoppingCart size={15} />
-                  {cartQty > 0 ? `In Cart (${cartQty}) · Add more` : "Add to cart"}
+                  {cartQty > 0
+                    ? `In Cart (${cartQty}) · Add more`
+                    : `Add to cart · $${(listing.price * qty).toFixed(2)}`}
                 </button>
               </div>
             )}
 
-            {/* Small creator credit — so the customer knows who they're buying
-                from without pushing plate info down. */}
+            {/* Creator credit */}
             <div className="mt-4 flex items-center gap-2 border-t border-white/[0.06] pt-3 text-xs text-white/50">
               {creator.photo_url ? (
                 <Image
@@ -219,8 +222,8 @@ export function PlateDetailSheet({
                 <span className="text-green-300/70">@{creator.handle}</span>
               </span>
             </div>
-          </div>
-        </article>
+          </article>
+        </div>
       </SheetContent>
     </Sheet>
   );
