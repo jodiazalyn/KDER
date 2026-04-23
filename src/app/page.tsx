@@ -646,6 +646,12 @@ export default function LandingPage() {
               >
                 Terms
               </Link>
+              <Link
+                href="/sms-policy"
+                className="text-white/50 transition-colors hover:text-green-300"
+              >
+                SMS Policy
+              </Link>
             </div>
           </div>
         </div>
