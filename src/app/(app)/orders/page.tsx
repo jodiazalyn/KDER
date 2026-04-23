@@ -88,16 +88,37 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  // Sort: pending first (most urgent), then by auto_decline_at ascending to
-  // match the old orders-store behavior.
+  // Sort: furthest-down-the-funnel first. A "ready" order means the plate
+  // is made and the customer is about to (or already at) pickup — creator
+  // needs to hand it off, so it's the most urgent next action. "Accepted"
+  // orders are being prepared and need the creator's kitchen time.
+  // "Pending" orders are still awaiting a decision — least urgent since the
+  // auto-decline timer handles them if the creator doesn't act in time.
+  // Within each status group, oldest first so longest-waiting orders rise.
+  const STATUS_PRIORITY: Record<Order["status"], number> = {
+    ready: 0,
+    accepted: 1,
+    pending: 2,
+    completed: 3,
+    declined: 4,
+    cancelled: 5,
+  };
   const activeOrders = allOrders
     .filter((o) => ACTIVE_STATUSES.has(o.status))
     .sort((a, b) => {
-      if (a.status === "pending" && b.status !== "pending") return -1;
-      if (b.status === "pending" && a.status !== "pending") return 1;
+      const ap = STATUS_PRIORITY[a.status];
+      const bp = STATUS_PRIORITY[b.status];
+      if (ap !== bp) return ap - bp;
+      // Within the same status: for pending, oldest auto_decline_at first
+      // (running out of time fastest). For others, oldest created_at first.
+      if (a.status === "pending" && b.status === "pending") {
+        return (
+          new Date(a.auto_decline_at).getTime() -
+          new Date(b.auto_decline_at).getTime()
+        );
+      }
       return (
-        new Date(a.auto_decline_at).getTime() -
-        new Date(b.auto_decline_at).getTime()
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
     });
   const completedOrders = allOrders.filter((o) => o.status === "completed");
