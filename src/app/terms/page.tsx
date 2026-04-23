@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "The rules of the road for KDER's Member-to-Member hospitality marketplace in Houston.",
 };
 
-const LAST_UPDATED = "April 18, 2026";
+const LAST_UPDATED = "April 23, 2026";
 
 export default function TermsPage() {
   return (
@@ -248,7 +248,62 @@ export default function TermsPage() {
             </p>
           </Section>
 
-          <Section title="15. Contact">
+          <Section title="15. SMS communications" id="sms-communications">
+            <p>
+              <strong className="text-white">Program name:</strong> KDER Order
+              &amp; Account Alerts.
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">
+                What messages you&apos;ll receive:
+              </strong>{" "}
+              one-time passwords (OTP) when you sign in, and notifications
+              about your KDER orders — confirmations, pickup or delivery
+              updates, and refund notices. We do not use SMS for marketing.
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">Message frequency:</strong>{" "}
+              message frequency varies based on your activity on the platform.
+              A typical order generates 3–5 transactional messages from KDER.
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">
+                Message and data rates may apply.
+              </strong>{" "}
+              Your carrier&apos;s standard rates for messaging and data apply
+              to every SMS you send or receive. KDER does not charge for SMS,
+              but we are not responsible for carrier charges.
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">How to get help:</strong> Reply{" "}
+              <strong className="text-white">HELP</strong> to any KDER text
+              for assistance, or email us at{" "}
+              <a
+                href="mailto:hello@kder.club"
+                className="font-medium text-green-300 underline-offset-4 hover:underline"
+              >
+                hello@kder.club
+              </a>
+              .
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">How to opt out:</strong> Reply{" "}
+              <strong className="text-white">STOP</strong> to any KDER text to
+              unsubscribe from all non-critical messages. One-time passwords
+              required to sign in may still be delivered for account security;
+              if you no longer want to receive any SMS from KDER, please close
+              your account.
+            </p>
+            <p className="mt-3">
+              <strong className="text-white">
+                Consent is not a condition of purchase.
+              </strong>{" "}
+              You can use KDER without opting into SMS, though most
+              order-status features depend on it.
+            </p>
+          </Section>
+
+          <Section title="16. Contact">
             <p>
               Questions? Reach us at{" "}
               <a
@@ -285,12 +340,14 @@ export default function TermsPage() {
 function Section({
   title,
   children,
+  id,
 }: {
   title: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
-    <section>
+    <section id={id}>
       <h2 className="mb-3 text-lg font-bold text-white lg:text-xl">{title}</h2>
       {children}
     </section>
