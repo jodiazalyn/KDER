@@ -70,15 +70,9 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
 
         <div className="flex flex-1 justify-around">
           <Stat value={creator.total_plates.toString()} label="Plates" />
-          <Stat value={creator.total_orders.toString()} label="Orders" />
           <Stat
-            value={
-              creator.vibe_score !== null
-                ? `${creator.vibe_score.toFixed(1)}★`
-                : "–"
-            }
+            value={`${(creator.vibe_score ?? 5).toFixed(1)}★`}
             label="Rating"
-            dim={creator.vibe_score === null}
           />
         </div>
       </div>
@@ -122,24 +116,10 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
   );
 }
 
-function Stat({
-  value,
-  label,
-  dim,
-}: {
-  value: string;
-  label: string;
-  dim?: boolean;
-}) {
+function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span
-        className={
-          dim
-            ? "text-xl font-bold leading-tight text-white/40"
-            : "text-xl font-bold leading-tight text-white"
-        }
-      >
+      <span className="text-xl font-bold leading-tight text-white">
         {value}
       </span>
       <span className="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">
