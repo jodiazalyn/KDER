@@ -4,13 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import type { Order } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -32,7 +25,7 @@ const ACTIVE_STATUSES = new Set<Order["status"]>(["pending", "accepted", "ready"
  */
 async function transitionOrder(
   orderId: string,
-  action: "accept" | "decline" | "ready" | "complete"
+  action: "accept" | "ready" | "complete"
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const res = await fetch(`/api/v1/orders/${orderId}/${action}`, {
@@ -52,7 +45,6 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("active");
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [declineId, setDeclineId] = useState<string | null>(null);
 
   /**
    * We fetch ALL the creator's orders (capped at 100 server-side) in one
@@ -134,23 +126,6 @@ export default function OrdersPage() {
     refresh();
   };
 
-  const handleDecline = (id: string) => {
-    setDeclineId(id);
-  };
-
-  const confirmDecline = async () => {
-    if (!declineId) return;
-    const id = declineId;
-    setDeclineId(null);
-    const result = await transitionOrder(id, "decline");
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success("Order declined. Member will be refunded.");
-    refresh();
-  };
-
   const handleMarkReady = async (id: string) => {
     const result = await transitionOrder(id, "ready");
     if (!result.ok) {
@@ -223,7 +198,6 @@ export default function OrdersPage() {
               key={order.id}
               order={order}
               onAccept={handleAccept}
-              onDecline={handleDecline}
               onMarkReady={handleMarkReady}
               onMarkComplete={handleMarkComplete}
             />
@@ -256,39 +230,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Decline confirmation dialog */}
-      <Dialog
-        open={!!declineId}
-        onOpenChange={(open) => {
-          if (!open) setDeclineId(null);
-        }}
-      >
-        <DialogContent className="rounded-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-white">Decline this order?</DialogTitle>
-            <DialogDescription className="text-white/60">
-              The member will receive a full refund. This action cannot be
-              undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex gap-3">
-            <button
-              type="button"
-              onClick={() => setDeclineId(null)}
-              className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform"
-            >
-              Keep Order
-            </button>
-            <button
-              type="button"
-              onClick={confirmDecline}
-              className="flex h-12 flex-1 items-center justify-center rounded-full bg-red-600 text-sm font-bold text-white active:scale-95 transition-transform"
-            >
-              Decline
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }

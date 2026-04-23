@@ -21,7 +21,6 @@ const STATUS_BADGES: Record<
 interface OrderCardProps {
   order: Order;
   onAccept?: (id: string) => void;
-  onDecline?: (id: string) => void;
   onMarkReady?: (id: string) => void;
   onMarkComplete?: (id: string) => void;
 }
@@ -29,7 +28,6 @@ interface OrderCardProps {
 export function OrderCard({
   order,
   onAccept,
-  onDecline,
   onMarkReady,
   onMarkComplete,
 }: OrderCardProps) {
@@ -73,7 +71,10 @@ export function OrderCard({
             <h3 className="text-sm font-semibold text-white truncate">
               {order.member_name}
             </h3>
-            <span className="text-lg font-bold text-green-300">
+            <span
+              className="text-2xl font-black text-green-300"
+              style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
+            >
               ${order.total_amount.toFixed(2)}
             </span>
           </div>
@@ -111,20 +112,24 @@ export function OrderCard({
         <div className="flex gap-2 border-t border-white/[0.08] px-4 py-3">
           {isPending && (
             <>
-              <button
-                type="button"
-                onClick={() => onDecline?.(order.id)}
-                className="flex h-10 flex-1 items-center justify-center rounded-full border-2 border-red-500/60 text-sm font-bold text-white active:scale-95 transition-transform"
-              >
-                Decline
-              </button>
+              {/* Accept is the primary revenue action — wider + taller + glow.
+                  Larger flex basis so it dominates the action row. */}
               <button
                 type="button"
                 onClick={() => onAccept?.(order.id)}
-                className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_16px_rgba(27,94,32,0.4)] active:scale-95 transition-transform"
+                className="flex h-12 flex-[2] items-center justify-center rounded-full bg-[#1B5E20] text-base font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.55)] active:scale-95 transition-transform"
               >
-                Accept
+                Accept · ${order.total_amount.toFixed(2)}
               </button>
+              {/* Review replaces Decline — opens the order detail page where
+                  the creator can review customer details and, if they want,
+                  decline from there via the confirmed decline flow. */}
+              <Link
+                href={`/orders/${order.id}`}
+                className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] text-sm font-semibold text-white/80 active:scale-95 transition-transform hover:bg-white/[0.08]"
+              >
+                Review
+              </Link>
             </>
           )}
           {isAccepted && (
