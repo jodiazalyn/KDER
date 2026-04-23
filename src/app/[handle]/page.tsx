@@ -69,6 +69,18 @@ async function loadStorefront(handle: string): Promise<{
     .eq("status", "active")
     .order("created_at", { ascending: false })) as { data: Listing[] | null };
 
+  // Count completed orders for the stats row on the IG-style profile header.
+  // Scoped to status='completed' so cancelled/declined/in-progress orders don't
+  // inflate the "Orders" figure shown to potential customers.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: completedOrdersCount } = (await (supabase as any)
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("creator_id", creatorRow.id)
+    .eq("status", "completed")) as { count: number | null };
+
+  const listings = listingsData ?? [];
+
   const creator: CreatorProfile = {
     display_name: member.display_name || "Creator",
     bio: member.bio,
@@ -81,11 +93,12 @@ async function loadStorefront(handle: string): Promise<{
       creatorRow.vibe_score !== null && creatorRow.vibe_score !== undefined
         ? Number(creatorRow.vibe_score)
         : null,
-    total_orders: 0,
+    total_orders: completedOrdersCount ?? 0,
+    total_plates: listings.length,
     pickup_address: null,
   };
 
-  return { creator, listings: listingsData ?? [] };
+  return { creator, listings };
 }
 
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
