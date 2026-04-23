@@ -1,102 +1,140 @@
 "use client";
 
-import { MapPin, Star, ShoppingBag, Flame, Zap, Trophy, Package, Gem } from "lucide-react";
+import { useCallback } from "react";
+import Image from "next/image";
+import { MessageCircle, Share2 } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
-import type { Badge, Streak } from "@/types";
-import { TIER_COLORS } from "@/lib/badges-store";
-
-const ICON_MAP: Record<string, typeof Star> = { Flame, Zap, Trophy, Star, Package, Gem };
+import { toast } from "sonner";
 
 interface CreatorHeaderProps {
   creator: CreatorProfile;
-  streak?: Streak;
-  badges?: Badge[];
+  onMessageClick: () => void;
 }
 
-export function CreatorHeader({ creator, streak, badges }: CreatorHeaderProps) {
-  const earnedBadges = badges?.filter((b) => b.earnedAt) || [];
+/**
+ * Instagram-style profile header for the public `/@handle` storefront.
+ *
+ * Layout, top-down:
+ *   - Row: 80px circular avatar on the left, 3-column stats row on the right
+ *     (Plates / Orders / Rating). Stats are dense and scannable.
+ *   - Display name (bold), @handle (muted green), bio (two-line clamp).
+ *   - CTA row: [Message] [Share] side-by-side.
+ *
+ * No hero banner, no gradient band. Plain dark background — the app shell
+ * already provides the #0A0A0A page bg.
+ */
+export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
+  const handleShare = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const title = `${creator.display_name} on KDER`;
+    // Prefer the Web Share API when available (mobile Safari/Chrome + some
+    // desktop browsers). Fall back to copying the URL to clipboard so desktop
+    // users still get a useful action.
+    const nav = window.navigator;
+    if (typeof nav.share === "function") {
+      try {
+        await nav.share({ url, title });
+        return;
+      } catch {
+        // User dismissed the share sheet — no toast, not an error.
+        return;
+      }
+    }
+    try {
+      await nav.clipboard.writeText(url);
+      toast.success("Link copied to clipboard");
+    } catch {
+      toast.error("Couldn't copy link");
+    }
+  }, [creator.display_name]);
+
   return (
-    <div className="relative">
-      {/* Background gradient */}
-      <div className="h-32 bg-gradient-to-b from-green-900/40 to-transparent" />
-
-      <div className="px-4 -mt-16">
-        {/* Avatar */}
-        <div className="flex items-end gap-4">
-          {creator.photo_url ? (
-            <img
-              src={creator.photo_url}
-              alt={creator.display_name}
-              className="h-20 w-20 rounded-2xl border-2 border-green-400/30 object-cover shadow-lg"
-            />
-          ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-green-400/30 bg-green-900/50 text-3xl font-bold text-green-300 shadow-lg">
-              {creator.display_name.charAt(0).toUpperCase()}
-            </div>
-          )}
-
-          <div className="flex-1 pb-1">
-            <h1 className="text-2xl font-black text-white">
-              {creator.display_name}
-            </h1>
-            <p className="text-sm text-green-300/70">@{creator.handle}</p>
+    <header className="px-4 pt-6 pb-5">
+      {/* Avatar + stats row */}
+      <div className="flex items-center gap-6">
+        {creator.photo_url ? (
+          <Image
+            src={creator.photo_url}
+            alt={creator.display_name}
+            width={80}
+            height={80}
+            className="h-20 w-20 flex-shrink-0 rounded-full border border-white/10 object-cover"
+            priority
+          />
+        ) : (
+          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-green-900/40 text-3xl font-bold text-green-300">
+            {creator.display_name.charAt(0).toUpperCase()}
           </div>
-        </div>
+        )}
 
-        {/* Bio */}
+        <div className="flex flex-1 justify-around">
+          <Stat value={creator.total_plates.toString()} label="Plates" />
+          <Stat
+            value={`${(creator.vibe_score ?? 5).toFixed(1)}★`}
+            label="Rating"
+          />
+        </div>
+      </div>
+
+      {/* Name + handle + bio */}
+      <div className="mt-4">
+        <h1 className="text-lg font-bold leading-tight text-white">
+          {creator.display_name}
+        </h1>
+        <p className="text-sm font-medium text-green-300/80">
+          @{creator.handle}
+        </p>
         {creator.bio && (
-          <p className="mt-3 text-sm text-white/60 leading-relaxed">
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70 line-clamp-3">
             {creator.bio}
           </p>
         )}
-
-        {/* Stats row */}
-        <div className="mt-3 flex items-center gap-4 text-xs text-white/40">
-          {creator.neighborhoods.length > 0 && (
-            <span className="flex items-center gap-1">
-              <MapPin size={12} />
-              {creator.neighborhoods.map((n) => n.name).join(", ")}
-            </span>
-          )}
-          {creator.vibe_score !== null && (
-            <span className="flex items-center gap-1">
-              <Star size={12} className="text-yellow-400" />
-              {creator.vibe_score.toFixed(1)}
-            </span>
-          )}
-          {creator.total_orders > 0 && (
-            <span className="flex items-center gap-1">
-              <ShoppingBag size={12} />
-              {creator.total_orders} orders
-            </span>
-          )}
-          {streak && streak.currentStreak > 0 && (
-            <span className="flex items-center gap-1 text-orange-400">
-              <Flame size={12} />
-              {streak.currentStreak}d streak
-            </span>
-          )}
-        </div>
-
-        {/* Badges */}
-        {earnedBadges.length > 0 && (
-          <div className="mt-3 flex gap-1.5 flex-wrap">
-            {earnedBadges.map((badge) => {
-              const Icon = ICON_MAP[badge.icon] || Star;
-              return (
-                <div
-                  key={badge.id}
-                  className={`flex items-center gap-1 rounded-full border bg-gradient-to-r px-2 py-0.5 text-[10px] font-medium text-white/80 ${TIER_COLORS[badge.tier]}`}
-                  title={badge.description}
-                >
-                  <Icon size={10} />
-                  {badge.name}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
+
+      {/* CTA row — Message + Share side-by-side */}
+      <div className="mt-4 flex gap-2">
+        <button
+          type="button"
+          onClick={onMessageClick}
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.06] text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+        >
+          <MessageCircle size={15} />
+          Message
+        </button>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.06] text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+          aria-label="Share profile"
+        >
+          <Share2 size={15} />
+          Share
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function Stat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="text-xl font-bold leading-tight text-white">
+        {value}
+      </span>
+      <span className="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">
+        {label}
+      </span>
+      {/* Subtle KDER flourish under each stat so the column doesn't feel bare.
+          Low opacity + small size keeps the number and label as the focal point. */}
+      <Image
+        src="/icons/kder-logo.png"
+        alt=""
+        width={16}
+        height={16}
+        aria-hidden="true"
+        className="mt-1.5 h-4 w-4 opacity-30"
+      />
     </div>
   );
 }

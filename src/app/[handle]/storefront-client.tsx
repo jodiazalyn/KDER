@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ShoppingCart, UtensilsCrossed, MessageCircle } from "lucide-react";
+import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
-import { CategoryFilter } from "@/components/storefront/CategoryFilter";
-import { PlateCard } from "@/components/storefront/PlateCard";
+import { PlateTile } from "@/components/storefront/PlateTile";
+import { PlateDetailSheet } from "@/components/storefront/PlateDetailSheet";
 import { CartSheet } from "@/components/storefront/CartSheet";
 import { CheckoutSheet, type OrderDetails } from "@/components/storefront/CheckoutSheet";
 import {
@@ -46,7 +46,7 @@ export function StorefrontClient({
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedPlate, setSelectedPlate] = useState<Listing | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
@@ -87,6 +87,29 @@ export function StorefrontClient({
       toast.success(`${listing.name} added to cart`);
     },
     [handle]
+  );
+
+  const handleBuyNow = useCallback(
+    (listing: Listing, qty: number) => {
+      // Not authenticated -> redirect to customer signup, return with
+      // ?action=checkout so the flow resumes after verify.
+      if (!currentUserId) {
+        router.push(
+          `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
+        );
+        // Still add the plate to cart so it's waiting for them after sign-in.
+        const updated = addToCart(handle, listing, qty);
+        setCart(updated);
+        return;
+      }
+      // Authenticated -> add + jump straight to checkout form. No cart view
+      // detour. CheckoutSheet prefills name + phone from the auth user.
+      const updated = addToCart(handle, listing, qty);
+      setCart(updated);
+      setSelectedPlate(null);
+      setCheckoutOpen(true);
+    },
+    [currentUserId, handle, router]
   );
 
   const handleUpdateQty = useCallback(
@@ -313,16 +336,6 @@ export function StorefrontClient({
     }
   }, [messageText, sending, currentUserId, creator?.member_id]);
 
-  // Derive categories from active listings
-  const allCategories = Array.from(
-    new Set(listings.flatMap((l) => l.category_tags))
-  ).sort();
-
-  // Filter listings
-  const filtered = selectedCategory
-    ? listings.filter((l) => l.category_tags.includes(selectedCategory))
-    : listings;
-
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
 
@@ -337,56 +350,35 @@ export function StorefrontClient({
 
   return (
     <main className="min-h-screen bg-[#0A0A0A] pb-24">
-      {/* Creator header */}
-      <CreatorHeader creator={creator} />
+      <div className="mx-auto max-w-[640px]">
+        {/* Instagram-style profile header (avatar + stats row + CTAs) */}
+        <CreatorHeader creator={creator} onMessageClick={handleMessageClick} />
 
-      {/* Storefront paused banner */}
-      {!creator.storefront_active && (
-        <div className="mx-4 mt-4 rounded-2xl border border-orange-400/20 bg-orange-900/20 p-3 text-center">
-          <p className="text-sm text-orange-300">
-            This storefront is currently paused.
-          </p>
+        {/* Storefront paused banner */}
+        {!creator.storefront_active && (
+          <div className="mx-4 mb-4 rounded-2xl border border-orange-400/20 bg-orange-900/20 p-3 text-center">
+            <p className="text-sm text-orange-300">
+              This storefront is currently paused.
+            </p>
+          </div>
+        )}
+
+        {/* Grid-icon tab bar — visual-only for now, single content type */}
+        <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
+          <Grid3x3 size={14} />
+          Plates
         </div>
-      )}
 
-      {/* Message Creator button */}
-      <div className="mt-4 px-4">
-        <button
-          type="button"
-          onClick={handleMessageClick}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/[0.15] bg-white/[0.06] text-sm font-medium text-white/70 hover:bg-white/[0.10] active:scale-95 transition-all"
-        >
-          <MessageCircle size={16} />
-          Message {creator.display_name}
-        </button>
-      </div>
-
-      {/* Category filter */}
-      {allCategories.length > 0 && (
-        <div className="mt-4">
-          <CategoryFilter
-            categories={allCategories}
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
-        </div>
-      )}
-
-      {/* Plates list — single-column vertical scroll */}
-      <div className="mt-4 px-4">
-        {filtered.length > 0 ? (
-          <div className="mx-auto flex max-w-lg flex-col gap-4">
-            {filtered.map((listing) => {
-              const inCart = cart.find((c) => c.listing.id === listing.id);
-              return (
-                <PlateCard
-                  key={listing.id}
-                  listing={listing}
-                  cartQty={inCart?.quantity ?? 0}
-                  onAddToCart={handleAddToCart}
-                />
-              );
-            })}
+        {/* 3-column square grid of plate tiles with 2px gutter */}
+        {listings.length > 0 ? (
+          <div className="grid grid-cols-3 gap-[2px]">
+            {listings.map((listing) => (
+              <PlateTile
+                key={listing.id}
+                listing={listing}
+                onClick={setSelectedPlate}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-4 pt-16">
@@ -394,13 +386,32 @@ export function StorefrontClient({
               <UtensilsCrossed size={28} className="text-white/20" />
             </div>
             <p className="text-center text-sm text-white/50">
-              {selectedCategory
-                ? `No ${selectedCategory} plates available right now.`
-                : "No plates available right now. Check back soon!"}
+              No plates available right now. Check back soon!
             </p>
           </div>
         )}
       </div>
+
+      {/* Plate detail sheet — opens when a tile is tapped */}
+      <PlateDetailSheet
+        listing={selectedPlate}
+        open={selectedPlate !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPlate(null);
+        }}
+        cartQty={
+          selectedPlate
+            ? cart.find((c) => c.listing.id === selectedPlate.id)?.quantity ?? 0
+            : 0
+        }
+        onAddToCart={handleAddToCart}
+        onBuyNow={handleBuyNow}
+        creator={{
+          display_name: creator.display_name,
+          handle: creator.handle,
+          photo_url: creator.photo_url,
+        }}
+      />
 
       {/* Floating cart button */}
       {cartCount > 0 && (
