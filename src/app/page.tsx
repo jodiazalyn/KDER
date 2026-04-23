@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 
 const HANDLE_REGEX = /^[a-z0-9_]{3,30}$/;
 const HANDLE_DEBOUNCE_MS = 400;
@@ -401,6 +402,9 @@ export default function LandingPage() {
                 </span>
               )}
             </div>
+
+            {/* Live demand counter — social proof reinforcing the CTA */}
+            <LiveUserTicker />
 
             {/* Secondary action */}
             <button
