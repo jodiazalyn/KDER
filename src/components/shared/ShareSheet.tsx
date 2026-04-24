@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   MessageCircle,
   Mail,
@@ -14,6 +14,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { AiDraftButton } from "@/components/shared/AiDraftButton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -21,6 +22,9 @@ interface ShareSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   handle: string;
+  /** Optional context for the AI caption draft. */
+  creatorDisplayName?: string;
+  featuredPlateName?: string;
 }
 
 interface ShareDestination {
@@ -54,12 +58,28 @@ const FacebookIcon = () => (
   </svg>
 );
 
-export function ShareSheet({ open, onOpenChange, handle }: ShareSheetProps) {
+export function ShareSheet({
+  open,
+  onOpenChange,
+  handle,
+  creatorDisplayName,
+  featuredPlateName,
+}: ShareSheetProps) {
   const [copied, setCopied] = useState(false);
+  // AI-drafted caption (overrides the default share text when set).
+  const [aiCaption, setAiCaption] = useState("");
   const fullUrl = `https://kder.club/@${handle}`;
   const displayLink = `kder.club/@${handle}`;
 
-  const shareText = `Check out my plates on KDER!\n\nOrder from me: ${fullUrl}\n\nFeed the city. Own your income.`;
+  const defaultShareText = `Check out my plates on KDER!\n\nOrder from me: ${fullUrl}\n\nFeed the city. Own your income.`;
+  const shareText = useMemo(() => {
+    const caption = aiCaption.trim();
+    if (!caption) return defaultShareText;
+    // If the caption already includes the link, don't append it again.
+    return caption.includes(fullUrl) || caption.includes(displayLink)
+      ? caption
+      : `${caption}\n\n${fullUrl}`;
+  }, [aiCaption, defaultShareText, fullUrl, displayLink]);
 
   const copyToClipboard = useCallback(async () => {
     try {
@@ -175,6 +195,34 @@ export function ShareSheet({ open, onOpenChange, handle }: ShareSheetProps) {
           >
             {copied ? <Check size={16} /> : <LinkIcon size={16} />}
           </button>
+        </div>
+
+        {/* AI caption drafter — optional. When a caption is drafted it
+            replaces the default share text piped to every destination. */}
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-white/50">
+              Caption (optional)
+            </span>
+            <AiDraftButton
+              kind="caption"
+              currentText={aiCaption}
+              context={{
+                creatorDisplayName,
+                creatorHandle: handle,
+                plateName: featuredPlateName,
+              }}
+              onTextUpdate={setAiCaption}
+              hideHint
+            />
+          </div>
+          <textarea
+            value={aiCaption}
+            onChange={(e) => setAiCaption(e.target.value.slice(0, 280))}
+            placeholder="Leave blank to use the default share text, or draft a social caption with AI."
+            rows={2}
+            className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-white/30 backdrop-blur-[8px] focus:border-green-400/60 focus:outline-none resize-none"
+          />
         </div>
 
         {/* App grid */}
