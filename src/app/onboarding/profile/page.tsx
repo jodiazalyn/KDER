@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ProgressDots } from "@/components/onboarding/ProgressDots";
 import { PhotoUpload } from "@/components/onboarding/PhotoUpload";
+import { AiDraftButton } from "@/components/shared/AiDraftButton";
 import { cn } from "@/lib/utils";
 
 const NAME_MAX = 40;
@@ -101,12 +102,23 @@ export default function ProfileSetupPage() {
 
         {/* Bio */}
         <div className="w-full">
-          <label
-            htmlFor="bio"
-            className="mb-2 block text-sm font-medium text-white/60"
-          >
-            Bio (optional)
-          </label>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <label
+              htmlFor="bio"
+              className="block text-sm font-medium text-white/60"
+            >
+              Bio (optional)
+            </label>
+            {/* Hint-driven AI draft — no photos yet at onboarding, so
+                creators type a few keywords ("bbq, brisket, family") and
+                Claude fleshes it into a 1–2 sentence bio. */}
+            <AiDraftButton
+              kind="bio"
+              currentText={bio}
+              context={{ creatorDisplayName: name || undefined }}
+              onTextUpdate={(text) => setBio(text.slice(0, BIO_MAX))}
+            />
+          </div>
           <textarea
             id="bio"
             value={bio}

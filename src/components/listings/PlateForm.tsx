@@ -8,6 +8,7 @@ import { MediaUpload } from "./MediaUpload";
 import { QuantityStepper } from "./QuantityStepper";
 import { FulfillmentPicker } from "./FulfillmentPicker";
 import { CategoryChips } from "./CategoryChips";
+import { AiDraftButton } from "@/components/shared/AiDraftButton";
 import {
   CATEGORIES,
   ALLERGENS,
@@ -300,12 +301,34 @@ export function PlateForm({ listing }: PlateFormProps) {
 
           {/* Description */}
           <section>
-            <label
-              htmlFor="plate-desc"
-              className="mb-2 block text-sm font-medium text-white/60"
-            >
-              Description
-            </label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <label
+                htmlFor="plate-desc"
+                className="block text-sm font-medium text-white/60"
+              >
+                Description
+              </label>
+              {/* AI draft trigger — auto-fires once when the first photo
+                  lands (and description is still empty), then acts as a
+                  manual Regenerate button. */}
+              <AiDraftButton
+                kind="plate"
+                currentText={description}
+                imageUrls={photos}
+                context={{
+                  plateName: name || undefined,
+                  plateTags: categories,
+                }}
+                autoTriggerKey={
+                  photos.length > 0 && !description.trim()
+                    ? photos[0]
+                    : null
+                }
+                onTextUpdate={(text) =>
+                  setDescription(text.slice(0, DESC_MAX))
+                }
+              />
+            </div>
             <textarea
               id="plate-desc"
               value={description}
