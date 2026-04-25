@@ -39,18 +39,39 @@ function SignupPageInner() {
 
     setLoading(true);
 
+    // Persist phone now so /signup/verify and /signup/waitlist can both
+    // read it without a query param. Done before the fetch so the
+    // waitlist screen has a number to display even if the fetch path
+    // navigates there (capture-before-send semantics).
+    const fullPhone = `+1${phone}`;
+    sessionStorage.setItem("kder_signup_phone", fullPhone);
+    const mode = sessionStorage.getItem("kder_signup_mode");
+
     try {
       const res = await fetch("/api/v1/auth/request-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `+1${phone}` }),
+        body: JSON.stringify({ phone: fullPhone, mode }),
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        // Surface the Supabase error code (when present) so users can
-        // share a specific identifier rather than a generic toast.
+        // Beta-window special case: when Supabase tells us the SMS
+        // couldn't be delivered (most often A2P 10DLC unregistered while
+        // we wait for Twilio approval), the request-otp route has
+        // ALREADY captured the number via the webhook notifier. Send the
+        // user to the waitlist screen instead of dumping a Twilio error
+        // toast on them — same UX whether they're in the test list or not
+        // is sub-optimal, so the waitlist branch is reserved for the
+        // delivery-failure code specifically.
+        if (json.code === "sms_send_failed") {
+          router.push("/signup/waitlist");
+          return;
+        }
+
+        // Other failures (validation, rate limit, etc.) keep the
+        // existing toast UX with the surfaced code identifier.
         const code = typeof json.code === "string" ? ` [${json.code}]` : "";
         toast.error(
           `${json.error || "Failed to send code. Try again."}${code}`
@@ -58,8 +79,6 @@ function SignupPageInner() {
         return;
       }
 
-      // Store phone in sessionStorage for the verify screen
-      sessionStorage.setItem("kder_signup_phone", `+1${phone}`);
       router.push("/signup/verify");
     } catch {
       toast.error("Something went wrong. Check your connection and try again.");

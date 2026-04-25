@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { checkRateLimit, OTP_REQUEST_LIMIT } from "@/lib/rate-limiter";
+import { notifyBetaSignup } from "@/lib/beta-signup-notifier";
 
 const US_PHONE_REGEX = /^\+1\d{10}$/;
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone } = await request.json();
+    const { phone, mode } = await request.json();
 
     if (!phone || !String(phone).trim()) return apiError("Phone number is required.", 400);
     const cleanPhone = String(phone).trim();
@@ -27,6 +28,20 @@ export async function POST(request: NextRequest) {
         429
       );
     }
+
+    // Beta-window capture: notify the configured webhook (Slack, Discord,
+    // Zapier, email forwarder, etc.) BEFORE attempting the OTP send. While
+    // A2P 10DLC registration is in flight we can't deliver real SMS to most
+    // numbers, so the webhook is how we collect tester phones to manually
+    // onboard via Supabase's test-number list. Fire-and-forget — never
+    // blocks the OTP send and never errors out the request even if the
+    // webhook URL is down.
+    notifyBetaSignup({
+      phone: cleanPhone,
+      mode: typeof mode === "string" ? mode : null,
+      source: "request-otp",
+      userAgent: request.headers.get("user-agent"),
+    });
 
     // Use Supabase Auth phone OTP
     const { createClient } = await import("@/lib/supabase/server");
