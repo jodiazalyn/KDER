@@ -91,11 +91,35 @@ export default function VerifyPage() {
           return;
         }
 
-        // Clear stored phone
-        sessionStorage.removeItem("kder_signup_phone");
-
-        // Branch on signup mode set on /signup?mode=customer
+        // Read mode BEFORE the cleanup below — it's only used for the
+        // new-user branch but sessionStorage is cleared first, so the
+        // read order matters.
         const mode = sessionStorage.getItem("kder_signup_mode");
+
+        // Successful verify → user is now authenticated. Clear ALL
+        // signup-flow sessionStorage so a future signup attempt on
+        // this device starts clean (no stale handle/mode/phone leaking
+        // between accounts on a shared browser).
+        sessionStorage.removeItem("kder_signup_phone");
+        sessionStorage.removeItem("kder_signup_mode");
+        sessionStorage.removeItem("kder_onboarding_handle");
+
+        // Returning user → they already have a public.members row, so
+        // they've completed at least basic onboarding. Send them
+        // straight to /dashboard — same destination the landing page
+        // uses for any user with an active session
+        // (src/app/page.tsx:159). router.replace (not push) so Back
+        // doesn't return to a stale OTP screen.
+        // Strict === false: any other shape (missing field, parse
+        // hiccup) falls through to the existing new-user flow rather
+        // than risk dropping a real new user onto an empty dashboard.
+        if (json?.data?.isNewUser === false) {
+          router.replace("/dashboard");
+          return;
+        }
+
+        // New user — first time finishing OTP. Route into onboarding
+        // based on the mode they picked on the landing page.
         if (mode === "customer") {
           router.push("/onboarding/customer");
         } else {
