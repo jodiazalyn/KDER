@@ -286,11 +286,17 @@ export default function LandingPage() {
           </Link>
 
           <div className="flex items-center gap-2">
+            {/* Log in lives next to Get started at every viewport so
+                returning testers (whose phones we've added to Supabase's
+                test list and DM'd a code to) have a one-tap entry point
+                from the landing page. Both paths land on /signup → enter
+                phone → /signup/verify; the OTP flow itself decides
+                whether they're a new applicant or a returning member. */}
             <Link
               href="/signup"
-              className="hidden h-10 items-center rounded-full border border-white/15 px-4 text-xs font-semibold text-white/80 transition-colors hover:border-white/30 hover:text-white lg:inline-flex"
+              className="inline-flex h-10 items-center rounded-full border border-white/15 px-4 text-xs font-semibold text-white/85 transition-colors hover:border-white/30 hover:text-white"
             >
-              Sign in
+              Log in
             </Link>
             <Link
               href="/signup"
