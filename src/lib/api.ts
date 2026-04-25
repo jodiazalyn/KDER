@@ -6,7 +6,11 @@ export function apiSuccess<T>(data: T, meta?: ApiResponse<T>["meta"]) {
   return NextResponse.json(response);
 }
 
-export function apiError(error: string, status: number = 400) {
+export function apiError(
+  error: string,
+  status: number = 400,
+  extras?: Record<string, unknown>
+) {
   const response: ApiResponse<never> = { data: null, error };
-  return NextResponse.json(response, { status });
+  return NextResponse.json({ ...response, ...extras }, { status });
 }

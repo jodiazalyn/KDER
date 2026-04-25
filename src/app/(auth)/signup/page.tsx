@@ -49,7 +49,12 @@ function SignupPageInner() {
       const json = await res.json();
 
       if (!res.ok) {
-        toast.error(json.error || "Failed to send code. Try again.");
+        // Surface the Supabase error code (when present) so users can
+        // share a specific identifier rather than a generic toast.
+        const code = typeof json.code === "string" ? ` [${json.code}]` : "";
+        toast.error(
+          `${json.error || "Failed to send code. Try again."}${code}`
+        );
         return;
       }
 

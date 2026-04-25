@@ -80,8 +80,12 @@ export default function VerifyPage() {
         if (!res.ok) {
           setError(true);
           setErrorKey((k) => k + 1);
+          // Surface the Supabase verify error code when present (e.g.
+          // otp_expired, invalid_otp) so creators can share a specific
+          // identifier with support if they need help.
+          const code = typeof json.code === "string" ? ` [${json.code}]` : "";
           toast.error(
-            json.error || "Incorrect code. Try again."
+            `${json.error || "Incorrect code. Try again."}${code}`
           );
           return;
         }
