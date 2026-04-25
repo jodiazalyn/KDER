@@ -19,6 +19,19 @@ const RESERVED_HANDLES = new Set([
   "onboarding",
 ]);
 
+/**
+ * Normalize a phone string to E.164 with leading "+". Supabase stores
+ * `auth.users.phone` without the "+", but we send phones with "+" from
+ * the client. Compare a stripped/prefixed form so the same number
+ * matches across both sources.
+ */
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("+") ? trimmed : `+${trimmed}`;
+}
+
 function generateSuggestions(handle: string): string[] {
   const suggestions: string[] = [];
   suggestions.push(`${handle}_htx`);
@@ -67,6 +80,14 @@ export async function GET(request: NextRequest) {
     const anonClient = await createClient();
     const serviceClient = createServiceClient();
 
+    // Fetch the authed user (if any) so we can detect self-ownership of
+    // a waitlist-reserved handle. An onboarded waitlist user picking
+    // their OWN reserved handle on /onboarding/handle should see it as
+    // available, not taken — without this, they'd get locked out of the
+    // exact handle we promised them.
+    const { data: { user } } = await anonClient.auth.getUser();
+    const userPhone = normalizePhone(user?.phone);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const memberQ = (anonClient as any)
       .from("members")
@@ -77,7 +98,7 @@ export async function GET(request: NextRequest) {
       ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (serviceClient as any)
           .from("waitlist_signups")
-          .select("handle, status")
+          .select("handle, status, phone")
           .eq("handle", normalized)
           .in("status", ["pending", "invited"]) // 'activated' rolls into members, 'declined' frees the handle
           .maybeSingle()
@@ -85,12 +106,33 @@ export async function GET(request: NextRequest) {
 
     const [memberRes, waitlistRes] = await Promise.all([memberQ, waitlistQ]);
 
-    if (memberRes.data || waitlistRes.data) {
+    // Members table hit always means taken (someone else has it).
+    if (memberRes.data) {
       return apiSuccess({
         handle: normalized,
         available: false,
         suggestions: generateSuggestions(normalized),
       });
+    }
+
+    // Waitlist hit by ANOTHER phone means taken. Hit by THIS user's
+    // phone means it's their own reservation — let them claim it.
+    if (waitlistRes.data) {
+      const reservedPhone = normalizePhone(
+        (waitlistRes.data as { phone?: string }).phone
+      );
+      const isOwnReservation =
+        reservedPhone !== null &&
+        userPhone !== null &&
+        reservedPhone === userPhone;
+      if (!isOwnReservation) {
+        return apiSuccess({
+          handle: normalized,
+          available: false,
+          suggestions: generateSuggestions(normalized),
+        });
+      }
+      // Fall through — handle is theirs.
     }
 
     return apiSuccess({
