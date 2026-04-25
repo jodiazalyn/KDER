@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import Link from "next/link";
 import { OtpInput } from "@/components/auth/OtpInput";
 import { toast } from "sonner";
 
@@ -179,6 +180,23 @@ export default function VerifyPage() {
               Resend code
             </button>
           )}
+        </div>
+
+        {/* Beta-window escape hatch — KDER is invite-only while we're
+            approving members by hand. Users who don't have a code
+            (because we haven't onboarded them yet) self-select into
+            the waitlist here. Once an admin adds their phone to the
+            Supabase test phone list and DMs them their code, they
+            come back to this same screen and enter it. */}
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <div className="h-px w-12 bg-white/[0.12]" aria-hidden />
+          <p className="text-xs text-white/40">Don&apos;t have a code yet?</p>
+          <Link
+            href="/signup/waitlist"
+            className="text-sm font-semibold text-white/85 underline-offset-4 hover:underline active:scale-95"
+          >
+            Apply for access →
+          </Link>
         </div>
       </div>
     </main>
