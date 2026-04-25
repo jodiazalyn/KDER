@@ -33,16 +33,32 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     const { error } = await supabase.auth.signInWithOtp({ phone });
+    const phoneSuffix = cleanPhone.slice(-4);
 
     if (error) {
+      // Surface the full Supabase error context to logs. Without this we
+      // could never tell why an OTP failed to send (Twilio A2P 10DLC,
+      // trial-mode account, geo-perms, etc. all surface here).
+      // Last 4 digits only — full phone is PII.
+      const code = (error as { code?: string }).code;
+      console.error("[auth/request-otp] supabase signInWithOtp failed", {
+        code,
+        status: error.status,
+        name: error.name,
+        message: error.message,
+        phoneSuffix,
+      });
       return apiError(
         error.message || "Failed to send code. Try again.",
-        400
+        error.status ?? 400,
+        { code }
       );
     }
 
+    console.log(`[auth/request-otp] sent ok phoneSuffix=${phoneSuffix}`);
     return apiSuccess({ sent: true });
-  } catch {
+  } catch (err) {
+    console.error("[auth/request-otp] unexpected exception", err);
     return apiError("Failed to send code. Try again.", 500);
   }
 }

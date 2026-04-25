@@ -40,9 +40,24 @@ export async function POST(request: NextRequest) {
       token: code,
       type: "sms",
     });
+    const phoneSuffix = cleanPhone.slice(-4);
 
     if (error || !data.user) {
-      return apiError("Incorrect code. Try again.", 400);
+      // Surface the verify failure too. Most common codes here:
+      //   otp_expired (60s expiry), otp_disabled, invalid_otp.
+      // Last 4 digits only — full phone is PII.
+      const errCode = error
+        ? (error as { code?: string }).code
+        : undefined;
+      console.error("[auth/verify-otp] supabase verifyOtp failed", {
+        code: errCode,
+        status: error?.status,
+        name: error?.name,
+        message: error?.message,
+        hasUser: !!data?.user,
+        phoneSuffix,
+      });
+      return apiError("Incorrect code. Try again.", 400, { code: errCode });
     }
 
     // Check if user already has a member profile
@@ -52,11 +67,15 @@ export async function POST(request: NextRequest) {
       .eq("id", data.user.id)
       .single();
 
+    console.log(
+      `[auth/verify-otp] verified ok phoneSuffix=${phoneSuffix} isNewUser=${!member}`
+    );
     return apiSuccess({
       verified: true,
       isNewUser: !member,
     });
-  } catch {
+  } catch (err) {
+    console.error("[auth/verify-otp] unexpected exception", err);
     return apiError("Verification failed. Check your connection and try again.", 500);
   }
 }
