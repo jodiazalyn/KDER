@@ -53,11 +53,13 @@ function InstagramIcon({ size = 20 }: { size?: number }) {
  * test-number list.
  */
 
-// TODO: replace with real KDER social URLs when Jodi provides them.
-// Until then these are clearly placeholder. Search/replace these two
-// constants with the live URLs (Facebook page + Instagram profile).
-const KDER_FACEBOOK_URL = "https://www.facebook.com/kder";
-const KDER_INSTAGRAM_URL = "https://www.instagram.com/kder";
+// KDER's official social profiles. Both URLs preserve the share-source
+// tracking params (mibextid / igsh) Jodi pasted from the apps; FB/IG
+// redirect through these to the actual page.
+const KDER_FACEBOOK_URL =
+  "https://www.facebook.com/share/18LhiFPTfc/?mibextid=wwXIfr";
+const KDER_INSTAGRAM_URL =
+  "https://www.instagram.com/kder.club?igsh=cWd1aTA0MDE1anVj";
 
 type ReserveState =
   | { kind: "idle" }
