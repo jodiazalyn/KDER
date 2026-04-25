@@ -73,17 +73,52 @@ export default function HandlePage() {
     };
   }, []);
 
-  // Restore handle from sessionStorage if the user entered one on the landing page
+  // Pre-fill the handle picker. Two sources, in priority order:
+  //   1. sessionStorage `kder_onboarding_handle` — set by the landing
+  //      page handle-claim form when this is a same-session signup.
+  //   2. The user's waitlist reservation — set when an admin onboards
+  //      a previously-applied waitlist user. Without this fallback,
+  //      onboarded testers landing on a fresh device/browser would
+  //      have to remember their handle AND would see it incorrectly
+  //      reported as taken (their own reservation locks it).
+  // We wrap in setTimeout(0) to satisfy React 19's
+  // react-hooks/set-state-in-effect rule.
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("kder_onboarding_handle");
-      if (saved && HANDLE_REGEX.test(saved)) {
-        setHandle(saved);
-        checkAvailability(saved);
+    let cancelled = false;
+    const id = setTimeout(async () => {
+      try {
+        const saved = sessionStorage.getItem("kder_onboarding_handle");
+        if (saved && HANDLE_REGEX.test(saved)) {
+          if (cancelled) return;
+          setHandle(saved);
+          checkAvailability(saved);
+          return;
+        }
+      } catch {
+        // sessionStorage blocked — fall through to the reservation lookup.
       }
-    } catch {
-      // sessionStorage blocked — no-op
-    }
+
+      // No sessionStorage handle — try the user's waitlist reservation.
+      try {
+        const res = await fetch("/api/v1/beta/my-reservation");
+        if (cancelled || !res.ok) return;
+        const json = await res.json();
+        const reserved = json?.data?.reservation?.handle;
+        if (
+          typeof reserved === "string" &&
+          HANDLE_REGEX.test(reserved)
+        ) {
+          setHandle(reserved);
+          checkAvailability(reserved);
+        }
+      } catch {
+        // Network or non-JSON — leave the input empty, user can type.
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
     // Only run once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
