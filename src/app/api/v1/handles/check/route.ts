@@ -51,17 +51,31 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check Supabase for existing handle
+    // Check Supabase for existing handle. We look in BOTH `members`
+    // (real activated creators) AND `waitlist_signups` (creators stuck
+    // behind A2P 10DLC pending who've reserved their handle). A handle
+    // reserved on the waitlist is locked to that phone — until that
+    // user is activated or declined, no one else can claim it.
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
-    const { data: existing } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const memberQ = (supabase as any)
       .from("members")
       .select("handle")
       .eq("handle", normalized)
-      .single();
+      .maybeSingle();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const waitlistQ = (supabase as any)
+      .from("waitlist_signups")
+      .select("handle, status")
+      .eq("handle", normalized)
+      .in("status", ["pending", "invited"]) // 'activated' rolls into members, 'declined' frees the handle
+      .maybeSingle();
 
-    if (existing) {
+    const [memberRes, waitlistRes] = await Promise.all([memberQ, waitlistQ]);
+
+    if (memberRes.data || waitlistRes.data) {
       return apiSuccess({
         handle: normalized,
         available: false,
