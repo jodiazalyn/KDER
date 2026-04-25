@@ -212,13 +212,44 @@ export async function POST(request: NextRequest) {
 
         send({ type: "done" });
       } catch (err) {
-        console.error("[ai/describe] stream error:", err);
+        // Extract whatever the Anthropic SDK exposes — name/status/code
+        // (the SDK wraps non-2xx responses in `APIError` with these
+        // fields) plus the raw message. Surfacing this through the SSE
+        // frame means the client toast tells the creator (and us) what
+        // actually went wrong without needing to dig in Function logs.
+        const e = err as {
+          name?: string;
+          status?: number;
+          code?: string;
+          message?: string;
+          error?: { type?: string; message?: string };
+        };
+        const errStatus = typeof e?.status === "number" ? e.status : undefined;
+        const errCode =
+          (typeof e?.code === "string" && e.code) ||
+          e?.error?.type ||
+          e?.name ||
+          undefined;
+        const errMessage =
+          e?.error?.message ||
+          (typeof e?.message === "string" ? e.message : undefined);
+        console.error("[ai/describe] stream error:", {
+          kind,
+          uid: user.id,
+          name: e?.name,
+          status: errStatus,
+          code: errCode,
+          message: errMessage,
+        });
         // Emit an error frame so the client can commit partial text and
         // surface a toast. We still close the stream cleanly.
         send({
           type: "error",
           message:
             "The AI draft was interrupted. Your description is saved — feel free to keep editing.",
+          code: errCode,
+          status: errStatus,
+          detail: errMessage,
         });
       } finally {
         const latencyMs = Date.now() - started;

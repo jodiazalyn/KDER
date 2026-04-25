@@ -151,16 +151,32 @@ export function AiDraftButton({
               const msg = JSON.parse(payload) as
                 | { type: "delta"; text: string }
                 | { type: "done" }
-                | { type: "error"; message?: string };
+                | {
+                    type: "error";
+                    message?: string;
+                    code?: string;
+                    status?: number;
+                    detail?: string;
+                  };
 
               if (msg.type === "delta") {
                 aiText += msg.text;
                 onTextUpdate(aiText);
               } else if (msg.type === "error") {
-                toast.error(
+                // Show the friendly message + a debug suffix with the
+                // Anthropic status/code/detail so a creator (or you over
+                // their shoulder) sees exactly why the draft died — no
+                // Function-logs spelunking required.
+                const base =
                   msg.message ||
-                    "The AI draft was interrupted. Keep editing if you like."
-                );
+                  "The AI draft was interrupted. Keep editing if you like.";
+                const tagParts: string[] = [];
+                if (typeof msg.status === "number")
+                  tagParts.push(String(msg.status));
+                if (msg.code) tagParts.push(msg.code);
+                const tag = tagParts.length ? ` [${tagParts.join(" ")}]` : "";
+                const detail = msg.detail ? ` — ${msg.detail}` : "";
+                toast.error(`${base}${tag}${detail}`);
               }
               // "done" — handled by loop end
             } catch {
