@@ -120,26 +120,20 @@ export function StorefrontClient({
 
   const handleBuyNow = useCallback(
     (listing: Listing, qty: number) => {
-      // Not authenticated -> redirect to customer signup, return with
-      // ?action=checkout so the flow resumes after verify.
-      if (!currentUserId) {
-        router.push(
-          `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
-        );
-        // Still add the plate to cart so it's waiting for them after sign-in.
-        const updated = addToCart(handle, listing, qty);
-        setCart(updated);
-        return;
-      }
-      // Authenticated -> add + jump straight to checkout form. No cart view
-      // detour. CheckoutSheet prefills name + phone from the auth user.
+      // Single code path regardless of auth state. The CheckoutSheet
+      // itself handles the no-auth case inline: it shows name+phone
+      // inputs and calls /api/v1/auth/anon-customer to register an
+      // anonymous Supabase session before hitting Stripe.
+      // (Twilio A2P 10DLC pending — OTP is removed from the customer
+      // purchase path during the registration window. See
+      // /api/v1/auth/anon-customer for the temporary auth bridge.)
       const updated = addToCart(handle, listing, qty);
       setCart(updated);
       setSelectedPlate(null);
       setHasOpenedCheckout(true);
       setCheckoutOpen(true);
     },
-    [currentUserId, handle, router]
+    [handle]
   );
 
   const handleUpdateQty = useCallback(
