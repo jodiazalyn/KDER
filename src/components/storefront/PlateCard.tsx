@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Plus, Minus, ShoppingCart } from "lucide-react";
 import type { Listing } from "@/types";
 import { cn } from "@/lib/utils";
@@ -9,9 +10,16 @@ interface PlateCardProps {
   listing: Listing;
   cartQty: number;
   onAddToCart: (listing: Listing, qty: number) => void;
+  /** First card on the page should preload its hero image (LCP candidate). */
+  priority?: boolean;
 }
 
-export function PlateCard({ listing, cartQty, onAddToCart }: PlateCardProps) {
+export function PlateCard({
+  listing,
+  cartQty,
+  onAddToCart,
+  priority = false,
+}: PlateCardProps) {
   const [qty, setQty] = useState(1);
   const photo = listing.photos[0] || "/icons/kder-logo.png";
   const soldOut = listing.quantity <= 0;
@@ -32,10 +40,13 @@ export function PlateCard({ listing, cartQty, onAddToCart }: PlateCardProps) {
     >
       {/* Hero photo */}
       <div className="relative aspect-[16/10] overflow-hidden">
-        <img
+        <Image
           src={photo}
           alt={listing.name}
-          className="h-full w-full object-cover"
+          fill
+          sizes="(max-width: 640px) 100vw, 600px"
+          priority={priority}
+          className="object-cover"
         />
         {soldOut && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">

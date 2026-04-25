@@ -165,7 +165,12 @@ export function PlateForm({ listing }: PlateFormProps) {
   const baseCanPublish = name.trim().length > 0 && priceNum > 0 && quantity >= 1 && photos.length >= 1;
   // Publishing a plate requires Stripe Connect verified so money can flow.
   // Drafts don't require Connect; creator can build out their menu first.
-  const canPublish = baseCanPublish && connectVerified === true;
+  // Optimistic UX: while we're still loading status (null), let the button
+  // be enabled — the server route enforces verification independently and
+  // returns a clean error if not. Only mark disabled once we've confirmed
+  // the creator is NOT verified. Saves the 200-500ms "phantom-disabled"
+  // window we used to have before the Connect status fetch resolved.
+  const canPublish = baseCanPublish && connectVerified !== false;
   const canDraft = name.trim().length > 0;
 
   const buildListingData = (status: ListingStatus) => ({

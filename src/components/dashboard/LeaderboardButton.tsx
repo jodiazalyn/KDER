@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Crown } from "lucide-react";
-import { LeaderboardPanel } from "./Leaderboard";
 import { getStreak } from "@/lib/streak-store";
 import { getOrders } from "@/lib/orders-store";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { getLeaderboard } from "@/lib/leaderboard-store";
+
+// Defer the panel itself — only loads when the crown is tapped.
+const LeaderboardPanel = dynamic(
+  () => import("./Leaderboard").then((m) => m.LeaderboardPanel),
+  { ssr: false }
+);
 
 interface LeaderboardButtonProps {
   /** If true, hide "Your Rankings" section (for anonymous/member views) */
@@ -17,6 +23,9 @@ interface LeaderboardButtonProps {
 export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // Track first-open so we can keep the panel mounted across re-closes
+  // (avoids re-fetching the dynamic chunk every time the user toggles).
+  const [hasOpened, setHasOpened] = useState(false);
   const [bestRank, setBestRank] = useState<number | null>(null);
   const [userData, setUserData] = useState<{
     displayName: string;
@@ -66,7 +75,10 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          setHasOpened(true);
+        }}
         aria-label="Open leaderboard"
         className="fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl border border-yellow-400/20 bg-[#0A0A0A]/80 backdrop-blur-[40px] shadow-[0_0_16px_rgba(234,179,8,0.15)] transition-all hover:border-yellow-400/40 active:scale-90"
       >
@@ -78,12 +90,18 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
         )}
       </button>
 
-      <LeaderboardPanel
-        open={open}
-        onOpenChange={setOpen}
-        currentUser={userData}
-        anonymous={anonymous}
-      />
+      {/* Only mount the panel after the user has opened it once, so the
+          dynamic import doesn't fire on initial render and the chunk
+          actually stays out of the critical path. After first open we
+          keep it mounted so reopen is instant. */}
+      {hasOpened ? (
+        <LeaderboardPanel
+          open={open}
+          onOpenChange={setOpen}
+          currentUser={userData}
+          anonymous={anonymous}
+        />
+      ) : null}
     </>
   );
 }

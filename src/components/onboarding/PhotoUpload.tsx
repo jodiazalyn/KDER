@@ -5,6 +5,10 @@ import { Camera, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  compressImage,
+  formatCompressionLog,
+} from "@/lib/image-compression";
 
 interface PhotoUploadProps {
   /** Current photo URL (stored in Supabase Storage). */
@@ -42,8 +46,12 @@ export function PhotoUpload({
 
     setLoading(true);
     try {
+      const compression = await compressImage(file);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(formatCompressionLog(compression));
+      }
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compression.file);
       const res = await fetch("/api/v1/profile/upload", {
         method: "POST",
         body: formData,

@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 interface PlateTileProps {
   listing: Listing;
   onClick: (listing: Listing) => void;
+  /** Above-the-fold tiles preload their image for LCP. */
+  priority?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface PlateTileProps {
  * Sold-out plates are dimmed and marked with a small "Sold out" pill in the
  * top-right corner so they're still scannable but clearly inactive.
  */
-export function PlateTile({ listing, onClick }: PlateTileProps) {
+export function PlateTile({ listing, onClick, priority = false }: PlateTileProps) {
   const photo = listing.photos[0] || null;
   const soldOut = listing.quantity <= 0;
 
@@ -40,6 +42,7 @@ export function PlateTile({ listing, onClick }: PlateTileProps) {
           alt={listing.name}
           fill
           sizes="(max-width: 640px) 33vw, 213px"
+          priority={priority}
           className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
         />
       ) : (

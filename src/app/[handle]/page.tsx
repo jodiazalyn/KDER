@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { StorefrontClient } from "./storefront-client";
 import { createClient } from "@/lib/supabase/server";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
@@ -6,6 +8,24 @@ import type { Listing } from "@/types";
 
 interface StorefrontPageProps {
   params: Promise<{ handle: string }>;
+}
+
+/** ISR-equivalent: cache storefront data at the edge for 60 seconds.
+ *  Cache is keyed per-handle and tagged so plate mutations can flush
+ *  it instantly via revalidateTag(`storefront-${handle}`). */
+const STOREFRONT_CACHE_TTL_SECONDS = 60;
+
+/** Public Supabase client — no cookies, RLS-anon access only. We use this
+ *  inside `unstable_cache` because the cookie-binding variant (`createClient`
+ *  from `@/lib/supabase/server`) reads dynamic state, which Next forbids
+ *  inside a cached scope. The buyer storefront query reads only public
+ *  rows (active listings, public member fields), so anon access is enough. */
+function createPublicSupabaseClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } }
+  );
 }
 
 interface MemberRow {
@@ -32,12 +52,15 @@ function resolveZips(zips: string[]) {
   return resolved;
 }
 
-async function loadStorefront(handle: string): Promise<{
+async function loadStorefrontUncached(handle: string): Promise<{
   creator: CreatorProfile | null;
   listings: Listing[];
 }> {
-  const supabase = await createClient();
+  // Public client — no cookies, no per-user state. The buyer storefront
+  // is the same for every visitor, so caching this read is safe.
+  const supabase = createPublicSupabaseClient();
 
+  // First query MUST run alone — every downstream query needs member.id.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: member } = (await (supabase as any)
     .from("members")
@@ -61,25 +84,31 @@ async function loadStorefront(handle: string): Promise<{
     return { creator: null, listings: [] };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: listingsData } = (await (supabase as any)
-    .from("listings")
-    .select("*")
-    .eq("creator_id", creatorRow.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })) as { data: Listing[] | null };
+  // Listings + completed-orders count are independent of each other and
+  // both depend only on creatorRow.id — run them in parallel. Saves
+  // ~150-300ms per uncached storefront visit.
+  const [listingsRes, ordersRes] = await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("listings")
+      .select("*")
+      .eq("creator_id", creatorRow.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false }) as Promise<{
+      data: Listing[] | null;
+    }>,
+    // Scoped to status='completed' so cancelled/declined/in-progress orders
+    // don't inflate the "Orders" figure on the IG-style stats header.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("creator_id", creatorRow.id)
+      .eq("status", "completed") as Promise<{ count: number | null }>,
+  ]);
 
-  // Count completed orders for the stats row on the IG-style profile header.
-  // Scoped to status='completed' so cancelled/declined/in-progress orders don't
-  // inflate the "Orders" figure shown to potential customers.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count: completedOrdersCount } = (await (supabase as any)
-    .from("orders")
-    .select("*", { count: "exact", head: true })
-    .eq("creator_id", creatorRow.id)
-    .eq("status", "completed")) as { count: number | null };
-
-  const listings = listingsData ?? [];
+  const listings = listingsRes.data ?? [];
+  const completedOrdersCount = ordersRes.count;
 
   const creator: CreatorProfile = {
     display_name: member.display_name || "Creator",
@@ -101,18 +130,42 @@ async function loadStorefront(handle: string): Promise<{
   return { creator, listings };
 }
 
+/** Edge-cached wrapper. Cache key is the handle; tag is `storefront-<handle>`
+ *  so plate mutations can flush a specific creator's page instantly via
+ *  revalidateTag(). */
+function loadStorefront(handle: string) {
+  return unstable_cache(
+    () => loadStorefrontUncached(handle),
+    ["storefront", handle],
+    {
+      revalidate: STOREFRONT_CACHE_TTL_SECONDS,
+      tags: [`storefront-${handle}`],
+    }
+  )();
+}
+
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { handle } = await params;
   // Strip @ prefix and decode URI component (handles %40 encoding)
   const cleanHandle = decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
 
-  const { creator, listings } = await loadStorefront(cleanHandle);
+  // Cached storefront data + auth lookup run in parallel. The auth call
+  // marks the route dynamic (so per-visitor data is correct) while the
+  // storefront data is served from the edge cache for repeat visits.
+  const supabase = await createClient();
+  const [storefront, authResult] = await Promise.all([
+    loadStorefront(cleanHandle),
+    supabase.auth.getUser(),
+  ]);
+  const { creator, listings } = storefront;
+  const currentUserId = authResult.data.user?.id ?? null;
 
   return (
     <StorefrontClient
       handle={cleanHandle}
       initialCreator={creator}
       initialListings={listings}
+      initialUserId={currentUserId}
     />
   );
 }

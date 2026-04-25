@@ -4,6 +4,10 @@ import { useRef, useState, type ChangeEvent } from "react";
 import { ImagePlus, X, Film, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import {
+  compressImage,
+  formatCompressionLog,
+} from "@/lib/image-compression";
 
 interface MediaUploadProps {
   photos: string[];
@@ -47,13 +51,20 @@ export function MediaUpload({
     e.target.value = "";
 
     // Upload in parallel, then append all resolved URLs in one setter call.
+    // We compress each file client-side first so the network payload is a
+    // few hundred KB instead of the 2–5MB raw camera capture — eliminates
+    // the /_next/image proxy timeouts we were seeing on cellular.
     setUploadingCount((n) => n + toAdd.length);
     const uploadedUrls: string[] = [];
     await Promise.all(
-      toAdd.map(async (file) => {
+      toAdd.map(async (originalFile) => {
         try {
+          const compression = await compressImage(originalFile);
+          if (process.env.NODE_ENV !== "production") {
+            console.log(formatCompressionLog(compression));
+          }
           const formData = new FormData();
-          formData.append("file", file);
+          formData.append("file", compression.file);
           const res = await fetch("/api/v1/listings/upload", {
             method: "POST",
             body: formData,
