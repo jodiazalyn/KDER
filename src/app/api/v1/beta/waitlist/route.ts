@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { checkRateLimit, OTP_REQUEST_LIMIT } from "@/lib/rate-limiter";
 import { notifyBetaSignup } from "@/lib/beta-signup-notifier";
+import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * POST /api/v1/beta/waitlist
@@ -95,8 +96,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
+  // Service-role client: this route is anon-facing, but the writes go
+  // into a table whose RLS policies block anon inserts. The route is
+  // already the integrity layer (phone format, handle format, reserved-
+  // word list, uniqueness checks below), so bypassing RLS is safe and
+  // sidesteps PostgREST policy-cache quirks.
+  const supabase = createServiceClient();
+  if (!supabase) {
+    console.error(
+      "[beta/waitlist] SUPABASE_SERVICE_ROLE_KEY not set — cannot write"
+    );
+    return apiError("Server misconfigured. Try again shortly.", 500);
+  }
 
   // Pre-flight handle uniqueness check across BOTH members and existing
   // waitlist entries. Allows re-submission from the same phone (we'll

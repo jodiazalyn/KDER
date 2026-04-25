@@ -56,22 +56,32 @@ export async function GET(request: NextRequest) {
     // behind A2P 10DLC pending who've reserved their handle). A handle
     // reserved on the waitlist is locked to that phone — until that
     // user is activated or declined, no one else can claim it.
+    //
+    // The members read is fine via the cookie-bound anon client (RLS
+    // allows public reads of handles). The waitlist read needs the
+    // service-role client because waitlist_signups is RLS-locked away
+    // from public reads (we don't want phone numbers leaking via this
+    // availability endpoint).
     const { createClient } = await import("@/lib/supabase/server");
-    const supabase = await createClient();
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const anonClient = await createClient();
+    const serviceClient = createServiceClient();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const memberQ = (supabase as any)
+    const memberQ = (anonClient as any)
       .from("members")
       .select("handle")
       .eq("handle", normalized)
       .maybeSingle();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const waitlistQ = (supabase as any)
-      .from("waitlist_signups")
-      .select("handle, status")
-      .eq("handle", normalized)
-      .in("status", ["pending", "invited"]) // 'activated' rolls into members, 'declined' frees the handle
-      .maybeSingle();
+    const waitlistQ = serviceClient
+      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (serviceClient as any)
+          .from("waitlist_signups")
+          .select("handle, status")
+          .eq("handle", normalized)
+          .in("status", ["pending", "invited"]) // 'activated' rolls into members, 'declined' frees the handle
+          .maybeSingle()
+      : Promise.resolve({ data: null });
 
     const [memberRes, waitlistRes] = await Promise.all([memberQ, waitlistQ]);
 
