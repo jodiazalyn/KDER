@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
+import { revalidateStorefrontByCreatorId } from "@/lib/storefront-cache";
 
 export async function GET(request: NextRequest) {
   try {
@@ -125,6 +126,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return apiError("Failed to create listing.", 500);
+    }
+
+    // Flush this creator's storefront page cache so the new plate appears
+    // on /@<handle> immediately rather than at the next 60s boundary.
+    if (allowed.status === "active") {
+      await revalidateStorefrontByCreatorId(supabase, creator.id);
     }
 
     return apiSuccess({ listing: data });

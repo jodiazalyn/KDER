@@ -57,6 +57,7 @@ export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
                   src={plate.photos[0]}
                   alt={`Photo of ${plate.name}`}
                   fill
+                  sizes="144px"
                   className="object-cover"
                 />
               ) : (

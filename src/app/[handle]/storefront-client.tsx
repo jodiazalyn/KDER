@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 import { PlateTile } from "@/components/storefront/PlateTile";
-import { PlateDetailSheet } from "@/components/storefront/PlateDetailSheet";
-import { CartSheet } from "@/components/storefront/CartSheet";
-import { CheckoutSheet, type OrderDetails } from "@/components/storefront/CheckoutSheet";
 import {
   Sheet,
   SheetContent,
@@ -31,16 +29,44 @@ import {
 import type { Listing, Message } from "@/types";
 import { toast } from "sonner";
 
+// Defer the three heavy sheets to async chunks. ~70% of buyer visits to a
+// storefront never open any of them, and even those who do can wait an
+// extra ~100ms while the chunk fetches on the way to opening the sheet.
+const PlateDetailSheet = dynamic(
+  () =>
+    import("@/components/storefront/PlateDetailSheet").then(
+      (m) => m.PlateDetailSheet
+    ),
+  { ssr: false }
+);
+const CartSheet = dynamic(
+  () => import("@/components/storefront/CartSheet").then((m) => m.CartSheet),
+  { ssr: false }
+);
+type CheckoutSheetOrderDetails =
+  import("@/components/storefront/CheckoutSheet").OrderDetails;
+const CheckoutSheet = dynamic(
+  () =>
+    import("@/components/storefront/CheckoutSheet").then(
+      (m) => m.CheckoutSheet
+    ),
+  { ssr: false }
+);
+
 interface StorefrontClientProps {
   handle: string;
   initialCreator: CreatorProfile | null;
   initialListings: Listing[];
+  /** Resolved server-side from the Supabase session — saves a client-side
+   *  round-trip to determine whether to gate Message/Checkout into signup. */
+  initialUserId: string | null;
 }
 
 export function StorefrontClient({
   handle,
   initialCreator,
   initialListings,
+  initialUserId,
 }: StorefrontClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,27 +76,29 @@ export function StorefrontClient({
   const [selectedPlate, setSelectedPlate] = useState<Listing | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  // Track first-interaction with each lazily-loaded sheet so the dynamic
+  // chunks stay out of the critical path until a user actually engages.
+  const [hasOpenedCart, setHasOpenedCart] = useState(false);
+  const [hasOpenedCheckout, setHasOpenedCheckout] = useState(false);
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Seeded from the server (no extra client round-trip); refreshes via
+  // onAuthStateChange in case the customer signs in mid-session.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(initialUserId);
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  // Resolve current auth user on mount so the Message/Checkout buttons
-  // can gate unauthenticated customers into the signup flow.
+  // Subscribe to auth changes so signup-while-on-storefront propagates
+  // (e.g. customer taps "Buy now" → auth flow → returns to this page).
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!cancelled) setCurrentUserId(user?.id ?? null);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUserId(session?.user?.id ?? null);
+    });
+    return () => subscription.unsubscribe();
   }, [supabase]);
 
   // Hydrate cart from sessionStorage on mount (client-only state)
@@ -108,6 +136,7 @@ export function StorefrontClient({
       const updated = addToCart(handle, listing, qty);
       setCart(updated);
       setSelectedPlate(null);
+      setHasOpenedCheckout(true);
       setCheckoutOpen(true);
     },
     [currentUserId, handle, router]
@@ -129,7 +158,7 @@ export function StorefrontClient({
     [handle]
   );
 
-  const handlePlaceOrder = useCallback((_details: OrderDetails) => {
+  const handlePlaceOrder = useCallback((_details: CheckoutSheetOrderDetails) => {
     // Intentionally a no-op. Order rows are created server-side by
     // POST /api/v1/checkout BEFORE redirecting to Stripe. The previous
     // implementation also wrote a duplicate demo order to localStorage via
@@ -150,6 +179,7 @@ export function StorefrontClient({
     if (action === "message") {
       setMessageOpen(true);
     } else if (action === "checkout") {
+      setHasOpenedCart(true);
       setCartOpen(true);
     }
     // Consume the hint so reloads don't re-open.
@@ -399,32 +429,36 @@ export function StorefrontClient({
         )}
       </div>
 
-      {/* Plate detail sheet — opens when a tile is tapped */}
-      <PlateDetailSheet
-        listing={selectedPlate}
-        open={selectedPlate !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedPlate(null);
-        }}
-        cartQty={
-          selectedPlate
-            ? cart.find((c) => c.listing.id === selectedPlate.id)?.quantity ?? 0
-            : 0
-        }
-        onAddToCart={handleAddToCart}
-        onBuyNow={handleBuyNow}
-        creator={{
-          display_name: creator.display_name,
-          handle: creator.handle,
-          photo_url: creator.photo_url,
-        }}
-      />
+      {/* Plate detail sheet — only mounted once the user actually taps a
+          tile so the dynamic chunk doesn't fetch on initial render. */}
+      {selectedPlate !== null && (
+        <PlateDetailSheet
+          listing={selectedPlate}
+          open={selectedPlate !== null}
+          onOpenChange={(open) => {
+            if (!open) setSelectedPlate(null);
+          }}
+          cartQty={
+            cart.find((c) => c.listing.id === selectedPlate.id)?.quantity ?? 0
+          }
+          onAddToCart={handleAddToCart}
+          onBuyNow={handleBuyNow}
+          creator={{
+            display_name: creator.display_name,
+            handle: creator.handle,
+            photo_url: creator.photo_url,
+          }}
+        />
+      )}
 
       {/* Floating cart button */}
       {cartCount > 0 && (
         <button
           type="button"
-          onClick={() => setCartOpen(true)}
+          onClick={() => {
+            setHasOpenedCart(true);
+            setCartOpen(true);
+          }}
           className="fixed bottom-6 left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
         >
           <ShoppingCart size={18} />
@@ -433,36 +467,42 @@ export function StorefrontClient({
         </button>
       )}
 
-      {/* Cart sheet */}
-      <CartSheet
-        open={cartOpen}
-        onOpenChange={setCartOpen}
-        items={cart}
-        onUpdateQty={handleUpdateQty}
-        onRemove={handleRemove}
-        onCheckout={() => {
-          if (!currentUserId) {
-            // Gate unauthenticated checkout — redirect to signup, come back
-            // with action=checkout so the cart auto-opens after verify.
-            router.push(
-              `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
-            );
-            return;
-          }
-          setCartOpen(false);
-          setCheckoutOpen(true);
-        }}
-      />
+      {/* Cart sheet — chunk fetches lazily on first open. Stays mounted
+          after first open so reopening is instant. */}
+      {hasOpenedCart && (
+        <CartSheet
+          open={cartOpen}
+          onOpenChange={setCartOpen}
+          items={cart}
+          onUpdateQty={handleUpdateQty}
+          onRemove={handleRemove}
+          onCheckout={() => {
+            if (!currentUserId) {
+              // Gate unauthenticated checkout — redirect to signup, come back
+              // with action=checkout so the cart auto-opens after verify.
+              router.push(
+                `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=checkout`
+              );
+              return;
+            }
+            setCartOpen(false);
+            setHasOpenedCheckout(true);
+            setCheckoutOpen(true);
+          }}
+        />
+      )}
 
-      {/* Checkout sheet */}
-      <CheckoutSheet
-        open={checkoutOpen}
-        onOpenChange={setCheckoutOpen}
-        items={cart}
-        creatorHandle={handle}
-        creatorName={creator.display_name}
-        onPlaceOrder={handlePlaceOrder}
-      />
+      {/* Checkout sheet — same lazy-mount pattern. */}
+      {hasOpenedCheckout && (
+        <CheckoutSheet
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          items={cart}
+          creatorHandle={handle}
+          creatorName={creator.display_name}
+          onPlaceOrder={handlePlaceOrder}
+        />
+      )}
 
       {/* Message Creator sheet — full chat thread */}
       <Sheet open={messageOpen} onOpenChange={setMessageOpen}>

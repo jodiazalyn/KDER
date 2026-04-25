@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
+import { revalidateStorefrontByCreatorId } from "@/lib/storefront-cache";
 
 /**
  * GET /api/v1/listings/:id — fetch a single listing.
@@ -113,6 +114,10 @@ export async function PATCH(
       return apiError("Failed to update listing.", 500);
     }
 
+    // Flush this creator's storefront cache so edits/status changes
+    // (publish/pause/archive) appear on /@<handle> immediately.
+    await revalidateStorefrontByCreatorId(supabase, creator.id);
+
     return apiSuccess({ listing: data });
   } catch {
     return apiError("Failed to update listing.", 500);
@@ -158,6 +163,9 @@ export async function DELETE(
     if (error) {
       return apiError("Failed to archive listing.", 500);
     }
+
+    // Drop the archived plate from the public storefront immediately.
+    await revalidateStorefrontByCreatorId(supabase, creator.id);
 
     return apiSuccess({ id, status: "archived" });
   } catch {

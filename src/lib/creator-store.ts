@@ -32,19 +32,24 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
     } = await supabase.auth.getUser();
 
     if (user) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: member } = await (supabase as any)
-        .from("members")
-        .select("display_name, handle, photo_url, bio")
-        .eq("id", user.id)
-        .single();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: creator } = await (supabase as any)
-        .from("creators")
-        .select("service_zip_codes, storefront_active, vibe_score")
-        .eq("member_id", user.id)
-        .single();
+      // The members and creators rows are independent given user.id —
+      // run them in parallel to halve the round-trip cost.
+      const [memberRes, creatorRes] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("members")
+          .select("display_name, handle, photo_url, bio")
+          .eq("id", user.id)
+          .single(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("creators")
+          .select("service_zip_codes, storefront_active, vibe_score")
+          .eq("member_id", user.id)
+          .single(),
+      ]);
+      const member = memberRes.data;
+      const creator = creatorRes.data;
 
       if (member) {
         const zips: string[] = creator?.service_zip_codes || [];
