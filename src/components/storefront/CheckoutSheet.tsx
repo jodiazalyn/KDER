@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, CreditCard, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -21,6 +20,15 @@ function formatPhone(phone: string): string {
   if (!phone) return "";
   const digits = phone.replace(/\D/g, "").slice(-10);
   if (digits.length !== 10) return phone;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+/** Format raw digits as the user types: "3235550123" → "(323) 555-0123". */
+function formatPhoneInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
@@ -54,45 +62,77 @@ export function CheckoutSheet({
   creatorName,
   onPlaceOrder,
 }: CheckoutSheetProps) {
-  const router = useRouter();
   const currentUser = useCurrentUser();
-  const [authChecked, setAuthChecked] = useState(false);
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("pickup");
   const [notes, setNotes] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
+  // Guest fields — only used when no currentUser (Twilio A2P pending,
+  // OTP gate is removed; see /api/v1/auth/anon-customer).
+  const [guestName, setGuestName] = useState("");
+  const [guestPhoneRaw, setGuestPhoneRaw] = useState(""); // formatted display
+  const guestPhoneDigits = guestPhoneRaw.replace(/\D/g, "");
 
-  // Give the hook a beat to resolve; once it has (user or null), mark auth as checked.
-  // This lets us distinguish "still loading" from "truly anonymous" before redirecting.
+  // Reset guest fields when the sheet closes so a stale entry doesn't
+  // leak into the next purchase on a shared device.
   useEffect(() => {
-    if (currentUser !== null) {
-      setAuthChecked(true);
-      return;
+    if (!open) {
+      setGuestName("");
+      setGuestPhoneRaw("");
     }
-    const timer = setTimeout(() => setAuthChecked(true), 800);
-    return () => clearTimeout(timer);
-  }, [currentUser]);
-
-  // Defensive: if the sheet is open but no authenticated user resolved, send them
-  // to customer signup. The Place Order button on the storefront already gates
-  // this upstream; this is belt-and-suspenders.
-  useEffect(() => {
-    if (open && authChecked && !currentUser) {
-      onOpenChange(false);
-      const next = encodeURIComponent(`/@${creatorHandle}`);
-      router.push(`/signup?mode=customer&next=${next}&action=checkout`);
-    }
-  }, [open, authChecked, currentUser, creatorHandle, onOpenChange, router]);
+  }, [open]);
 
   const total = getCartTotal(items);
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
-  const canPlace = !!currentUser && !needsAddress;
+  // When authed, the existing user satisfies name+phone. When not, the
+  // guest inputs must be valid (non-empty trimmed name + 10 digits).
+  const guestFieldsValid =
+    guestName.trim().length > 0 && guestPhoneDigits.length === 10;
+  const canPlace =
+    !needsAddress && (!!currentUser || guestFieldsValid);
 
   const handlePlace = async () => {
-    if (!currentUser) return;
+    if (placing) return;
     setPlacing(true);
     try {
+      // No-OTP guest path — register an anon Supabase auth session
+      // first so the checkout route's auth.getUser() resolves and we
+      // get a real user.id for orders.member_id + messaging.
+      let memberName: string;
+      let memberPhone: string;
+
+      if (!currentUser) {
+        const trimmedName = guestName.trim();
+        const anonRes = await fetch("/api/v1/auth/anon-customer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: trimmedName,
+            phone: guestPhoneDigits,
+          }),
+        });
+        const anonJson = await anonRes.json();
+        if (!anonRes.ok) {
+          // Surface the server's error + code (anonymous_provider_disabled
+          // is the most likely cause if the dashboard toggle hasn't been
+          // flipped) so it's diagnosable from the toast.
+          const code =
+            typeof anonJson?.code === "string" ? ` [${anonJson.code}]` : "";
+          toast.error(
+            `${anonJson?.error || "Couldn't start your order. Try again."}${code}`
+          );
+          setPlacing(false);
+          return;
+        }
+        memberName = (anonJson?.data?.display_name as string) ?? trimmedName;
+        memberPhone =
+          (anonJson?.data?.phone as string) ?? `+1${guestPhoneDigits}`;
+      } else {
+        memberName = currentUser.display_name;
+        memberPhone = currentUser.phone;
+      }
+
       // Create Stripe Checkout Session
       const res = await fetch("/api/v1/checkout", {
         method: "POST",
@@ -105,8 +145,8 @@ export function CheckoutSheet({
             quantity: item.quantity,
             photo: item.listing.photos[0] || null,
           })),
-          member_name: currentUser.display_name,
-          member_phone: currentUser.phone,
+          member_name: memberName,
+          member_phone: memberPhone,
           fulfillment_type: fulfillment,
           notes: notes.trim(),
           creator_handle: creatorHandle,
@@ -121,8 +161,8 @@ export function CheckoutSheet({
 
       // Also create local orders for demo tracking
       onPlaceOrder({
-        memberName: currentUser.display_name,
-        memberPhone: currentUser.phone,
+        memberName,
+        memberPhone,
         fulfillmentType: fulfillment,
         notes: notes.trim(),
         deliveryAddress: fulfillment === "delivery" ? deliveryAddress.trim() : null,
@@ -179,7 +219,11 @@ export function CheckoutSheet({
         </SheetHeader>
 
         <div className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
-          {/* Ordering-as summary (prefilled from signup — no re-entry) */}
+          {/* Ordering-as panel.
+              - Authed user: read-only summary (existing behavior, unchanged).
+              - Anonymous (no OTP, A2P pending): inline name + phone inputs.
+                These pass to /api/v1/auth/anon-customer on submit and become
+                the order's member_name/member_phone. */}
           {currentUser ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
               <p className="text-xs text-white/50">Ordering as</p>
@@ -193,8 +237,35 @@ export function CheckoutSheet({
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-white/50">
+                Your contact info
+              </p>
+              <input
+                type="text"
+                value={guestName}
+                onChange={(e) =>
+                  setGuestName(e.target.value.slice(0, 40))
+                }
+                placeholder="Your name"
+                autoFocus
+                autoComplete="name"
+                className="h-12 w-full rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.10] focus:outline-none"
+              />
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={guestPhoneRaw}
+                onChange={(e) =>
+                  setGuestPhoneRaw(formatPhoneInput(e.target.value))
+                }
+                placeholder="(323) 555-0123"
+                autoComplete="tel"
+                className="h-12 w-full rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.10] focus:outline-none"
+              />
+              <p className="text-xs text-white/35">
+                The creator will text you order updates here.
+              </p>
             </div>
           )}
 

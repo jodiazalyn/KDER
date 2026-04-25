@@ -1,0 +1,40 @@
+-- ============================================
+-- 003_members_phone_drop_unique
+-- TEMPORARY (Twilio A2P 10DLC pending) — drop UNIQUE on members.phone
+-- ============================================
+-- Rationale:
+--   Customer purchases now use Supabase anonymous auth as a stop-gap
+--   while Twilio A2P 10DLC registration is pending. Each new device /
+--   browser the same human checks out from creates a fresh
+--   auth.users row + members row. They will legitimately share a phone
+--   number across multiple member rows during this workaround window.
+--
+--   The non-unique idx_members_phone index from schema.sql:114 stays
+--   in place so phone lookups remain fast.
+--
+-- Reversal:
+--   When A2P approval lands and OTP-verified signups are restored,
+--   ship a follow-up migration that:
+--     1. Deduplicates same-phone rows (manual decision per creator's
+--        customer list — typically: keep the row with the most order
+--        history, repoint orders/messages to it, delete the others).
+--     2. Re-adds the UNIQUE constraint:
+--          ALTER TABLE members
+--            ADD CONSTRAINT members_phone_key UNIQUE (phone);
+--
+-- Idempotency:
+--   IF EXISTS guards make this migration safe to re-run.
+-- ============================================
+
+ALTER TABLE members DROP CONSTRAINT IF EXISTS members_phone_key;
+
+-- members_phone_key is the auto-generated name Postgres assigns to
+-- the inline UNIQUE in `phone TEXT UNIQUE NOT NULL`. The actual
+-- constraint name in the live project may differ. To verify the
+-- correct name on your database, run:
+--
+--   SELECT conname FROM pg_constraint
+--   WHERE conrelid = 'public.members'::regclass AND contype = 'u';
+--
+-- and substitute the real name above if needed (the IF EXISTS makes
+-- the wrong-name attempt a silent no-op rather than a hard failure).
