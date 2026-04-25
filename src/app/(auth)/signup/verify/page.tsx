@@ -91,30 +91,43 @@ export default function VerifyPage() {
           return;
         }
 
-        // Read mode BEFORE the cleanup below — it's only used for the
-        // new-user branch but sessionStorage is cleared first, so the
-        // read order matters.
+        // Read all routing-relevant sessionStorage values BEFORE the
+        // cleanup below — removing items first would null these out.
         const mode = sessionStorage.getItem("kder_signup_mode");
+        const next = sessionStorage.getItem("kder_signup_next");
 
-        // Successful verify → user is now authenticated. Clear ALL
-        // signup-flow sessionStorage so a future signup attempt on
-        // this device starts clean (no stale handle/mode/phone leaking
-        // between accounts on a shared browser).
+        // Auth-flow keys we own end-to-end and are safe to clear here.
+        // Note: kder_signup_next and kder_signup_action are
+        // intentionally NOT cleared — the destination page (storefront
+        // / customer onboarding) consumes them to resume the
+        // customer's flow (auto-open checkout sheet, etc.). See
+        // src/app/onboarding/customer/page.tsx:43-44 for the
+        // matching convention.
         sessionStorage.removeItem("kder_signup_phone");
         sessionStorage.removeItem("kder_signup_mode");
         sessionStorage.removeItem("kder_onboarding_handle");
 
-        // Returning user → they already have a public.members row, so
-        // they've completed at least basic onboarding. Send them
-        // straight to /dashboard — same destination the landing page
-        // uses for any user with an active session
-        // (src/app/page.tsx:159). router.replace (not push) so Back
-        // doesn't return to a stale OTP screen.
-        // Strict === false: any other shape (missing field, parse
-        // hiccup) falls through to the existing new-user flow rather
-        // than risk dropping a real new user onto an empty dashboard.
+        // Returning user → they already have a public.members row.
+        // Split by role so customers always land on the storefront
+        // they came from (per product requirement: customers don't
+        // have a personal home, only the creator's storefront link),
+        // and creators land on their dashboard.
+        // Strict === false / === true checks: any unexpected shape
+        // (missing field, parse hiccup) falls through to the existing
+        // new-user flow, and within the returning branch defaults to
+        // the customer path — safer than dropping a non-creator onto
+        // /dashboard.
         if (json?.data?.isNewUser === false) {
-          router.replace("/dashboard");
+          if (json?.data?.isCreator === true) {
+            router.replace("/dashboard");
+          } else {
+            // Customer → back to the storefront link they clicked
+            // from the creator. In normal flow `next` is always set
+            // (see src/app/(auth)/signup/page.tsx:30 — `?next=` is
+            // stamped into sessionStorage on every customer entry).
+            // The `|| "/"` fallback is purely defensive.
+            router.replace(next || "/");
+          }
           return;
         }
 
