@@ -15,6 +15,7 @@ import { OrderTransferDrawer } from "./OrderTransferDrawer";
 import { PayoutHistoryList } from "./PayoutHistoryList";
 import { PayoutScheduleSheet } from "./PayoutScheduleSheet";
 import { TransactionRow } from "./TransactionRow";
+import { getInstantPayoutState } from "@/lib/earnings-instant";
 import type {
   EarningsData,
   EarningsTransaction,
@@ -54,6 +55,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
   } = initial;
 
   const availableCents = balance?.availableCents ?? 0;
+  const instantPayoutState = getInstantPayoutState({ balance, account });
 
   const startConnectOnboarding = useCallback(async () => {
     setConnectLoading(true);
@@ -117,6 +119,9 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
               toast.error("No balance available for payout.");
               return;
             }
+            // Sheet handles every non-available state (no debit card,
+            // not approved by Stripe yet) with an in-sheet explainer
+            // instead of a verbose toast. See InstantPayoutSheet.
             setShowInstantSheet(true);
           }}
         />
@@ -208,6 +213,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
         open={showInstantSheet}
         onOpenChange={setShowInstantSheet}
         availableCents={availableCents}
+        state={instantPayoutState}
         onSuccess={() => router.refresh()}
       />
 

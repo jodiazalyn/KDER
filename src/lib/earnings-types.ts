@@ -20,6 +20,14 @@ export type PayoutScheduleInterval = "daily" | "weekly" | "manual";
 export interface EarningsBalance {
   availableCents: number;
   pendingCents: number;
+  /**
+   * Stripe `balance.instant_available` USD entry. When 0, Stripe hasn't
+   * approved this Connect account for instant payouts yet — funds in
+   * `available` can only go out via standard ACH. Pre-flight gate so we
+   * can show an explainer BEFORE the user taps Confirm rather than
+   * surfacing `instant_payouts_limit_exceeded` after the fact.
+   */
+  instantAvailableCents: number;
   currency: string; // 'usd'
 }
 
@@ -79,6 +87,23 @@ export interface EarningsTransaction {
   refundAmountCents: number;
   paymentIntentId: string | null;
 }
+
+/**
+ * Discriminated union describing whether the creator can run an instant
+ * payout right now, and if not, why. Drives both the button state in
+ * BalanceHero and the explainer view in InstantPayoutSheet.
+ *
+ *   - available     : has card, has balance, Stripe approved instant
+ *   - no_balance    : nothing to pay out (button shouldn't render)
+ *   - no_debit_card : bank-only Connect account; needs to add a card
+ *   - not_enabled   : Stripe hasn't approved instant for this account yet
+ *                     (typically resolves once volume/age thresholds met)
+ */
+export type InstantPayoutState =
+  | { kind: "available" }
+  | { kind: "no_balance" }
+  | { kind: "no_debit_card" }
+  | { kind: "not_enabled" };
 
 export type EarningsErrorSection = "balance" | "payouts" | "account" | "lifetime";
 
