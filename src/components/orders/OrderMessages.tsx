@@ -24,14 +24,21 @@ export function OrderMessages({
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
-  // Load existing messages
+  // Load existing messages — scoped to the conversation between this
+  // member and creator regardless of order_id. Both surfaces (storefront
+  // chat sheet + order page thread) now show the same continuous thread,
+  // so a message sent from one place appears in the other. order_id is
+  // still set on inserts here for analytics, but it no longer fragments
+  // the conversation.
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const load = async () => {
         const { data, error } = await supabase
           .from("messages")
           .select("*")
-          .eq("order_id", orderId)
+          .or(
+            `and(sender_id.eq.${currentUserId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentUserId})`
+          )
           .order("created_at", { ascending: true });
 
         if (!error && data) {
@@ -41,22 +48,29 @@ export function OrderMessages({
       load();
     });
     return () => cancelAnimationFrame(frame);
-  }, [orderId, recipientId, currentUserId, supabase]);
+  }, [recipientId, currentUserId, supabase]);
 
-  // Subscribe to new messages via Realtime
+  // Subscribe to new messages via Realtime — filter client-side by
+  // participants since Postgres-changes filter syntax doesn't support
+  // OR conditions on multiple columns.
   useEffect(() => {
     const channel = supabase
-      .channel(`order-messages-${orderId}`)
+      .channel(`order-messages-${currentUserId}-${recipientId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `order_id=eq.${orderId}`,
         },
         (payload) => {
           const newMsg = payload.new as Message;
+          const involvesMe =
+            (newMsg.sender_id === currentUserId &&
+              newMsg.recipient_id === recipientId) ||
+            (newMsg.sender_id === recipientId &&
+              newMsg.recipient_id === currentUserId);
+          if (!involvesMe) return;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
@@ -68,7 +82,7 @@ export function OrderMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId, supabase]);
+  }, [currentUserId, recipientId, supabase]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
