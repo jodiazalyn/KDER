@@ -41,9 +41,11 @@ export function BalanceHero({
   // taps are confusing.
   const showStandardButton = account?.schedule.interval === "manual";
 
-  // Instant button gated on having a debit card external_account.
-  const instantEnabled =
-    hasBalance && (account?.hasInstantEligibleCard ?? false);
+  // Instant button always enabled when balance > 0. Pre-flight ineligible
+  // states (no debit card, instant not enabled by Stripe) are surfaced
+  // by the InstantPayoutSheet's explainer views — letting the user tap
+  // and learn why is friendlier than a disabled button with a tooltip
+  // they may not even discover.
 
   return (
     <div className="rounded-3xl border border-green-400/[0.25] bg-green-900/[0.40] p-6 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]">
@@ -99,14 +101,8 @@ export function BalanceHero({
           <button
             type="button"
             onClick={onInstantPayout}
-            disabled={!instantEnabled}
             aria-label="Request instant payout, 1.5 percent fee, within 30 minutes"
-            title={
-              !account?.hasInstantEligibleCard
-                ? "Add a debit card in Stripe to enable instant payouts"
-                : undefined
-            }
-            className="flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all"
           >
             <span className="flex items-center gap-1 text-sm font-bold">
               <Zap size={12} />
