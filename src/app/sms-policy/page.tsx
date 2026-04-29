@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     "How KDER collects SMS consent, what messages we send, and how members can opt in or out at any time.",
 };
 
-const LAST_UPDATED = "April 23, 2026";
+const LAST_UPDATED = "April 29, 2026";
 
 export default function SmsPolicyPage() {
   return (
@@ -73,7 +73,10 @@ export default function SmsPolicyPage() {
       <article className="mx-auto max-w-3xl px-6 py-16 lg:py-24">
         <p className="text-xs text-white/30">Last updated {LAST_UPDATED}</p>
 
-        <div className="mt-10 space-y-14 text-[15px] leading-relaxed text-white/75">
+        {/* ── Required SMS Program Disclosure (regulatory component) ── */}
+        <ProgramDisclosureBox />
+
+        <div className="mt-14 space-y-14 text-[15px] leading-relaxed text-white/75">
           {/* 1. About KDER */}
           <Section eyebrow="Overview" title="About KDER">
             <p>
@@ -102,21 +105,23 @@ export default function SmsPolicyPage() {
             <Steps
               items={[
                 <>
-                  The user visits <strong className="text-white">kder.club</strong>{" "}
-                  and initiates account creation by entering their mobile
-                  phone number.
+                  The user visits{" "}
+                  <strong className="text-white">kder.club</strong> and
+                  initiates account creation by entering their mobile phone
+                  number.
                 </>,
                 <>
                   KDER sends a one-time passcode (OTP) to the provided phone
                   number via SMS to verify ownership of the number.
                 </>,
                 <>
-                  After OTP verification, the user is presented with{" "}
+                  After OTP verification, the user is presented with a{" "}
                   <strong className="text-white">
-                    explicit SMS consent language
+                    Terms of Service acknowledgment
                   </strong>{" "}
-                  acknowledging the Terms of Service. Consent is not
-                  pre-checked — the user must actively acknowledge to proceed.
+                  containing explicit SMS consent language. This is{" "}
+                  <strong className="text-white">not pre-checked</strong> —
+                  the user must actively acknowledge it to proceed.
                 </>,
                 <>
                   The user completes account creation, confirming consent.
@@ -198,47 +203,46 @@ export default function SmsPolicyPage() {
           </Section>
 
           {/* 4. Keywords */}
-          <Section
-            eyebrow="Keywords"
-            title="Opt-In & Opt-Out Keywords"
-          >
+          <Section eyebrow="Keywords" title="Opt-In & Opt-Out Keywords">
             <p>
               KDER&apos;s primary opt-in method is web-based registration at
               kder.club, not keyword-based SMS opt-in. However, the following
-              standard industry keywords are supported:
+              standard industry keywords are fully supported:
             </p>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <KeywordPill tone="green">START</KeywordPill>
-              <KeywordPill tone="green">ACCEPT</KeywordPill>
-              <KeywordPill tone="green">UNSTOP</KeywordPill>
-            </div>
-            <p className="mt-2 text-xs text-white/50">
-              Replying with any of these keywords re-enables messaging for
-              users who previously opted out.
-            </p>
+            {/* Opt-in / re-subscribe block */}
+            <KeywordBlock
+              tone="green"
+              label="Opt-In / Re-Subscribe Keywords"
+              keywords={["START", "ACCEPT", "UNSTOP"]}
+              note="Replying with any of these keywords re-enables messaging for users who previously opted out."
+            />
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <KeywordPill tone="red">STOP</KeywordPill>
-              <KeywordPill tone="red">CANCEL</KeywordPill>
-              <KeywordPill tone="red">UNSUBSCRIBE</KeywordPill>
-              <KeywordPill tone="red">END</KeywordPill>
-              <KeywordPill tone="red">QUIT</KeywordPill>
-            </div>
-            <p className="mt-2 text-xs text-white/50">
-              Replying with any of these keywords immediately opts the user
-              out of all non-authentication SMS messages.
-            </p>
+            {/* Opt-out block */}
+            <KeywordBlock
+              tone="red"
+              label="Opt-Out Keywords — reply with any of these to stop messages"
+              keywords={["STOP", "CANCEL", "UNSUBSCRIBE", "END", "QUIT"]}
+              note="Replying with any of these keywords immediately opts the user out of all non-authentication SMS messages. A single confirmation is sent and no further messages will follow."
+            />
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <KeywordPill tone="gray">HELP</KeywordPill>
-              <KeywordPill tone="gray">INFO</KeywordPill>
-            </div>
-            <p className="mt-2 text-xs text-white/50">
-              Replying with HELP or INFO returns: &ldquo;KDER Alerts: Msg
-              &amp; data rates may apply. Reply STOP to unsubscribe. Support:
-              hello@kder.club&rdquo;
-            </p>
+            {/* Help block */}
+            <KeywordBlock
+              tone="gray"
+              label="Help Keywords"
+              keywords={["HELP", "INFO"]}
+              note={
+                <>
+                  Replying with HELP or INFO returns:{" "}
+                  <em className="text-white/85">
+                    &ldquo;KDER Alerts: Get order updates &amp; notifications
+                    from KDER. Msg &amp; data rates may apply. Msg frequency
+                    varies. Reply STOP to unsubscribe. Support:
+                    support@kder.org&rdquo;
+                  </em>
+                </>
+              }
+            />
           </Section>
 
           {/* 5. Opt-Out Process */}
@@ -267,10 +271,10 @@ export default function SmsPolicyPage() {
                 <>
                   Contact KDER support directly at{" "}
                   <a
-                    href="mailto:hello@kder.club"
+                    href="mailto:support@kder.org"
                     className="font-medium text-green-300 underline-offset-4 hover:underline"
                   >
-                    hello@kder.club
+                    support@kder.org
                   </a>{" "}
                   to request removal.
                 </>,
@@ -342,7 +346,8 @@ export default function SmsPolicyPage() {
               This consent language is displayed adjacent to an acknowledgment
               that is <strong className="text-white">not pre-checked</strong>.
               The user must actively acknowledge consent before account
-              creation can be completed.
+              creation can be completed. Submission of the registration form
+              without acknowledging this is not permitted.
             </p>
           </Section>
         </div>
@@ -361,10 +366,10 @@ export default function SmsPolicyPage() {
             Reach our compliance team at any time.
           </p>
           <a
-            href="mailto:hello@kder.club"
+            href="mailto:support@kder.org"
             className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-[#1B5E20] px-8 text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.4)] transition-colors hover:bg-[#2E7D32]"
           >
-            hello@kder.club
+            support@kder.org
           </a>
         </div>
 
@@ -375,6 +380,12 @@ export default function SmsPolicyPage() {
             className="font-medium text-green-300 transition-colors hover:text-green-200"
           >
             Read the Terms of Service →
+          </Link>
+          <Link
+            href="/privacy"
+            className="font-medium text-green-300 transition-colors hover:text-green-200"
+          >
+            Privacy Policy →
           </Link>
           <Link
             href="/"
@@ -464,8 +475,7 @@ function KeywordPill({
   children: React.ReactNode;
 }) {
   const classes = {
-    green:
-      "border-green-400/50 bg-green-900/25 text-green-200",
+    green: "border-green-400/50 bg-green-900/25 text-green-200",
     red: "border-red-400/50 bg-red-900/25 text-red-200",
     gray: "border-white/20 bg-white/[0.06] text-white/70",
   }[tone];
@@ -475,5 +485,143 @@ function KeywordPill({
     >
       {children}
     </span>
+  );
+}
+
+/**
+ * Grouped keyword block used in the Keywords section. Each block has its
+ * own tone and clearly labels its purpose so the regulatory intent
+ * (opt-in / opt-out / help) is unambiguous.
+ */
+function KeywordBlock({
+  tone,
+  label,
+  keywords,
+  note,
+}: {
+  tone: "green" | "red" | "gray";
+  label: string;
+  keywords: string[];
+  note: React.ReactNode;
+}) {
+  const containerClasses = {
+    green: "border-green-400/25 bg-green-900/10",
+    red: "border-red-400/25 bg-red-900/10",
+    gray: "border-white/[0.10] bg-white/[0.03]",
+  }[tone];
+  const labelColor = {
+    green: "text-green-300",
+    red: "text-red-300",
+    gray: "text-white/60",
+  }[tone];
+
+  return (
+    <div
+      className={`mt-5 rounded-xl border px-5 py-4 ${containerClasses}`}
+    >
+      <p
+        className={`mb-3 text-[10px] font-bold uppercase tracking-[0.1em] ${labelColor}`}
+      >
+        {label}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {keywords.map((kw) => (
+          <KeywordPill key={kw} tone={tone}>
+            {kw}
+          </KeywordPill>
+        ))}
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-white/55">{note}</p>
+    </div>
+  );
+}
+
+/**
+ * Required SMS Program Disclosure box at the top of the policy.
+ * Mirrors the "program details" pattern surfaced in Privacy and
+ * Terms so the regulatory boilerplate is consistent across surfaces.
+ */
+function ProgramDisclosureBox() {
+  return (
+    <div className="mt-10 rounded-2xl border border-white/[0.10] bg-black/60 p-6 backdrop-blur-sm">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-green-300">
+        Required SMS Program Disclosure
+      </p>
+      <h2 className="mb-5 border-b border-white/10 pb-3 text-xl font-bold text-white">
+        KDER SMS Program Details
+      </h2>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <DisclosureField label="Program Name" value="KDER Alerts" />
+        <DisclosureField
+          label="Message Types"
+          value="Order alerts, confirmations, fulfillment updates & account notifications"
+        />
+        <DisclosureField
+          label="Message Frequency"
+          value="Varies based on your order activity on KDER"
+        />
+        <DisclosureField
+          label="Support Contact"
+          value={
+            <a
+              href="mailto:support@kder.org"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              support@kder.org
+            </a>
+          }
+        />
+        <DisclosureField
+          label="Privacy Policy"
+          value={
+            <Link
+              href="/privacy"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              kder.club/privacy
+            </Link>
+          }
+        />
+        <DisclosureField
+          label="Terms of Service"
+          value={
+            <Link
+              href="/terms"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              kder.club/terms
+            </Link>
+          }
+        />
+      </div>
+
+      <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <p className="text-[13px] leading-relaxed text-white/70">
+          Message and data rates may apply. Message frequency varies. KDER
+          does not sell or share your mobile phone number with third parties
+          for marketing purposes.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DisclosureField({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium leading-relaxed text-white/85">
+        {value}
+      </p>
+    </div>
   );
 }

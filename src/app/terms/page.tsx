@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "The rules of the road for KDER's Member-to-Member hospitality marketplace in Houston.",
 };
 
-const LAST_UPDATED = "April 23, 2026";
+const LAST_UPDATED = "April 29, 2026";
 
 export default function TermsPage() {
   return (
@@ -97,7 +97,7 @@ export default function TermsPage() {
               You are responsible for the activity on your account and for
               keeping your phone number current. Your public handle
               (&quot;@yourhandle&quot;) is yours to use while your account is
-              in good standing; KDER reserves the right to reclaim handles
+              in good standing. KDER reserves the right to reclaim handles
               that impersonate others, infringe rights, or violate these
               terms.
             </p>
@@ -149,24 +149,46 @@ export default function TermsPage() {
 
           <Section title="6. Fees and payouts">
             <p>
-              Listing on KDER is always free. KDER charges a 10% platform fee
-              on each completed transaction, deducted from the Creator&apos;s
-              payout. Creators are paid through Stripe Connect; payouts
-              typically arrive in the Creator&apos;s bank account within one
-              business day after an order is marked complete. Stripe
-              processing fees are covered by KDER out of the platform fee.
+              Listing on KDER is always free. KDER charges a{" "}
+              <strong className="text-white">10% platform fee</strong> on each
+              completed transaction, deducted from the Creator&apos;s payout
+              via Stripe. Creators are paid through Stripe Connect. Payouts
+              are available via:
+            </p>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-white/70">
+              <li>
+                <strong className="text-white">Standard Payout</strong> — 2-3
+                business days, no additional fee.
+              </li>
+              <li>
+                <strong className="text-white">Instant Payout</strong> —
+                within 30 minutes,{" "}
+                <strong className="text-white">1.5% fee</strong> paid by the
+                Creator (disclosed before confirmation; Stripe&apos;s rate
+                may vary by region or balance).
+              </li>
+            </ul>
+            <p className="mt-3">
+              Payouts are held until Creator KYC verification is complete
+              through Stripe Identity. Stripe&apos;s standard processing fees
+              are factored into the platform fee.
             </p>
           </Section>
 
           <Section title="7. Cancellations, refunds, and disputes">
             <p>
-              Orders can be cancelled by the Creator (who may decline) or by
-              mutual agreement before the order is marked ready. If an order
-              cannot be fulfilled, the Member is refunded. For disputes about
-              quality or delivery, Members and Creators are encouraged to
-              work it out directly through the in-app messaging first. KDER
-              may, at its discretion, mediate disputes and issue refunds or
-              credits when appropriate.
+              Members may request a full refund within{" "}
+              <strong className="text-white">30 minutes</strong> of placing an
+              order. After 30 minutes, refunds are subject to the
+              Creator&apos;s stated refund policy. Orders that are
+              auto-declined (after 15 minutes with no Creator response) are
+              refunded in full automatically.
+            </p>
+            <p className="mt-3">
+              For disputes about quality or delivery, Members and Creators are
+              encouraged to work it out directly through in-app messaging
+              first. KDER may, at its discretion, mediate disputes and issue
+              refunds or credits when appropriate.
             </p>
           </Section>
 
@@ -249,68 +271,17 @@ export default function TermsPage() {
           </Section>
 
           <Section title="15. SMS communications" id="sms-communications">
-            <p>
-              <strong className="text-white">Program name:</strong> KDER Order
-              &amp; Account Alerts.
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">
-                What messages you&apos;ll receive:
-              </strong>{" "}
-              one-time passwords (OTP) when you sign in, and notifications
-              about your KDER orders — confirmations, pickup or delivery
-              updates, and refund notices. We do not use SMS for marketing.
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">Message frequency:</strong>{" "}
-              message frequency varies based on your activity on the platform.
-              A typical order generates 3–5 transactional messages from KDER.
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">
-                Message and data rates may apply.
-              </strong>{" "}
-              Your carrier&apos;s standard rates for messaging and data apply
-              to every SMS you send or receive. KDER does not charge for SMS,
-              but we are not responsible for carrier charges.
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">How to get help:</strong> Reply{" "}
-              <strong className="text-white">HELP</strong> to any KDER text
-              for assistance, or email us at{" "}
-              <a
-                href="mailto:hello@kder.club"
-                className="font-medium text-green-300 underline-offset-4 hover:underline"
-              >
-                hello@kder.club
-              </a>
-              .
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">How to opt out:</strong> Reply{" "}
-              <strong className="text-white">STOP</strong> to any KDER text to
-              unsubscribe from all non-critical messages. One-time passwords
-              required to sign in may still be delivered for account security;
-              if you no longer want to receive any SMS from KDER, please close
-              your account.
-            </p>
-            <p className="mt-3">
-              <strong className="text-white">
-                Consent is not a condition of purchase.
-              </strong>{" "}
-              You can use KDER without opting into SMS, though most
-              order-status features depend on it.
-            </p>
+            <SmsTermsBox />
           </Section>
 
           <Section title="16. Contact">
             <p>
               Questions? Reach us at{" "}
               <a
-                href="mailto:hello@kder.club"
+                href="mailto:support@kder.org"
                 className="font-medium text-green-300 underline-offset-4 hover:underline"
               >
-                hello@kder.club
+                support@kder.org
               </a>
               .
             </p>
@@ -324,6 +295,12 @@ export default function TermsPage() {
             className="font-medium text-green-300 transition-colors hover:text-green-200"
           >
             Read the Privacy Policy →
+          </Link>
+          <Link
+            href="/sms-policy"
+            className="font-medium text-green-300 transition-colors hover:text-green-200"
+          >
+            SMS Consent Policy →
           </Link>
           <Link
             href="/"
@@ -351,5 +328,150 @@ function Section({
       <h2 className="mb-3 text-lg font-bold text-white lg:text-xl">{title}</h2>
       {children}
     </section>
+  );
+}
+
+/**
+ * Section 15 SMS box — A2P 10DLC required disclosures inside Terms.
+ * Mirrors the structure of the standalone SMS Policy page so the
+ * regulatory boilerplate is consistent across surfaces.
+ */
+function SmsTermsBox() {
+  return (
+    <div className="rounded-2xl border border-white/[0.10] bg-black/60 p-6 backdrop-blur-sm">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <DisclosureField label="Program Name" value="KDER Alerts" />
+        <DisclosureField
+          label="Message Types"
+          value="Order alerts, confirmations, fulfillment updates, authentication OTPs & account notifications"
+        />
+        <DisclosureField
+          label="Message Frequency"
+          value="Varies based on your activity. A typical order generates 3-5 transactional messages."
+        />
+        <DisclosureField
+          label="Support"
+          value={
+            <a
+              href="mailto:support@kder.org"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              support@kder.org
+            </a>
+          }
+        />
+        <DisclosureField
+          label="SMS Consent Policy"
+          value={
+            <Link
+              href="/sms-policy"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              kder.club/sms-policy
+            </Link>
+          }
+        />
+        <DisclosureField
+          label="Privacy Policy"
+          value={
+            <Link
+              href="/privacy"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              kder.club/privacy
+            </Link>
+          }
+        />
+      </div>
+
+      <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <p className="text-[13px] leading-relaxed text-white/70">
+          <strong className="text-white/95">
+            Message and data rates may apply.
+          </strong>{" "}
+          Your carrier&apos;s standard rates for messaging and data apply to
+          every SMS you send or receive. KDER does not charge for SMS, but is
+          not responsible for carrier charges.
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-white/70">
+          KDER does not sell or share your mobile phone number with third
+          parties for marketing purposes. Consent is not a condition of
+          purchase — you can use KDER without opting into SMS, though most
+          order-status features depend on it.
+        </p>
+      </div>
+
+      <div className="mt-5">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+          To opt out — reply with any of these
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {["STOP", "CANCEL", "UNSUBSCRIBE", "END", "QUIT"].map((kw) => (
+            <KwPill key={kw} tone="red">
+              {kw}
+            </KwPill>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-white/45">
+          Opt-out takes effect immediately. A single confirmation is sent and
+          no further messages will follow except authentication OTPs required
+          for account security.
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+          For help — reply with any of these
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <KwPill tone="green">HELP</KwPill>
+          <KwPill tone="green">INFO</KwPill>
+        </div>
+        <p className="mt-2 text-xs text-white/45">
+          Response: &ldquo;KDER Alerts: Get order updates &amp; notifications
+          from KDER. Msg &amp; data rates may apply. Msg frequency varies.
+          Reply STOP to unsubscribe. Support: support@kder.org&rdquo;
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DisclosureField({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium leading-relaxed text-white/85">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function KwPill({
+  tone,
+  children,
+}: {
+  tone: "red" | "green";
+  children: React.ReactNode;
+}) {
+  const classes =
+    tone === "red"
+      ? "border-red-400/40 bg-red-900/25 text-red-200"
+      : "border-green-400/40 bg-green-900/25 text-green-200";
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border-[1.5px] px-3 py-0.5 text-xs font-extrabold tracking-wider ${classes}`}
+    >
+      {children}
+    </span>
   );
 }
