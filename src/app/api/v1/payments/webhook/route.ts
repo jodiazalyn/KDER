@@ -4,9 +4,15 @@ import {
   handleCheckoutCompleted,
   handleChargeSucceeded,
   handleChargeRefunded,
+  handlePayoutCreated,
+  handlePayoutUpdated,
   handlePayoutPaid,
   handlePayoutFailed,
+  handlePayoutCanceled,
   handleAccountUpdated,
+  handleDisputeCreated,
+  handleDisputeUpdated,
+  handleDisputeClosed,
 } from "@/lib/stripe/webhook-handlers";
 import type Stripe from "stripe";
 
@@ -74,6 +80,14 @@ export async function POST(request: NextRequest) {
         await handleChargeRefunded(event.data.object as Stripe.Charge);
         break;
 
+      case "payout.created":
+        await handlePayoutCreated(event.data.object as Stripe.Payout);
+        break;
+
+      case "payout.updated":
+        await handlePayoutUpdated(event.data.object as Stripe.Payout);
+        break;
+
       case "payout.paid":
         await handlePayoutPaid(event.data.object as Stripe.Payout);
         break;
@@ -82,8 +96,24 @@ export async function POST(request: NextRequest) {
         await handlePayoutFailed(event.data.object as Stripe.Payout);
         break;
 
+      case "payout.canceled":
+        await handlePayoutCanceled(event.data.object as Stripe.Payout);
+        break;
+
       case "account.updated":
         await handleAccountUpdated(event.data.object as Stripe.Account);
+        break;
+
+      case "charge.dispute.created":
+        await handleDisputeCreated(event.data.object as Stripe.Dispute);
+        break;
+
+      case "charge.dispute.updated":
+        await handleDisputeUpdated(event.data.object as Stripe.Dispute);
+        break;
+
+      case "charge.dispute.closed":
+        await handleDisputeClosed(event.data.object as Stripe.Dispute);
         break;
 
       default:

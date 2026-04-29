@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
       //    connected account
       // Stripe then pays out KDER's platform balance to our bank on the
       // default schedule (2-day rolling ACH).
-      // PLATFORM_FEE_PERCENT = 2.5 (set via STRIPE_PLATFORM_FEE_PERCENT env var).
+      // PLATFORM_FEE_PERCENT defaults to 10 (set via STRIPE_PLATFORM_FEE_PERCENT env var).
       payment_intent_data: {
         application_fee_amount: platformFeeCents,
         transfer_data: {
