@@ -5,6 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { CalendarClock, ChevronRight, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { BalanceHero } from "./BalanceHero";
+import {
+  CollapsibleSection,
+  countDismissedSections,
+  restoreAllSections,
+} from "./CollapsibleSection";
 import { ExpressLoginLinkButton } from "./ExpressLoginLinkButton";
 import { FailedPayoutBanner } from "./FailedPayoutBanner";
 import { HowEarningsWorkAccordion } from "./HowEarningsWorkAccordion";
@@ -56,6 +61,14 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
 
   const availableCents = balance?.availableCents ?? 0;
   const instantPayoutState = getInstantPayoutState({ balance, account });
+
+  // Track how many sections the creator has dismissed so we can render
+  // the "Show N hidden sections" footer. Initial value reads localStorage;
+  // bumps via CollapsibleSection's onDismiss callback.
+  const [dismissedCount, setDismissedCount] = useState<number>(0);
+  useEffect(() => {
+    setDismissedCount(countDismissedSections());
+  }, []);
 
   const startConnectOnboarding = useCallback(async () => {
     setConnectLoading(true);
@@ -134,15 +147,21 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
           />
         )}
 
-        {/* Payout History */}
+        {/* Payout History — collapsible + dismissible */}
         {hasConnectAccount && (
-          <div>
-            <h2 className="mb-3 text-lg font-bold text-white/80">Payouts</h2>
+          <CollapsibleSection
+            id="payouts"
+            title="Payouts"
+            count={payouts.length || undefined}
+            defaultOpen
+            dismissible
+            onDismiss={() => setDismissedCount((c) => c + 1)}
+          >
             <PayoutHistoryList
               payouts={payouts}
               errorCode={errors.payouts}
             />
-          </div>
+          </CollapsibleSection>
         )}
 
         {/* Payout schedule row */}
@@ -174,15 +193,15 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
         {/* Manage in Stripe */}
         {hasConnectAccount && <ExpressLoginLinkButton />}
 
-        {/* Transaction list */}
-        <div>
-          <h2
-            className="mb-3 text-lg font-bold text-green-300"
-            style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.6))" }}
-          >
-            Transactions
-          </h2>
-
+        {/* Transaction list — collapsible + dismissible */}
+        <CollapsibleSection
+          id="transactions"
+          title="Transactions"
+          count={transactions.length || undefined}
+          defaultOpen
+          dismissible
+          onDismiss={() => setDismissedCount((c) => c + 1)}
+        >
           {transactions.length > 0 ? (
             <div className="space-y-2">
               {transactions.map((tx) => (
@@ -204,9 +223,24 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
               </p>
             </div>
           )}
-        </div>
+        </CollapsibleSection>
 
         <HowEarningsWorkAccordion />
+
+        {/* Restore footer — only renders when something is hidden */}
+        {dismissedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              restoreAllSections();
+              setDismissedCount(0);
+            }}
+            className="mt-2 w-full text-center text-xs text-white/40 underline-offset-2 hover:text-white/60 hover:underline"
+          >
+            Show {dismissedCount} hidden{" "}
+            {dismissedCount === 1 ? "section" : "sections"}
+          </button>
+        )}
       </div>
 
       <InstantPayoutSheet
