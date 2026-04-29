@@ -97,6 +97,14 @@ export function StorefrontClient({
   // onAuthStateChange in case the customer signs in mid-session.
   const [currentUserId, setCurrentUserId] = useState<string | null>(initialUserId);
   const [sending, setSending] = useState(false);
+  // Anon-auth gate state — same shape as CheckoutSheet's guest fields.
+  // Used only when a non-authed visitor opens the message sheet.
+  const [gateName, setGateName] = useState("");
+  const [gatePhoneRaw, setGatePhoneRaw] = useState("");
+  const gatePhoneDigits = gatePhoneRaw.replace(/\D/g, "");
+  const gateValid =
+    gateName.trim().length > 0 && gatePhoneDigits.length === 10;
+  const [gateSubmitting, setGateSubmitting] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -303,15 +311,57 @@ export function StorefrontClient({
     };
   }, [messageOpen, currentUserId, creator?.member_id, supabase]);
 
+  // Always opens the sheet. When the visitor has no auth session, the
+  // sheet renders an inline name+phone gate (same anon-auth bridge as
+  // CheckoutSheet — see /api/v1/auth/anon-customer) instead of bouncing
+  // to the full /signup flow. Once anon-auth succeeds, currentUserId
+  // updates and the sheet swaps to the chat thread.
   const handleMessageClick = useCallback(() => {
-    if (!currentUserId) {
-      router.push(
-        `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=message`
-      );
-      return;
-    }
     setMessageOpen(true);
-  }, [currentUserId, router, handle]);
+  }, []);
+
+  // Anon-auth bridge: register an anonymous Supabase session keyed to
+  // the typed name+phone so messages can write `sender_id = auth.uid()`.
+  // Mirrors CheckoutSheet's pre-checkout flow. Server cookie-sets the
+  // session; we also setCurrentUserId from the response so the sheet
+  // flips to chat without a round-trip.
+  const handleAnonAuthForMessaging = useCallback(async () => {
+    if (!gateValid || gateSubmitting) return;
+    setGateSubmitting(true);
+    try {
+      const res = await fetch("/api/v1/auth/anon-customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: gateName.trim(),
+          phone: gatePhoneDigits,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const code =
+          typeof json?.code === "string" ? ` [${json.code}]` : "";
+        toast.error(
+          `${json?.error || "Couldn't start chat. Try again."}${code}`
+        );
+        setGateSubmitting(false);
+        return;
+      }
+      const userId = json?.data?.user_id as string | undefined;
+      if (!userId) {
+        toast.error("Couldn't start chat. Try again.");
+        setGateSubmitting(false);
+        return;
+      }
+      setCurrentUserId(userId);
+      setGateName("");
+      setGatePhoneRaw("");
+    } catch {
+      toast.error("Couldn't reach the server. Check your connection.");
+    } finally {
+      setGateSubmitting(false);
+    }
+  }, [gateValid, gateSubmitting, gateName, gatePhoneDigits]);
 
   const handleSendMessage = useCallback(async () => {
     const body = messageText.trim();
@@ -531,6 +581,57 @@ export function StorefrontClient({
             </SheetTitle>
           </SheetHeader>
 
+          {!currentUserId ? (
+            /* Anon-auth gate — same friction as the checkout name/phone
+               step. Once submitted, the sheet swaps to the chat thread. */
+            <div className="mt-4 space-y-4 pb-6">
+              <p className="text-sm text-white/70">
+                Tell {creator.display_name} who you are. Your name + phone
+                lets them reach back if they need to confirm details about
+                your message.
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={gateName}
+                  onChange={(e) => setGateName(e.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
+                  aria-label="Your name"
+                />
+                <input
+                  type="tel"
+                  value={gatePhoneRaw}
+                  onChange={(e) => setGatePhoneRaw(e.target.value)}
+                  placeholder="Phone number"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
+                  aria-label="Phone number"
+                />
+                <p className="text-[11px] text-white/40">
+                  We won&apos;t text you anything you didn&apos;t ask for.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAnonAuthForMessaging}
+                disabled={!gateValid || gateSubmitting}
+                className={cn(
+                  "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold transition-all active:scale-95",
+                  gateValid && !gateSubmitting
+                    ? "bg-[#1B5E20] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                    : "bg-white/10 text-white/30 cursor-not-allowed"
+                )}
+              >
+                {gateSubmitting
+                  ? "Starting chat…"
+                  : `Start chat with ${creator.display_name}`}
+              </button>
+            </div>
+          ) : (
+            <>
           {/* Chat history */}
           <div className="mt-3 flex-1 overflow-y-auto space-y-2 min-h-[120px] max-h-[45vh] px-1">
             {chatMessages.length === 0 ? (
@@ -612,6 +713,8 @@ export function StorefrontClient({
               <Send size={18} />
             </button>
           </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
     </main>
