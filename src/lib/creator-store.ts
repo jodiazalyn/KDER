@@ -11,6 +11,10 @@ export interface CreatorProfile {
   bio: string | null;
   photo_url: string | null;
   handle: string;
+  /** Creators-table id. Used to scope per-visitor lookups (e.g. the
+   *  "your active order with this creator" banner). Optional because
+   *  some legacy callers only fill members.id. */
+  creator_id?: string | null;
   /** Creator's user id (members.id). Used as recipient_id for messaging. */
   member_id: string | null;
   neighborhoods: { name: string; zip: string }[];

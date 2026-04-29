@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  ActiveOrderBanner,
+  type ActiveOrderSummary,
+} from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 import { PlateTile } from "@/components/storefront/PlateTile";
@@ -60,6 +64,11 @@ interface StorefrontClientProps {
   /** Resolved server-side from the Supabase session — saves a client-side
    *  round-trip to determine whether to gate Message/Checkout into signup. */
   initialUserId: string | null;
+  /** Visitor's most-recent in-flight order with this creator (or null).
+   *  When set, an ActiveOrderBanner renders above the storefront header
+   *  so the customer can hop back to /order-confirmation without using
+   *  browser back. */
+  initialActiveOrder: ActiveOrderSummary | null;
 }
 
 export function StorefrontClient({
@@ -67,6 +76,7 @@ export function StorefrontClient({
   initialCreator,
   initialListings,
   initialUserId,
+  initialActiveOrder,
 }: StorefrontClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -202,13 +212,15 @@ export function StorefrontClient({
 
     let cancelled = false;
     (async () => {
+      // Load the unified conversation between this member and creator
+      // regardless of order_id. Same thread renders here AND on the order
+      // page so a message sent from either surface appears in both.
       const { data } = await supabase
         .from("messages")
         .select("*")
         .or(
           `and(sender_id.eq.${currentUserId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${currentUserId})`
         )
-        .is("order_id", null)
         .order("created_at", { ascending: true });
       if (cancelled) return;
       setChatMessages((data as Message[]) ?? []);
@@ -232,7 +244,7 @@ export function StorefrontClient({
           const involvesMe =
             (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
             (m.sender_id === partnerId && m.recipient_id === currentUserId);
-          if (!involvesMe || m.order_id) return;
+          if (!involvesMe) return;
           setChatMessages((prev) => {
             // Skip if we already have this real id.
             if (prev.some((p) => p.id === m.id)) return prev;
@@ -275,7 +287,7 @@ export function StorefrontClient({
           const involvesMe =
             (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
             (m.sender_id === partnerId && m.recipient_id === currentUserId);
-          if (!involvesMe || m.order_id) return;
+          if (!involvesMe) return;
           // Merge server-updated fields (typically read_at) into the matching
           // message so the sender's UI flips from "Pending" to "✓ Read".
           setChatMessages((prev) =>
@@ -376,6 +388,15 @@ export function StorefrontClient({
   return (
     <main className="min-h-screen bg-[#0A0A0A] pb-24">
       <div className="mx-auto max-w-[640px]">
+        {/* Active-order CTA — only when the visitor has an in-flight order
+            with this creator. Inbound link to their order page that
+            otherwise didn't exist anywhere on the storefront. */}
+        {initialActiveOrder && (
+          <div className="mx-4 mt-4">
+            <ActiveOrderBanner order={initialActiveOrder} />
+          </div>
+        )}
+
         {/* Instagram-style profile header (avatar + stats row + CTAs) */}
         <CreatorHeader creator={creator} onMessageClick={handleMessageClick} />
 

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing } from "@/types";
+import type { ActiveOrderSummary } from "@/components/storefront/ActiveOrderBanner";
 
 interface StorefrontPageProps {
   params: Promise<{ handle: string }>;
@@ -115,6 +116,7 @@ async function loadStorefrontUncached(handle: string): Promise<{
     bio: member.bio,
     photo_url: member.photo_url,
     handle: member.handle,
+    creator_id: creatorRow.id,
     member_id: member.id,
     neighborhoods: resolveZips(creatorRow.service_zip_codes ?? []),
     storefront_active: creatorRow.storefront_active ?? true,
@@ -160,12 +162,63 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { creator, listings } = storefront;
   const currentUserId = authResult.data.user?.id ?? null;
 
+  // Per-visitor: if they're signed in (incl. anon-auth) and have an
+  // in-flight order with THIS creator, surface a banner linking back
+  // to /order-confirmation. Skipped entirely for non-signed visitors.
+  const activeOrder = await loadActiveOrder({
+    supabase,
+    creatorId: creator?.creator_id ?? null,
+    userId: currentUserId,
+    handle: cleanHandle,
+  });
+
   return (
     <StorefrontClient
       handle={cleanHandle}
       initialCreator={creator}
       initialListings={listings}
       initialUserId={currentUserId}
+      initialActiveOrder={activeOrder}
     />
   );
+}
+
+/**
+ * Most-recent in-flight order between this visitor and this creator.
+ * "In-flight" = pending | accepted | ready (not declined / completed /
+ * cancelled). Returns null when there isn't one or the visitor isn't
+ * signed in.
+ *
+ * Runs against the cookie-bound supabase client so RLS scopes the
+ * read to the visitor's own orders only.
+ */
+async function loadActiveOrder({
+  supabase,
+  creatorId,
+  userId,
+  handle,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any;
+  creatorId: string | null;
+  userId: string | null;
+  handle: string;
+}): Promise<ActiveOrderSummary | null> {
+  if (!creatorId || !userId) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = (await (supabase as any)
+    .from("orders")
+    .select("id, status")
+    .eq("creator_id", creatorId)
+    .eq("member_id", userId)
+    .in("status", ["pending", "accepted", "ready"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()) as {
+    data: { id: string; status: ActiveOrderSummary["status"] } | null;
+  };
+
+  if (!data) return null;
+  return { id: data.id, status: data.status, creatorHandle: handle };
 }
