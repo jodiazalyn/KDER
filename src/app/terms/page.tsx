@@ -149,7 +149,7 @@ export default function TermsPage() {
 
           <Section title="6. Fees and payouts">
             <p>
-              Listing on KDER is always free. KDER charges a 5% platform fee
+              Listing on KDER is always free. KDER charges a 10% platform fee
               on each completed transaction, deducted from the Creator&apos;s
               payout. Creators are paid through Stripe Connect; payouts
               typically arrive in the Creator&apos;s bank account within one

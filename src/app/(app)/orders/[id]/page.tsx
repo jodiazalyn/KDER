@@ -298,7 +298,7 @@ export default function OrderDetailPage({
 
               {/* Platform fee */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/60">KDER fee (5%)</span>
+                <span className="text-white/60">KDER fee (10%)</span>
                 <span className="text-red-400">
                   -${order.platform_fee.toFixed(2)}
                 </span>

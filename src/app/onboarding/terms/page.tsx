@@ -324,7 +324,7 @@ export default function TermsPage() {
                       guarantee any food items.
                     </p>
                     <p>
-                      KDER charges a 5% platform fee on each completed
+                      KDER charges a 10% platform fee on each completed
                       transaction, deducted from the creator&apos;s payout.
                       Listing on KDER is always free.
                     </p>
