@@ -167,6 +167,12 @@ function shapeBalance(balance: Stripe.Balance): EarningsBalance {
   // gets enabled later.
   const usdAvail = balance.available.find((b) => b.currency === "usd");
   const usdPending = balance.pending.find((b) => b.currency === "usd");
+  // `instant_available` is only present on accounts Stripe has approved
+  // for instant payouts. Missing/empty/zero means instant isn't unlocked
+  // yet — pre-flight gate.
+  const usdInstant = balance.instant_available?.find(
+    (b) => b.currency === "usd"
+  );
 
   const nonUsd = [
     ...balance.available.filter((b) => b.currency !== "usd"),
@@ -182,6 +188,7 @@ function shapeBalance(balance: Stripe.Balance): EarningsBalance {
   return {
     availableCents: usdAvail?.amount ?? 0,
     pendingCents: usdPending?.amount ?? 0,
+    instantAvailableCents: usdInstant?.amount ?? 0,
     currency: "usd",
   };
 }
