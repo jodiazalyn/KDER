@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import type { Order } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -137,6 +139,15 @@ export default function OrdersPage() {
         ? completedOrders
         : declinedOrders;
 
+  // Coachmark anchor: ID of the first pending order in the active tab.
+  // We attach a ref conditionally during the .map so the coachmark can
+  // highlight that specific row.
+  const firstPendingRef = useRef<HTMLDivElement>(null);
+  const firstPendingId =
+    activeTab === "active"
+      ? (activeOrders.find((o) => o.status === "pending")?.id ?? null)
+      : null;
+
   const handleAccept = async (id: string) => {
     const result = await transitionOrder(id, "accept");
     if (!result.ok) {
@@ -214,15 +225,25 @@ export default function OrdersPage() {
         </div>
       ) : visibleOrders.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {visibleOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onAccept={handleAccept}
-              onMarkReady={handleMarkReady}
-              onMarkComplete={handleMarkComplete}
-            />
-          ))}
+          {visibleOrders.map((order) => {
+            const isFirstPending =
+              activeTab === "active" &&
+              order.status === "pending" &&
+              order.id === firstPendingId;
+            return (
+              <div
+                key={order.id}
+                ref={isFirstPending ? firstPendingRef : undefined}
+              >
+                <OrderCard
+                  order={order}
+                  onAccept={handleAccept}
+                  onMarkReady={handleMarkReady}
+                  onMarkComplete={handleMarkComplete}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 pt-24">
@@ -251,6 +272,16 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* First-time tip on the active-tab pending row. Fires only when
+          there's actually a pending row to point at. */}
+      {firstPendingId && (
+        <Coachmark
+          id="creator-orders-pending"
+          copy={COACHMARK_COPY["creator-orders-pending"]}
+          targetRef={firstPendingRef}
+          showDelayMs={300}
+        />
+      )}
     </main>
   );
 }
