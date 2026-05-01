@@ -95,7 +95,11 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
           duration: reduceMotion ? FADE_DURATION : SLIDE_DURATION,
           ease: [0.32, 0.72, 0, 1], // iOS-like cubic-bezier
         }}
-        style={{ willChange: "transform" }}
+        // No explicit `will-change: transform` — framer-motion manages
+        // GPU layer hints internally during the animation. Setting it
+        // here permanently leaves the GPU layer active after the slide
+        // settles, which causes subpixel repaints / jitter during scroll
+        // (especially on Android Chromium and lower-end iPhones).
       >
         {children}
       </motion.div>

@@ -137,7 +137,7 @@ export default function MessagesPage() {
         type="button"
         onClick={() => setComposeOpen(true)}
         aria-label="New message"
-        className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E20] text-white shadow-[0_8px_28px_rgba(27,94,32,0.55)] ring-1 ring-green-400/20 transition-all hover:bg-[#207024] active:scale-90"
+        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E20] text-white shadow-[0_8px_28px_rgba(27,94,32,0.55)] ring-1 ring-green-400/20 transition-all hover:bg-[#207024] active:scale-90"
       >
         <PenSquare size={20} />
       </button>
