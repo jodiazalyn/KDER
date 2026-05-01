@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Wallet, Zap, Calendar } from "lucide-react";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import type {
   EarningsAccountInfo,
   EarningsBalance,
@@ -47,8 +50,16 @@ export function BalanceHero({
   // and learn why is friendlier than a disabled button with a tooltip
   // they may not even discover.
 
+  // Coachmark anchors to the hero on first visit. Only meaningful for
+  // creators who have an account loaded (skip the spotlight on empty
+  // states / not-yet-onboarded views).
+  const heroRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="rounded-3xl border border-green-400/[0.25] bg-green-900/[0.40] p-6 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]">
+    <div
+      ref={heroRef}
+      className="rounded-3xl border border-green-400/[0.25] bg-green-900/[0.40] p-6 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]"
+    >
       <div className="flex items-center gap-2">
         <Wallet size={16} className="text-green-300/60" />
         <span className="text-xs font-medium text-green-300/60 uppercase tracking-wider">
@@ -113,6 +124,18 @@ export function BalanceHero({
             </span>
           </button>
         </div>
+      )}
+
+      {/* First-time-user tip pointing at the balance hero. Only fires
+          for creators who have a real account context (account != null),
+          not first-touch onboarding before they've set anything up. */}
+      {account && (
+        <Coachmark
+          id="creator-earn-balance"
+          copy={COACHMARK_COPY["creator-earn-balance"]}
+          targetRef={heroRef}
+          showDelayMs={300}
+        />
       )}
     </div>
   );
