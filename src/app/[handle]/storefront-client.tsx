@@ -10,6 +10,8 @@ import {
 } from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { PlateTile } from "@/components/storefront/PlateTile";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import {
   Sheet,
   SheetContent,
@@ -111,6 +113,10 @@ export function StorefrontClient({
   // leave a stale subscribed channel that the next mount picks up,
   // causing `.on()`-after-`.subscribe()` crashes.
   const instanceId = useId();
+
+  // Coachmark anchor for the first plate tile — first-time visitors
+  // get a tip explaining that tapping a tile opens details.
+  const firstTileRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -474,12 +480,16 @@ export function StorefrontClient({
         {/* 3-column square grid of plate tiles with 2px gutter */}
         {listings.length > 0 ? (
           <div className="grid grid-cols-3 gap-[2px]">
-            {listings.map((listing) => (
-              <PlateTile
+            {listings.map((listing, idx) => (
+              <div
                 key={listing.id}
-                listing={listing}
-                onClick={setSelectedPlate}
-              />
+                ref={idx === 0 ? firstTileRef : undefined}
+              >
+                <PlateTile
+                  listing={listing}
+                  onClick={setSelectedPlate}
+                />
+              </div>
             ))}
           </div>
         ) : (
@@ -717,6 +727,17 @@ export function StorefrontClient({
           )}
         </SheetContent>
       </Sheet>
+
+      {/* First-time tip explaining that plate tiles are tappable. Only
+          renders when there's at least one plate to anchor to. */}
+      {listings.length > 0 && (
+        <Coachmark
+          id="customer-storefront-tile"
+          copy={COACHMARK_COPY["customer-storefront-tile"]}
+          targetRef={firstTileRef}
+          showDelayMs={400}
+        />
+      )}
     </main>
   );
 }
