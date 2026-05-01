@@ -39,6 +39,27 @@ export async function GET(request: NextRequest) {
 
     if (!creator) return apiSuccess({ orders: [] });
 
+    // ── Lazy auto-decline ─────────────────────────────────────────
+    // Pending orders past their auto_decline_at deadline are stuck —
+    // creator never accepted, customer never abandoned formally, and
+    // they linger in the Active tab cluttering the list. Sweep them
+    // here on every list fetch, scoped to this creator only.
+    //
+    // No refund is issued: pending state means the customer never
+    // completed Stripe Checkout (the checkout.session.completed webhook
+    // would have moved the order to 'accepted'). So there's no captured
+    // payment to refund — only an abandoned order to clean up.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
+      .from("orders")
+      .update({
+        status: "declined",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("creator_id", creator.id)
+      .eq("status", "pending")
+      .lt("auto_decline_at", new Date().toISOString());
+
     // Single query, LEFT JOIN listings for the photo + name fallback. Using the
     // Supabase foreign-key relation syntax; `listing` here is an alias for the
     // related row.

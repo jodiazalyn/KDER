@@ -10,8 +10,10 @@ import type { Order } from "@/types";
  *  - member_photo: null (UI falls back to an initial-letter avatar)
  *  - listing_name: prefer the per-item snapshot in the `items` JSONB, fall
  *    back to the joined listing row for legacy orders pre-`items`
- *  - listing_photo: first photo from the joined listing (null if the listing
- *    was deleted; UI has an ImageOff fallback)
+ *  - listing_photo: prefer the per-item snapshot in the `items` JSONB
+ *    (set at checkout time so future listing edits / deletions don't break
+ *    historical order pages), fall back to the joined listing row for
+ *    pre-snapshot orders
  *  - pickup_address / delivery_zip: not used by the current UI beyond a
  *    confirmation banner; return null
  */
@@ -45,8 +47,11 @@ export function rowToOrder(row: any): Order {
     member_photo: null,
     listing_name: firstItem?.name ?? joinedListing?.name ?? "Plate",
     listing_photo:
-      Array.isArray(joinedListing?.photos) && joinedListing.photos.length > 0
+      // Prefer the snapshotted photo from items JSONB so legacy listing
+      // edits / deletions don't break historical order pages.
+      firstItem?.photo ??
+      (Array.isArray(joinedListing?.photos) && joinedListing.photos.length > 0
         ? joinedListing.photos[0]
-        : null,
+        : null),
   };
 }

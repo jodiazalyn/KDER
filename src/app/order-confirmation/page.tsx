@@ -270,7 +270,10 @@ function OrderConfirmationInner() {
             </div>
           </div>
 
-          {/* Fulfillment detail */}
+          {/* Fulfillment detail. Pickup address is HIDDEN until the creator
+              marks the order ready — keeps the creator's home address
+              private during the prep window and turns "Ready" into a
+              meaningful state change for the customer. */}
           <div className="mt-4 flex items-start gap-2 border-t border-white/[0.06] pt-3 text-xs text-white/60">
             {order.fulfillment_type === "pickup" ? (
               <>
@@ -280,11 +283,13 @@ function OrderConfirmationInner() {
                 />
                 <div>
                   <p className="font-medium text-white/80">Pickup</p>
-                  {order.pickup_address ? (
+                  {(order.status === "ready" || order.status === "completed") &&
+                  order.pickup_address ? (
                     <p className="mt-0.5">{order.pickup_address}</p>
                   ) : (
                     <p className="mt-0.5 text-white/40">
-                      Creator will share pickup details
+                      Pickup details will appear here once your order is
+                      ready.
                     </p>
                   )}
                 </div>
