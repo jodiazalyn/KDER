@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
@@ -107,6 +107,11 @@ export function StorefrontClient({
   const [gateSubmitting, setGateSubmitting] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -239,7 +244,9 @@ export function StorefrontClient({
     })();
 
     const channel = supabase
-      .channel(`storefront-chat-${currentUserId}-${partnerId}`)
+      .channel(
+        `storefront-chat-${currentUserId}-${partnerId}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
@@ -309,7 +316,7 @@ export function StorefrontClient({
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [messageOpen, currentUserId, creator?.member_id, supabase]);
+  }, [messageOpen, currentUserId, creator?.member_id, supabase, instanceId]);
 
   // Always opens the sheet. When the visitor has no auth session, the
   // sheet renders an inline name+phone gate (same anon-auth bridge as
