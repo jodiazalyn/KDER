@@ -443,7 +443,7 @@ export function StorefrontClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] pb-24">
+    <main className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-[640px]">
         {/* Active-order CTA — only when the visitor has an in-flight order
             with this creator. Inbound link to their order page that
@@ -531,7 +531,7 @@ export function StorefrontClient({
             setHasOpenedCart(true);
             setCartOpen(true);
           }}
-          className="fixed bottom-6 left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
         >
           <ShoppingCart size={18} />
           View Cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}

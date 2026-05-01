@@ -184,7 +184,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="relative min-h-screen bg-[#0A0A0A] pb-32">
+    <main className="relative min-h-[100dvh] bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
         <button
@@ -380,7 +380,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Sticky save bar */}
-      <div className="fixed bottom-20 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto max-w-lg">
           <button
             type="button"

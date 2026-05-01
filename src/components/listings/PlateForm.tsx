@@ -234,7 +234,7 @@ export function PlateForm({ listing }: PlateFormProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#0A0A0A]">
+    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
         <button
@@ -447,7 +447,7 @@ export function PlateForm({ listing }: PlateFormProps) {
       </div>
 
       {/* Sticky bottom action bar — sits above the bottom nav */}
-      <div className="fixed bottom-20 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
         <div className="mx-auto max-w-lg space-y-2">
           {/* Connect-not-verified hint: show only once status has loaded
               and we know they can't publish because of Connect
