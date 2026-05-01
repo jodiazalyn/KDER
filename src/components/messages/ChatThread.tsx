@@ -128,28 +128,32 @@ export function ChatThread({
 
   const loadMessages = useCallback(() => {
     const load = async () => {
-      let query = supabase
+      // Load the unified conversation between this creator and partner
+      // regardless of order_id. Customer-side surfaces (storefront chat,
+      // order-confirmation thread) already query without order_id
+      // filtering — keeping the creator inbox in sync with that means
+      // both parties see the same continuous message history.
+      //
+      // order_id is still set on inserts for analytics / per-order linking,
+      // but it no longer fragments the visible thread. The threadId URL
+      // pattern (`order_<id>_<partner>` vs `general_<partner>`) survives
+      // for forward-compat with deep links from the order pages — both
+      // patterns now render the same conversation, just with different
+      // banner context.
+      const { data } = await supabase
         .from("messages")
         .select("*")
         .or(
           `and(sender_id.eq.${currentUserId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${currentUserId})`
         )
         .order("created_at", { ascending: true });
-
-      if (orderId) {
-        query = query.eq("order_id", orderId);
-      } else {
-        query = query.is("order_id", null);
-      }
-
-      const { data } = await query;
       if (data) setMessages(data as Message[]);
       // The thread is now visible to the user — mark any unread incoming
       // messages from the partner as read.
       markRead();
     };
     load();
-  }, [partnerId, currentUserId, orderId, supabase, markRead]);
+  }, [partnerId, currentUserId, supabase, markRead]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => loadMessages());
@@ -180,8 +184,6 @@ export function ChatThread({
               newMsg.recipient_id === partnerId);
 
           if (!isRelevant) return;
-          if (orderId && newMsg.order_id !== orderId) return;
-          if (!orderId && newMsg.order_id) return;
 
           setMessages((prev) => {
             // Skip if we already have this real id.
@@ -225,8 +227,6 @@ export function ChatThread({
             (updated.sender_id === currentUserId &&
               updated.recipient_id === partnerId);
           if (!isRelevant) return;
-          if (orderId && updated.order_id !== orderId) return;
-          if (!orderId && updated.order_id) return;
           // Merge server-updated fields (typically read_at) into local state
           // so the sender's "Pending" badge flips to "Read".
           setMessages((prev) =>
