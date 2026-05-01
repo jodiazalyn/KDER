@@ -9,6 +9,7 @@ import { QuantityStepper } from "./QuantityStepper";
 import { FulfillmentPicker } from "./FulfillmentPicker";
 import { CategoryChips } from "./CategoryChips";
 import { AiDraftButton } from "@/components/shared/AiDraftButton";
+import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import {
   CATEGORIES,
   ALLERGENS,
@@ -446,9 +447,9 @@ export function PlateForm({ listing }: PlateFormProps) {
         </div>
       </div>
 
-      {/* Sticky bottom action bar — sits above the bottom nav */}
-      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto max-w-lg space-y-2">
+      {/* Save / Publish bar with optional Connect hint above. */}
+      <FloatingActionBar>
+        <div className="space-y-2">
           {/* Connect-not-verified hint: show only once status has loaded
               and we know they can't publish because of Connect
               (not because of the baseline form validation). */}
@@ -494,7 +495,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             </button>
           </div>
         </div>
-      </div>
+      </FloatingActionBar>
     </div>
   );
 }

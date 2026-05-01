@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoUpload } from "@/components/onboarding/PhotoUpload";
+import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import { cn } from "@/lib/utils";
@@ -379,30 +380,28 @@ export default function SettingsPage() {
         </section>
       </div>
 
-      {/* Sticky save bar */}
-      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto max-w-lg">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!canSave}
-            className={cn(
-              "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
-              canSave
-                ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                : "bg-white/10 text-white/30 cursor-not-allowed"
-            )}
-          >
-            {saving ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isDirty ? (
-              "Save changes"
-            ) : (
-              "No changes"
-            )}
-          </button>
-        </div>
-      </div>
+      {/* Save bar — disabled when nothing's dirty. */}
+      <FloatingActionBar>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave}
+          className={cn(
+            "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
+            canSave
+              ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+              : "bg-white/10 text-white/30 cursor-not-allowed"
+          )}
+        >
+          {saving ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isDirty ? (
+            "Save changes"
+          ) : (
+            "No changes"
+          )}
+        </button>
+      </FloatingActionBar>
     </main>
   );
 }

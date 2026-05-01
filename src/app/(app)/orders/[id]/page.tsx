@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { CountdownTimer } from "@/components/orders/CountdownTimer";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import {
   Dialog,
@@ -394,10 +395,10 @@ export default function OrderDetailPage({
         </div>
       </div>
 
-      {/* Sticky bottom action bar */}
+      {/* Action bar — Accept/Decline (pending) → Mark Ready (accepted) → Mark Complete (ready). */}
       {isActive && (
-        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 px-4 pb-3">
-          <div className="mx-auto flex max-w-lg gap-3">
+        <FloatingActionBar styled={false}>
+          <div className="flex gap-3">
             {isPending && (
               <>
                 <button
@@ -435,7 +436,7 @@ export default function OrderDetailPage({
               </button>
             )}
           </div>
-        </div>
+        </FloatingActionBar>
       )}
 
       {/* Decline confirmation dialog */}
