@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { Send, Camera, Check, CheckCheck, Image as ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
@@ -108,6 +108,11 @@ export function ChatThread({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
 
   // Fire-and-forget: mark any unread messages from partnerId as read for this
   // user + thread. Relies on the "Recipient can mark read" RLS policy.
@@ -156,7 +161,9 @@ export function ChatThread({
   // the thread (UPDATE sets messages.read_at).
   useEffect(() => {
     const channel = supabase
-      .channel(`chat-${partnerId}-${orderId || "general"}`)
+      .channel(
+        `chat-${partnerId}-${orderId || "general"}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
@@ -232,7 +239,7 @@ export function ChatThread({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partnerId, currentUserId, orderId, supabase, markRead]);
+  }, [partnerId, currentUserId, orderId, supabase, markRead, instanceId]);
 
   // Auto-scroll
   useEffect(() => {

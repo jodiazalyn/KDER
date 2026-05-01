@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
@@ -23,6 +23,11 @@ export function OrderMessages({
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
 
   // Load existing messages — scoped to the conversation between this
   // member and creator regardless of order_id. Both surfaces (storefront
@@ -55,7 +60,9 @@ export function OrderMessages({
   // OR conditions on multiple columns.
   useEffect(() => {
     const channel = supabase
-      .channel(`order-messages-${currentUserId}-${recipientId}`)
+      .channel(
+        `order-messages-${currentUserId}-${recipientId}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
@@ -82,7 +89,7 @@ export function OrderMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, recipientId, supabase]);
+  }, [currentUserId, recipientId, supabase, instanceId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
