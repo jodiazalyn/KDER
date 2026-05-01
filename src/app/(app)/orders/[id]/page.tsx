@@ -122,10 +122,16 @@ export default function OrderDetailPage({
     await loadOrder();
 
     const messages: Record<string, string> = {
-      accepted: "Order accepted! Member has been notified with your address.",
-      ready: "Marked as ready! Member has been notified.",
+      // Address is intentionally NOT shared on accept — it's revealed to the
+      // member only when the order is marked Ready. Toast copy reflects that.
+      accepted: "Order accepted! Member has been notified.",
+      ready: "Marked as ready! Member can now see your pickup address.",
       completed: "Order complete! Payout triggered.",
-      declined: "Order declined. Member will be refunded.",
+      // Manual decline doesn't fire a Stripe refund (the decline route
+      // only flips status). Pending orders weren't charged in the first
+      // place — the checkout.session.completed webhook would have moved
+      // them to 'accepted' if they had been. So no refund to promise.
+      declined: "Order declined. Member has been notified.",
     };
     toast.success(messages[newStatus] || "Order updated.");
   };
