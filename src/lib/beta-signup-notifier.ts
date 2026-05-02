@@ -1,11 +1,15 @@
 /**
  * Beta signup webhook notifier.
  *
- * During the closed beta — while Twilio A2P 10DLC registration is in
- * flight and real SMS can't be delivered to non-test numbers — we still
- * want every signup attempt to fire a real-time ping so an operator can
- * manually onboard the would-be tester (add them to Supabase's
- * test-number list, DM them their OTP, etc.).
+ * Fires a real-time ping for every signup attempt so an operator has
+ * visibility into who's onboarding. Originally added during the A2P
+ * 10DLC wait as a workaround — when SMS delivery was blocked, an
+ * operator would catch the ping and manually deliver an OTP. Now that
+ * signup OTPs go through Twilio Verify (which is exempt from 10DLC
+ * registration), this is no longer a delivery workaround; it's just
+ * operational telemetry — useful for tracking conversion, debugging
+ * deliverability complaints, and providing manual help to a stuck
+ * tester (e.g. "Verify says we sent it, you say you didn't get it").
  *
  * Set `BETA_SIGNUP_WEBHOOK_URL` to:
  *   - A Slack incoming webhook → message arrives in your channel of choice
@@ -54,17 +58,15 @@ export function notifyBetaSignup(payload: BetaSignupPayload): void {
   const nameLabel = payload.displayName ? ` "${payload.displayName}"` : "";
   const ts = new Date().toISOString();
 
-  // Onboarding hint: the exact string to paste into Supabase's Test
-  // Phone Numbers list to activate this user with code 123456.
-  const onboardHint = `${payload.phone.slice(1)}=123456`;
-
   // Slack-compatible payload. Slack/Discord/Zapier/etc. all accept
-  // `text` (Slack) or fall back to readable JSON.
+  // `text` (Slack) or fall back to readable JSON. Real OTP delivery
+  // happens via Twilio Verify — operators only need to intervene on
+  // failure (deliverability complaint, carrier filter, etc.).
   const text = [
-    `📱 *KDER beta signup*${modeLabel}${handleLabel}${nameLabel}`,
+    `📱 *KDER signup* — OTP sent via Twilio Verify${modeLabel}${handleLabel}${nameLabel}`,
     `Phone: ${payload.phone} (…${phoneSuffix})`,
     `Source: ${payload.source} · ${ts}`,
-    `Onboard: paste \`${onboardHint}\` into Supabase → Auth → Providers → Phone → Test Phone Numbers, then DM them \`123456\`.`,
+    `Debug: Twilio Console → Verify → Logs → filter by ${payload.phone} for delivery status.`,
   ].join("\n");
 
   const body = {
@@ -78,7 +80,6 @@ export function notifyBetaSignup(payload: BetaSignupPayload): void {
     source: payload.source,
     userAgent: payload.userAgent ?? null,
     timestamp: ts,
-    onboardHint,
   };
 
   // Don't await — fire-and-forget so the signup flow stays fast even if

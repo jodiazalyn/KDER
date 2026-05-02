@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
       return apiError("Incorrect code. Try again.", 400);
     }
 
-    // Rate limit: 10 verify attempts per phone per 10 minutes
+    // App-level rate limit: 10 verify attempts per phone per 10 minutes.
+    // Twilio Verify also caps at 5 wrong attempts PER VERIFICATION (not
+    // per window), which is stricter in the short term but resets on the
+    // next OTP request. Our window-based limit catches the abuse pattern
+    // of spamming requests + checks across multiple verifications.
     const limit = checkRateLimit(
       `otp_verify:${cleanPhone}`,
       OTP_VERIFY_LIMIT.maxRequests,
@@ -31,7 +35,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify with Supabase Auth
+    // Verify with Supabase Auth — Supabase routes the verification check
+    // through Twilio Verify (configured in dashboard) and mints the user
+    // session on success. The {type: "sms"} hint stays the same regardless
+    // of the underlying SMS provider.
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
@@ -44,7 +51,11 @@ export async function POST(request: NextRequest) {
 
     if (error || !data.user) {
       // Surface the verify failure too. Most common codes here:
-      //   otp_expired (60s expiry), otp_disabled, invalid_otp.
+      //   - otp_expired: code older than the Verify Service TTL (10min default)
+      //   - invalid_otp: wrong digits
+      //   - over_phone_send_rate_limit: Verify locked the number out after
+      //     too many wrong checks on this verification — user must request
+      //     a fresh code rather than keep guessing
       // Last 4 digits only — full phone is PII.
       const errCode = error
         ? (error as { code?: string }).code
