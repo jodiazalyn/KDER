@@ -36,6 +36,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   themeColor: "#0A0A0A",
+  // Required for env(safe-area-inset-*) to take real values on iPhones
+  // with notches / Dynamic Island / home indicators. Without this,
+  // those env vars resolve to 0 and bottom nav / floating action bars
+  // tuck under the home indicator.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

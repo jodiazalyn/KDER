@@ -20,6 +20,7 @@ import { OrderTransferDrawer } from "./OrderTransferDrawer";
 import { PayoutHistoryList } from "./PayoutHistoryList";
 import { PayoutScheduleSheet } from "./PayoutScheduleSheet";
 import { TransactionRow } from "./TransactionRow";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { getInstantPayoutState } from "@/lib/earnings-instant";
 import type {
   EarningsData,
@@ -108,6 +109,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
   }, [searchParams]);
 
   return (
+    <PullToRefresh onRefresh={() => router.refresh()}>
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Earnings</h1>
 
@@ -269,5 +271,6 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
         transaction={activeTransaction}
       />
     </main>
+    </PullToRefresh>
   );
 }

@@ -558,7 +558,7 @@ export function ChatThread({
               }}
               placeholder={`Message ${partnerName}...`}
               rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-2 text-[15px] text-white placeholder:text-white/35 focus:outline-none max-h-[100px] leading-snug"
+              className="flex-1 resize-none bg-transparent px-4 py-2 text-base text-white placeholder:text-white/35 focus:outline-none max-h-[100px] leading-snug"
               style={{ minHeight: "36px" }}
               aria-label="Message input"
             />

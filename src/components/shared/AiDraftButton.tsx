@@ -275,7 +275,7 @@ export function AiDraftButton({
             value={hint}
             onChange={(e) => setHint(e.target.value.slice(0, 200))}
             placeholder="e.g., make it shorter, emphasize smoky, keep it family-friendly"
-            className="h-9 flex-1 rounded-xl border border-white/[0.12] bg-white/[0.06] px-3 text-xs text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none"
+            className="h-10 flex-1 rounded-xl border border-white/[0.12] bg-white/[0.06] px-3 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none"
           />
           <button
             type="button"

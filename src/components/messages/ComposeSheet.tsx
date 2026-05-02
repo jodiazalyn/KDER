@@ -138,7 +138,7 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Your customers & conversations"
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+              className="flex-1 bg-transparent text-base text-white placeholder:text-white/30 focus:outline-none"
               aria-label="Filter conversations"
             />
           </div>
