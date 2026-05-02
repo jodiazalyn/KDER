@@ -146,6 +146,60 @@ function loadStorefront(handle: string) {
   )();
 }
 
+/**
+ * Per-creator metadata so social shares of `/@handle` URLs render
+ * with the creator's name + bio, not the generic root site copy.
+ *
+ * The OG image itself comes from the dynamic route handler at
+ * `src/app/[handle]/opengraph-image.tsx` — Next.js auto-wires it to
+ * this metadata via the `opengraph-image` file convention. Twitter
+ * card mirrors via `twitter-image.tsx`.
+ *
+ * Re-uses the same edge-cached `loadStorefront` so we don't pay an
+ * extra Supabase round-trip for the metadata lookup — the same data
+ * powers the page render too.
+ */
+export async function generateMetadata({
+  params,
+}: StorefrontPageProps): Promise<import("next").Metadata> {
+  const { handle } = await params;
+  const cleanHandle = decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
+  const { creator } = await loadStorefront(cleanHandle);
+
+  if (!creator) {
+    return {
+      title: "Creator not found — KDER",
+      description: "This KDER storefront doesn't exist.",
+    };
+  }
+
+  const title = `${creator.display_name} on KDER`;
+  const description =
+    creator.bio?.trim() ||
+    `Order plates from ${creator.display_name} in Houston. ${creator.total_plates} plate${
+      creator.total_plates === 1 ? "" : "s"
+    } available now on KDER.`;
+  const url = `https://kder.club/@${cleanHandle}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      siteName: "KDER",
+      url,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { handle } = await params;
   // Strip @ prefix and decode URI component (handles %40 encoding)
