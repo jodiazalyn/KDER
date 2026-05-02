@@ -184,7 +184,7 @@ export function OrderMessages({
             }
           }}
           placeholder="Type a message..."
-          className="h-10 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none transition-colors"
+          className="h-10 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none transition-colors"
           aria-label="Message input"
         />
         <button

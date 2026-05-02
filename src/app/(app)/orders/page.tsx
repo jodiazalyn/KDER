@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import type { Order } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -173,6 +174,7 @@ export default function OrdersPage() {
       : "mystore";
 
   return (
+    <PullToRefresh onRefresh={refresh}>
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Orders</h1>
 
@@ -252,5 +254,6 @@ export default function OrdersPage() {
       )}
 
     </main>
+    </PullToRefresh>
   );
 }
