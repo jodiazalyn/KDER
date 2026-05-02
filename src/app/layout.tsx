@@ -18,11 +18,27 @@ export const metadata: Metadata = {
     siteName: "KDER",
     locale: "en_US",
     url: "https://kder.club",
+    // Explicit `images` array (rather than relying on Next.js's
+    // file-convention auto-wiring of opengraph-image.png) because
+    // some scrapers — Facebook in particular — won't pick up the
+    // file-convention path consistently and we want the absolute
+    // URL emitted in the page's <meta property="og:image"> for max
+    // compatibility. Width/height let scrapers preallocate the
+    // preview slot without re-fetching just to measure.
+    images: [
+      {
+        url: "/opengraph-image.png",
+        width: 1200,
+        height: 1200,
+        alt: "KDER — Feed the city. Own your income.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "KDER — Feed the city. Own your income.",
     description: "Houston's hospitality marketplace for food creators.",
+    images: ["/twitter-image.png"],
   },
   // Image attribution (moved here from visible page credit)
   other: {
