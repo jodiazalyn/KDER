@@ -15,7 +15,11 @@ export async function POST(request: NextRequest) {
       return apiError("Enter a valid US phone number.", 400);
     }
 
-    // Rate limit: 5 OTP requests per phone per 10 minutes
+    // App-level rate limit: 5 OTP requests per phone per 10 minutes.
+    // Twilio Verify enforces its own server-side limits (5 sends per
+    // recipient per 10min plus a daily ceiling), so this is mostly a
+    // defense-in-depth fast-path 429 — bouncing the obvious abuse before
+    // we even reach Supabase/Twilio.
     const limit = checkRateLimit(
       `otp_request:${cleanPhone}`,
       OTP_REQUEST_LIMIT.maxRequests,
@@ -29,13 +33,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Beta-window capture: notify the configured webhook (Slack, Discord,
-    // Zapier, email forwarder, etc.) BEFORE attempting the OTP send. While
-    // A2P 10DLC registration is in flight we can't deliver real SMS to most
-    // numbers, so the webhook is how we collect tester phones to manually
-    // onboard via Supabase's test-number list. Fire-and-forget — never
-    // blocks the OTP send and never errors out the request even if the
-    // webhook URL is down.
+    // Operational telemetry: notify the configured webhook (Slack, Discord,
+    // Zapier, email forwarder, etc.) BEFORE attempting the OTP send so an
+    // operator has real-time visibility into who's signing up. Originally
+    // added during the A2P 10DLC wait as a workaround for blocked SMS
+    // delivery — now that OTPs route through Twilio Verify (10DLC-exempt),
+    // this is just visibility / audit trail. Fire-and-forget — never blocks
+    // the OTP send and never errors out the request even if the webhook
+    // URL is down.
     notifyBetaSignup({
       phone: cleanPhone,
       mode: typeof mode === "string" ? mode : null,
@@ -43,7 +48,10 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent"),
     });
 
-    // Use Supabase Auth phone OTP
+    // Supabase Auth phone OTP. Supabase is configured (via dashboard:
+    // Authentication → Providers → Phone) to use Twilio Verify as its SMS
+    // backend, so the actual `verifications.create` call to Twilio happens
+    // inside Supabase. We get back the same response shape regardless.
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
@@ -51,9 +59,15 @@ export async function POST(request: NextRequest) {
     const phoneSuffix = cleanPhone.slice(-4);
 
     if (error) {
-      // Surface the full Supabase error context to logs. Without this we
-      // could never tell why an OTP failed to send (Twilio A2P 10DLC,
-      // trial-mode account, geo-perms, etc. all surface here).
+      // Surface the full Supabase error context to logs. Common Verify
+      // failure modes that bubble up here:
+      //   - sms_send_failed: catch-all from Verify (check phoneSuffix
+      //     against Twilio Verify logs for the underlying reason)
+      //   - over_phone_send_rate_limit: Verify's per-recipient cap
+      //     (stricter than ours; user just needs to wait)
+      //   - phone_provider_disabled: Supabase phone provider config
+      //     missing/wrong (Verify Service SID typo, etc.)
+      //   - invalid_format: phone failed Verify's E.164 parse
       // Last 4 digits only — full phone is PII.
       const code = (error as { code?: string }).code;
       console.error("[auth/request-otp] supabase signInWithOtp failed", {
