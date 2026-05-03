@@ -1,6 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
+
+// Geist via next/font/google. We expose it as a CSS variable so
+// Tailwind's `font-sans` (which leads with `var(--font-geist)`) picks
+// it up everywhere — but the system stack remains as a fallback for
+// any surface that renders before the variable is bound (e.g. an
+// emergency error boundary). Subset to the four weights the marketing
+// landing actually uses to keep the woff2 payload small.
+const geist = Geist({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-geist",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kder.club"),
@@ -65,7 +79,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={`dark ${geist.variable}`}>
       <body className="min-h-screen bg-[#0A0A0A] text-white antialiased">
         {children}
         <Toaster

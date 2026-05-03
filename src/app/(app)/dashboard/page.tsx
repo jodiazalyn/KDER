@@ -13,7 +13,6 @@ import { getBadges } from "@/lib/badges-store";
 import { getOrders } from "@/lib/orders-store";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { BadgeShelf } from "@/components/dashboard/BadgeShelf";
-import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 // Leaderboard moved to floating button in layout
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing, Streak, Badge } from "@/types";
@@ -106,12 +105,6 @@ export default function DashboardPage() {
 
       {/* Content */}
       <div className="space-y-5 px-4 pb-8 pt-4">
-        {/* Live demand counter — keeps creators visually aware that the
-            market is growing every time they open their dashboard. */}
-        <div className="flex justify-center">
-          <LiveUserTicker />
-        </div>
-
         {/* Storefront status */}
         <button
           type="button"

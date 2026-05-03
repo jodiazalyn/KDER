@@ -9,7 +9,6 @@ import {
   type ActiveOrderSummary,
 } from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
-import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 import { PlateTile } from "@/components/storefront/PlateTile";
 import {
   Sheet,
@@ -465,12 +464,6 @@ export function StorefrontClient({
             </p>
           </div>
         )}
-
-        {/* Live demand counter — reinforces "real people are looking" right
-            before the plate grid, driving tap-through to purchase. */}
-        <div className="flex justify-center px-4 pb-3">
-          <LiveUserTicker />
-        </div>
 
         {/* Grid-icon tab bar — visual-only for now, single content type */}
         <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
