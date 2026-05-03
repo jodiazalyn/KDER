@@ -55,8 +55,9 @@ export function BuiltForHouston() {
             </h2>
             <p className="mt-5 text-sm leading-relaxed text-kder-ink-muted lg:text-base">
               Every order on KDER stays in your neighborhood. We launched
-              here because Houston cooks deserve a marketplace that
-              isn&rsquo;t extracting 30% to ship food in San Francisco.
+              here because Houston cooks deserve a marketplace built
+              for them &mdash; one that isn&rsquo;t taking 30% off the
+              top of every plate.
             </p>
             <Link
               href="/signup"

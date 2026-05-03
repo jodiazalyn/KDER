@@ -74,11 +74,6 @@ export function CreatorProgram() {
             </li>
           ))}
         </ul>
-
-        <p className="mt-10 max-w-xl text-xs text-kder-ink-muted/80">
-          Coming soon — the Creator Program ships after we exit closed
-          beta. Early creators auto-qualify with no waitlist.
-        </p>
       </div>
     </section>
   );

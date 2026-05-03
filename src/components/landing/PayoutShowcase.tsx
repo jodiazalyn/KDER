@@ -1,5 +1,6 @@
 import { Banknote, Clock3, Zap } from "lucide-react";
 import { PhoneFrame } from "./PhoneFrame";
+import { EarningsPhoneScreen } from "./phones/EarningsPhoneScreen";
 
 /**
  * Payout / earnings showcase — KDER's equivalent of Stooty's twin
@@ -12,10 +13,9 @@ import { PhoneFrame } from "./PhoneFrame";
  * Layout: text-left, phone-mockup-right, mirroring the Hero so the
  * page has a consistent rhythm of "claim → workflow → money".
  *
- * The "earnings phone" mockup screenshot lives at
- * `/public/images/landing/earnings-phone.png`. Capture from the
- * /earnings route in dev — 390×844 @2x → 780×1688 PNG, optimized
- * to <200KB. See `Hero.tsx` for the full capture recipe.
+ * The earnings phone screen is rendered in CSS via
+ * `<EarningsPhoneScreen />` — no PNG asset required, same approach
+ * as the Hero mockups.
  *
  * The 10%/90% split is the canonical platform fee — see
  * `src/app/terms/page.tsx`, `STRIPE_PLATFORM_FEE_PERCENT`, and the
@@ -87,17 +87,15 @@ export function PayoutShowcase() {
           </ul>
         </div>
 
-        {/* Right — single phone mockup of the earnings UI. Single
-            phone (not the stacked pair from the hero) keeps the
-            visual hierarchy clear: hero is the page's main mockup
-            moment, this is the supporting one. */}
+        {/* Right — single phone mockup of the earnings UI, rendered
+            in CSS via EarningsPhoneScreen. Single phone (not the
+            stacked pair from the hero) keeps the visual hierarchy
+            clear: hero is the page's main mockup moment, this is
+            the supporting one. */}
         <div className="relative mx-auto flex w-full max-w-[320px] justify-center lg:max-w-none">
-          <PhoneFrame
-            src="/images/landing/earnings-phone.png"
-            alt="KDER earnings screen showing balance, payout schedule, and recent transactions"
-            variant="primary"
-            className="rotate-[3deg]"
-          />
+          <PhoneFrame variant="primary" className="rotate-[3deg]">
+            <EarningsPhoneScreen />
+          </PhoneFrame>
         </div>
       </div>
     </section>

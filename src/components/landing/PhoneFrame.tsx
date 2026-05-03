@@ -1,35 +1,43 @@
 import Image from "next/image";
 
 /**
- * Lightweight iPhone-shaped frame for the landing page's hero
- * mockups. Dark device chrome on cream surfaces is the page's main
- * visual contrast — exactly Stooty's pattern. Implemented with CSS +
- * a single inline SVG notch so we don't pay for a 3D mockup library.
+ * Lightweight iPhone-shaped frame for the landing page's mockups.
+ * Dark device chrome on cream surfaces is the page's main visual
+ * contrast — exactly Stooty's pattern. Implemented with CSS + a
+ * single inline SVG notch so we don't pay for a 3D mockup library.
  *
- * Pass a `src` pointing to a 390×844-equivalent screenshot (we
- * recommend 780×1688 @2x to look crisp on Retina). The image is
- * `object-cover`'d into the frame so any reasonable aspect ratio
- * still looks intentional.
+ * Two render modes:
  *
- * NOTE: phone screenshot assets live under
- * `/public/images/landing/storefront-phone.png` and
- * `/public/images/landing/order-phone.png`. They must be added
- * before merge — see the regen note in `Hero.tsx`.
+ *   1. Pass `children` (preferred) — render a JSX phone-screen
+ *      component (e.g. `<StorefrontPhoneScreen />`). Pixel-perfect,
+ *      no PNG assets to manage, never goes blurry, never has a
+ *      missing-asset state. This is what the marketing landing
+ *      uses today — Stooty's mockups are designed UI, not raw
+ *      screenshots, for the same reasons.
+ *
+ *   2. Pass `src` (fallback) — point at a 390×844-equivalent PNG
+ *      (we recommend 780×1688 @2x for Retina). Useful if/when we
+ *      want to drop in real captures of the live product.
  */
 
 interface PhoneFrameProps {
-  src: string;
-  alt: string;
   /** "primary" stacks slightly forward; "secondary" sits behind. */
   variant?: "primary" | "secondary";
   className?: string;
+  /** Render-mode 1: JSX content sized to the phone screen. */
+  children?: React.ReactNode;
+  /** Render-mode 2: PNG src. Required if `children` is not provided. */
+  src?: string;
+  /** Required when using `src` — alt text for the screenshot. */
+  alt?: string;
 }
 
 export function PhoneFrame({
-  src,
-  alt,
   variant = "primary",
   className = "",
+  children,
+  src,
+  alt,
 }: PhoneFrameProps) {
   return (
     <div
@@ -44,20 +52,30 @@ export function PhoneFrame({
         className,
       ].join(" ")}
     >
-      {/* Inner screen surface */}
-      <div className="relative h-full w-full overflow-hidden rounded-[36px] bg-black">
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          sizes="(max-width: 1024px) 60vw, 280px"
-          className="object-cover"
-          priority={variant === "primary"}
-        />
-        {/* Notch: a black pill centered at the top of the screen */}
+      {/* Inner screen surface — black baseline so any unfilled gaps
+          read as device chrome rather than transparent paper. */}
+      <div className="relative h-full w-full overflow-hidden rounded-[36px] bg-[#0A0A0A]">
+        {children ? (
+          <div className="absolute inset-0 overflow-hidden text-white">
+            {children}
+          </div>
+        ) : src ? (
+          <Image
+            src={src}
+            alt={alt ?? ""}
+            fill
+            sizes="(max-width: 1024px) 60vw, 280px"
+            className="object-cover"
+            priority={variant === "primary"}
+          />
+        ) : null}
+
+        {/* Notch: a black pill centered at the top of the screen.
+            Layered above content so it's visible regardless of the
+            screen's own top-row treatment. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 top-2 h-[22px] w-[90px] -translate-x-1/2 rounded-full bg-black"
+          className="pointer-events-none absolute left-1/2 top-2 z-20 h-[22px] w-[90px] -translate-x-1/2 rounded-full bg-black"
         />
       </div>
     </div>
