@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { BuiltForHouston } from "@/components/landing/BuiltForHouston";
+import { CreatorCards } from "@/components/landing/CreatorCards";
 import { CreatorProgram } from "@/components/landing/CreatorProgram";
 import { Hero } from "@/components/landing/Hero";
 import { HowItWorks } from "@/components/landing/HowItWorks";
@@ -12,10 +13,10 @@ import { ListingShowcase } from "@/components/landing/ListingShowcase";
 import { MarketingFooter } from "@/components/landing/MarketingFooter";
 import { MarketingNav } from "@/components/landing/MarketingNav";
 import { MissionAnchor } from "@/components/landing/MissionAnchor";
+import { PaymentMethods } from "@/components/landing/PaymentMethods";
 import { PayoutShowcase } from "@/components/landing/PayoutShowcase";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { TrustStrip } from "@/components/landing/TrustStrip";
-import { WaitlistCTA } from "@/components/landing/WaitlistCTA";
 
 /**
  * KDER public landing page.
@@ -113,7 +114,8 @@ export default function LandingPage() {
         <PayoutShowcase />
         <BuiltForHouston />
         <Testimonials />
-        <WaitlistCTA />
+        <PaymentMethods />
+        <CreatorCards />
       </main>
       <MarketingFooter />
     </div>
