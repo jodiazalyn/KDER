@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Wifi } from "lucide-react";
 
 /**
@@ -45,13 +46,22 @@ export function CreatorCardMockup({ className = "" }: CreatorCardMockupProps) {
         }}
       />
 
-      {/* Top row — KDER wordmark + contactless icon */}
-      <div className="absolute inset-x-6 top-6 flex items-start justify-between text-white">
-        <div>
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.32em] text-white/60">
-            KDER
-          </span>
-          <span className="mt-0.5 block text-[10px] font-medium text-white/45">
+      {/* Top row — KDER cloche+wordmark lockup (white variant) +
+          contactless icon. Using the lockup version (cloche + "DER")
+          rather than just the cloche so the card reads as a
+          KDER-branded product at a glance, the way Apple Card uses
+          its full lockup rather than just the Apple glyph. */}
+      <div className="absolute inset-x-6 top-5 flex items-start justify-between text-white">
+        <div className="flex flex-col gap-1.5">
+          <Image
+            src="/brand/lockup-white.png"
+            alt="KDER"
+            width={140}
+            height={56}
+            className="h-9 w-auto object-contain"
+            priority={false}
+          />
+          <span className="block pl-1 text-[10px] font-medium uppercase tracking-[0.18em] text-white/55">
             Founder Card
           </span>
         </div>
