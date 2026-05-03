@@ -24,18 +24,20 @@ export function MarketingNav() {
         <Link
           href="/"
           aria-label="KDER home"
-          className="flex items-center gap-2"
+          className="flex items-center"
         >
+          {/* Green lockup (cloche + DER wordmark) — the white cloche
+              we use elsewhere doesn't read on the cream marketing
+              surfaces. The lockup file already includes the "KDER"
+              wordmark so we drop the separate text span. */}
           <Image
-            src="/icons/kder-logo.png"
-            alt=""
-            width={28}
-            height={28}
+            src="/brand/lockup-green.png"
+            alt="KDER"
+            width={120}
+            height={48}
+            className="h-8 w-auto object-contain"
             priority
           />
-          <span className="text-sm font-extrabold tracking-[0.2em] text-kder-ink">
-            KDER
-          </span>
         </Link>
 
         <div className="flex items-center gap-2">

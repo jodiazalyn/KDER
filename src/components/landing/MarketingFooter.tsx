@@ -29,16 +29,17 @@ export function MarketingFooter() {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
           <div className="max-w-md">
-            <Link href="/" className="mb-5 inline-flex items-center gap-2">
+            <Link href="/" className="mb-5 inline-flex items-center">
+              {/* Green lockup matches MarketingNav. Slightly larger
+                  here since the footer has more vertical breathing
+                  room. */}
               <Image
-                src="/icons/kder-logo.png"
-                alt=""
-                width={28}
-                height={28}
+                src="/brand/lockup-green.png"
+                alt="KDER"
+                width={150}
+                height={60}
+                className="h-10 w-auto object-contain"
               />
-              <span className="text-sm font-extrabold tracking-[0.2em] text-kder-ink">
-                KDER
-              </span>
             </Link>
             <p className="text-sm leading-relaxed text-kder-ink-muted">
               KDER is the sovereign marketplace connecting passionate
