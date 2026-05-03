@@ -7,8 +7,8 @@ import { ArrowRight, Check, Loader2, X } from "lucide-react";
 /**
  * Self-contained handle-claim input — the most-loved interaction on
  * the current landing page, extracted from `src/app/page.tsx` so the
- * marketing page composition can drop it into multiple sections (Hero,
- * WaitlistCTA) without prop-drilling state.
+ * marketing page composition can drop it into any section without
+ * prop-drilling state.
  *
  * Behavior preserved 1:1 from the original:
  * - Live availability check via `/api/v1/handles/check` (debounced
@@ -20,9 +20,10 @@ import { ArrowRight, Check, Loader2, X } from "lucide-react";
  * - Navigates to `/signup` (default) or `/signup/waitlist` (waitlist
  *   variant) after claim.
  *
- * What changed: the visual treatment now targets the cream/light
- * marketing surfaces. The "on-green" theme is for the WaitlistCTA
- * block (white surface on KDER-green background).
+ * Theme variants:
+ *   - `light` (default): cream/paper marketing surfaces — used in Hero.
+ *   - `on-green`: white-on-KDER-green — kept available for any future
+ *     section that wants to overlay this input on the brand-green block.
  */
 
 const HANDLE_REGEX = /^[a-z0-9_]{3,30}$/;
