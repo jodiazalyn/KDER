@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Lock } from "lucide-react";
 
 /**
@@ -6,11 +7,13 @@ import { Lock } from "lucide-react";
  * checking out a creator's storefront that paying is easy and uses
  * the same tools they already trust.
  *
- * Method tiles render brand text in approximate brand styling — close
- * enough to read as recognizable without shipping vendor SVG logos
- * (which are trademarked and inconsistent to maintain). If we ever
- * want pixel-perfect logos, swap each tile body for an inline SVG
- * imported from the brand's official press kit.
+ * Real polychrome official brand SVGs from /public/brand/payments/.
+ * Sources:
+ *   - apple-pay, google-pay, visa, mastercard, amex, discover —
+ *     gilbarbara/logos GitHub repo (CC BY 4.0)
+ *   - cashapp, zelle, klarna, afterpay, dinersclub —
+ *     Wikimedia Commons (mostly CC BY-SA / public-domain trademark
+ *     marks used here for compatibility identification)
  *
  * The supported list (per Jodi):
  *   - Wallets: Apple Pay, Google Pay
@@ -22,54 +25,46 @@ import { Lock } from "lucide-react";
  */
 
 interface MethodTileProps {
-  /** The brand's display string. */
+  /** Brand display name — used for alt text + accessibility. */
   label: string;
-  /** Optional sub-label (e.g. "Pay" for Apple Pay/Google Pay). */
-  sub?: string;
-  /** Background color for the tile (brand color). */
-  bg: string;
-  /** Text color. */
-  fg: string;
-  /** Optional accent before/after the label (e.g. an Apple glyph). */
-  prefix?: string;
-}
-
-function MethodTile({ label, sub, bg, fg, prefix }: MethodTileProps) {
-  return (
-    <div
-      className="flex h-14 items-center justify-center gap-1.5 rounded-xl border border-kder-line px-5 font-bold tracking-tight"
-      style={{ backgroundColor: bg, color: fg }}
-    >
-      {prefix && (
-        <span className="text-base leading-none" aria-hidden="true">
-          {prefix}
-        </span>
-      )}
-      <span className="text-sm leading-none">{label}</span>
-      {sub && (
-        <span className="text-sm font-medium leading-none">{sub}</span>
-      )}
-    </div>
-  );
+  /** SVG file under /public/brand/payments/. */
+  src: string;
+  /** Logo intrinsic width (px). Used by next/image to compute aspect ratio. */
+  width: number;
+  /** Logo intrinsic height (px). */
+  height: number;
 }
 
 const METHODS: MethodTileProps[] = [
-  // Apple uses a literal Apple glyph + "Pay". Unicode  is the
-  // standard Apple-logo character; renders correctly in macOS / iOS
-  // Safari and as a missing-glyph box on most Linux/Android browsers.
-  // Acceptable tradeoff — most KDER traffic is Apple-device anyway.
-  { label: "Pay", prefix: "", bg: "#000000", fg: "#FFFFFF" },
-  { label: "Pay", prefix: "G", bg: "#FFFFFF", fg: "#202124" },
-  { label: "Cash App", bg: "#00D632", fg: "#000000" },
-  { label: "Zelle", bg: "#6D1ED4", fg: "#FFFFFF" },
-  { label: "Klarna", bg: "#FFA8CD", fg: "#17120F" },
-  { label: "Afterpay", bg: "#B2FCE4", fg: "#000000" },
-  { label: "VISA", bg: "#1A1F71", fg: "#FFFFFF" },
-  { label: "Mastercard", bg: "#FFFFFF", fg: "#1A1F36" },
-  { label: "American Express", bg: "#016FD0", fg: "#FFFFFF" },
-  { label: "Discover", bg: "#FFFFFF", fg: "#FF6000" },
-  { label: "Diners Club", bg: "#0079BE", fg: "#FFFFFF" },
+  { label: "Apple Pay", src: "/brand/payments/applepay.svg", width: 60, height: 24 },
+  { label: "Google Pay", src: "/brand/payments/googlepay.svg", width: 60, height: 24 },
+  { label: "Cash App", src: "/brand/payments/cashapp.svg", width: 24, height: 24 },
+  { label: "Zelle", src: "/brand/payments/zelle.svg", width: 60, height: 24 },
+  { label: "Klarna", src: "/brand/payments/klarna.svg", width: 60, height: 24 },
+  { label: "Afterpay", src: "/brand/payments/afterpay.svg", width: 80, height: 20 },
+  { label: "Visa", src: "/brand/payments/visa.svg", width: 60, height: 24 },
+  { label: "Mastercard", src: "/brand/payments/mastercard.svg", width: 36, height: 28 },
+  { label: "American Express", src: "/brand/payments/amex.svg", width: 36, height: 28 },
+  { label: "Discover", src: "/brand/payments/discover.svg", width: 80, height: 16 },
+  { label: "Diners Club", src: "/brand/payments/dinersclub.svg", width: 36, height: 28 },
 ];
+
+function MethodTile({ label, src, width, height }: MethodTileProps) {
+  return (
+    <div className="flex h-16 items-center justify-center rounded-xl border border-kder-line bg-kder-paper px-5">
+      <Image
+        src={src}
+        alt={label}
+        width={width}
+        height={height}
+        className="max-h-8 w-auto object-contain"
+        // Marketing logos — fine to ship unoptimized; they're tiny SVGs
+        // that don't benefit from Next's image pipeline anyway.
+        unoptimized
+      />
+    </div>
+  );
+}
 
 export function PaymentMethods() {
   return (
@@ -97,7 +92,7 @@ export function PaymentMethods() {
 
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
           {METHODS.map((method) => (
-            <li key={`${method.label}-${method.prefix ?? ""}`}>
+            <li key={method.label}>
               <MethodTile {...method} />
             </li>
           ))}
