@@ -55,7 +55,7 @@ export function Hero() {
 
           <p className="mt-6 max-w-xl text-base leading-relaxed text-kder-ink-muted lg:text-lg">
             Claim your food club. Take orders from neighbors. Keep 90% of
-            every plate — no algorithm, no 30% gatekeeper, no middleman.
+            every plate — no algorithm.
           </p>
 
           <HandleClaimInput
