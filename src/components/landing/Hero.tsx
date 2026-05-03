@@ -1,36 +1,28 @@
-import Link from "next/link";
 import { HandleClaimInput } from "./HandleClaimInput";
-import { ListingChip } from "./ListingChip";
 import { PhoneFrame } from "./PhoneFrame";
-import { SHOWCASE_LISTINGS } from "./data/showcase-listings";
+import { OrderPhoneScreen } from "./phones/OrderPhoneScreen";
+import { StorefrontPhoneScreen } from "./phones/StorefrontPhoneScreen";
 
 /**
  * Hero — creator-first lead. Cream surface, dark headline, dark phone
  * mockups for contrast. Inspired by Stooty's hero (which uses the
  * same dark-phone-on-light pattern as the page's main visual anchor).
  *
- * Phone-mockup screenshot assets live under
- * `/public/images/landing/storefront-phone.png` and `order-phone.png`.
- * They must be added before merge — until then `<PhoneFrame>` falls
- * back to a black device with no screen content. To regenerate:
+ * The phone screens are rendered in CSS via `<StorefrontPhoneScreen
+ * />` and `<OrderPhoneScreen />` — no PNG assets required. This
+ * matches Stooty's actual approach (their phone mockups are
+ * designed UI, not raw captures) and means the marketing page
+ * never has stale or missing screenshots.
  *
- *   1. Run the storefront in dev against a curated demo handle.
- *   2. Capture iPhone-sized screenshots (390×844 @2x → 780×1688 PNG):
- *      - public storefront grid → storefront-phone.png
- *      - order-confirmation step → order-phone.png
- *   3. Optimize each to <200KB and place under
- *      `/public/images/landing/`.
- *
- * Future: a Playwright capture script could automate this — see
- * `scripts/capture-mockups.md` (TODO doc, follow-up PR).
+ * No explicit scroll affordance — the MissionAnchor's giant
+ * typography immediately below does the scroll-cue work via design,
+ * not via an explicit "Scroll ↓" label. Same logic on the listing
+ * chip preview that used to live below the input — the right-column
+ * StorefrontPhoneScreen already shows the visitor what they're
+ * claiming, so a duplicate one-line preview was redundant.
  */
 
 export function Hero() {
-  // Pick the first showcase listing as the hero's preview teaser —
-  // gives the visitor an immediate, concrete sense of what they're
-  // claiming a handle for.
-  const previewListing = SHOWCASE_LISTINGS[0];
-
   return (
     <section
       aria-label="Hero"
@@ -49,7 +41,7 @@ export function Hero() {
       />
 
       <div className="relative z-10 mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-        {/* Left column — headline, sub-copy, claim input, listing teaser */}
+        {/* Left column — headline, sub-copy, claim input */}
         <div className="flex flex-col">
           <span className="mb-6 inline-flex w-fit items-center rounded-full bg-kder-mint px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-kder-green">
             For Houston food creators
@@ -71,51 +63,23 @@ export function Hero() {
             destination="/signup"
             className="mt-8 max-w-[520px]"
           />
-
-          {/* Listing chip teaser — what they're really claiming */}
-          <div className="mt-6 flex max-w-[520px] flex-col gap-2 rounded-2xl border border-kder-line bg-kder-paper px-5 py-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-kder-ink-muted">
-              You&rsquo;ll show up like this
-            </span>
-            <ListingChip listing={previewListing} variant="compact" />
-          </div>
-
-          {/* "(scroll)" affordance — the immediate scroll payoff is the
-              MissionAnchor section right below the hero. Animated bounce
-              gently invites the scroll without screaming. Honors
-              prefers-reduced-motion via Tailwind's motion-safe variant. */}
-          <Link
-            href="#mission"
-            aria-label="Scroll to mission"
-            className="group mt-8 inline-flex w-fit flex-col items-start gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-kder-ink-muted transition-colors hover:text-kder-ink"
-          >
-            <span>Scroll</span>
-            <span
-              aria-hidden="true"
-              className="text-base motion-safe:group-hover:translate-y-0.5 motion-safe:transition-transform"
-            >
-              ↓
-            </span>
-          </Link>
         </div>
 
-        {/* Right column — stacked phone mockups. Hidden on mobile to
-            keep the hero tight; on lg+ the dark device chrome
-            provides the page's main contrast moment. */}
+        {/* Right column — stacked phone mockups rendered entirely in
+            CSS via the StorefrontPhoneScreen / OrderPhoneScreen
+            components. Hidden on mobile to keep the hero tight; on
+            lg+ the dark device chrome provides the page's main
+            contrast moment against the cream surface. */}
         <div className="relative hidden h-[600px] w-full lg:block">
           <div className="absolute left-[8%] top-[40px] z-10 w-[58%] rotate-[-6deg]">
-            <PhoneFrame
-              src="/images/landing/storefront-phone.png"
-              alt="KDER storefront preview — a creator's plate grid"
-              variant="primary"
-            />
+            <PhoneFrame variant="primary">
+              <StorefrontPhoneScreen />
+            </PhoneFrame>
           </div>
           <div className="absolute right-[6%] top-[120px] z-0 w-[52%] rotate-[7deg]">
-            <PhoneFrame
-              src="/images/landing/order-phone.png"
-              alt="KDER order confirmation screen"
-              variant="secondary"
-            />
+            <PhoneFrame variant="secondary">
+              <OrderPhoneScreen />
+            </PhoneFrame>
           </div>
         </div>
       </div>

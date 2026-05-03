@@ -118,11 +118,6 @@ export function MarketingFooter() {
             </Link>
           </div>
         </div>
-
-        <p className="mt-4 text-[10px] text-kder-ink-muted/70">
-          Community hero photo based on Houston 2014 by Katie Haugland
-          Bowen (CC BY 2.0), adapted by KDER.
-        </p>
       </div>
     </footer>
   );
