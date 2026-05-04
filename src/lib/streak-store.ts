@@ -1,12 +1,10 @@
-import { getOrders } from "./orders-store";
-import type { Streak } from "@/types";
+import type { Order, Streak } from "@/types";
 
 /**
  * Calculate the creator's current selling streak from completed orders.
  * A streak = consecutive calendar days with at least 1 completed order.
  */
-export function getStreak(): Streak {
-  const orders = getOrders();
+export function getStreak(orders: Order[]): Streak {
   const completed = orders.filter((o) => o.status === "completed");
 
   if (completed.length === 0) {

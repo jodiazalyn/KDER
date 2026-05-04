@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Mail, PenSquare } from "lucide-react";
 import { ConversationRow } from "@/components/messages/ConversationRow";
 import { ComposeSheet } from "@/components/messages/ComposeSheet";
-import type { Conversation } from "@/lib/messages-store";
+import type { Conversation } from "@/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 

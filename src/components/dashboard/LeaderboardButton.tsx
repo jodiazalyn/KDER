@@ -5,9 +5,9 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Crown } from "lucide-react";
 import { getStreak } from "@/lib/streak-store";
-import { getOrders } from "@/lib/orders-store";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { getLeaderboard } from "@/lib/leaderboard-store";
+import type { Order } from "@/types";
 
 // Defer the panel itself — only loads when the crown is tapped.
 const LeaderboardPanel = dynamic(
@@ -41,18 +41,23 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
 
     let cancelled = false;
     async function load() {
-      const profile = await getCreatorProfileAsync();
+      const [profile, ordersRes] = await Promise.all([
+        getCreatorProfileAsync(),
+        fetch("/api/v1/orders?status=completed")
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
       if (cancelled) return;
 
-      const streak = getStreak();
-      const completedOrders = getOrders().filter((o) => o.status === "completed").length;
+      const completedOrders: Order[] = ordersRes?.data?.orders ?? [];
+      const streak = getStreak(completedOrders);
 
       const user = {
         displayName: profile.display_name,
         handle: profile.handle,
         photoUrl: profile.photo_url,
         vibeScore: profile.vibe_score || 0,
-        totalOrders: completedOrders,
+        totalOrders: completedOrders.length,
         currentStreak: streak.currentStreak,
       };
       setUserData(user);

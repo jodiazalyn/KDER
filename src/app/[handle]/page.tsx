@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { StorefrontClient } from "./storefront-client";
 import { createClient } from "@/lib/supabase/server";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/env";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing } from "@/types";
@@ -23,8 +24,8 @@ const STOREFRONT_CACHE_TTL_SECONDS = 60;
  *  rows (active listings, public member fields), so anon access is enough. */
 function createPublicSupabaseClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     { auth: { persistSession: false } }
   );
 }

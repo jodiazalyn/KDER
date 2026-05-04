@@ -151,6 +151,17 @@ export interface Message {
   created_at: string;
 }
 
+export interface Conversation {
+  threadId: string;
+  partnerId: string;
+  partnerName: string;
+  partnerPhoto: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  orderId: string | null;
+}
+
 // --- Gamification types ---
 
 export interface Streak {
