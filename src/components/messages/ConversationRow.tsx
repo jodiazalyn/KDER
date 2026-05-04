@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { Conversation } from "@/lib/messages-store";
+import type { Conversation } from "@/types";
 
 function shortTimeAgo(dateStr: string): string {
   const now = Date.now();
