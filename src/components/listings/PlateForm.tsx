@@ -9,7 +9,9 @@ import { QuantityStepper } from "./QuantityStepper";
 import { FulfillmentPicker } from "./FulfillmentPicker";
 import { CategoryChips } from "./CategoryChips";
 import { AiDraftButton } from "@/components/shared/AiDraftButton";
+import { Coachmark } from "@/components/ui/coachmark";
 import { FloatingActionBar } from "@/components/ui/floating-action-bar";
+import { COACHMARK_COPY, isCoachmarkDismissed } from "@/lib/coachmarks";
 import {
   CATEGORIES,
   ALLERGENS,
@@ -75,6 +77,22 @@ export function PlateForm({ listing }: PlateFormProps) {
 
   // Restore draft for new plates (not edits)
   const restored = !isEditing ? loadDraft() : null;
+
+  // Coachmark targets — first-time tips fire only when this PlateForm is
+  // creating a new plate (not editing an existing one) so we don't nag
+  // experienced creators editing their menu.
+  const nameCoachRef = useRef<HTMLInputElement>(null);
+  const photosCoachRef = useRef<HTMLDivElement>(null);
+  const priceCoachRef = useRef<HTMLDivElement>(null);
+  // Sequence: photos tip first, then name, then price. Each tip only
+  // renders once the previous has been dismissed (this session OR
+  // persistent). Prevents simultaneous coachmark spotlights.
+  const [photosCoachDone, setPhotosCoachDone] = useState<boolean>(() =>
+    isCoachmarkDismissed("creator-plate-photos")
+  );
+  const [nameCoachDone, setNameCoachDone] = useState<boolean>(() =>
+    isCoachmarkDismissed("creator-plate-title")
+  );
 
   const [name, setName] = useState(listing?.name ?? restored?.name ?? "");
   const [description, setDescription] = useState(listing?.description ?? restored?.description ?? "");
@@ -276,12 +294,14 @@ export function PlateForm({ listing }: PlateFormProps) {
             <label className="mb-2 block text-sm font-medium text-white/60">
               Photos &amp; Video
             </label>
-            <MediaUpload
-              photos={photos}
-              video={video}
-              onPhotosChange={setPhotos}
-              onVideoChange={setVideo}
-            />
+            <div ref={photosCoachRef}>
+              <MediaUpload
+                photos={photos}
+                video={video}
+                onPhotosChange={setPhotos}
+                onVideoChange={setVideo}
+              />
+            </div>
           </section>
 
           {/* Name */}
@@ -293,6 +313,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               Plate name *
             </label>
             <input
+              ref={nameCoachRef}
               id="plate-name"
               type="text"
               value={name}
@@ -358,7 +379,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             >
               Price *
             </label>
-            <div className="relative">
+            <div ref={priceCoachRef} className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
                 $
               </span>
@@ -496,6 +517,38 @@ export function PlateForm({ listing }: PlateFormProps) {
           </div>
         </div>
       </FloatingActionBar>
+
+      {/* First-time-user coachmarks. Only fire on NEW plate creation
+          (not editing) so existing creators editing a plate don't get
+          re-nagged. Sequenced: photos → name → price. Each waits for
+          the previous to dismiss. The 250ms delay lets the form finish
+          mounting before targeting. */}
+      {!isEditing && !photosCoachDone && (
+        <Coachmark
+          id="creator-plate-photos"
+          copy={COACHMARK_COPY["creator-plate-photos"]}
+          targetRef={photosCoachRef}
+          showDelayMs={250}
+          onDismiss={() => setPhotosCoachDone(true)}
+        />
+      )}
+      {!isEditing && photosCoachDone && !nameCoachDone && (
+        <Coachmark
+          id="creator-plate-title"
+          copy={COACHMARK_COPY["creator-plate-title"]}
+          targetRef={nameCoachRef}
+          showDelayMs={250}
+          onDismiss={() => setNameCoachDone(true)}
+        />
+      )}
+      {!isEditing && photosCoachDone && nameCoachDone && (
+        <Coachmark
+          id="creator-plate-price"
+          copy={COACHMARK_COPY["creator-plate-price"]}
+          targetRef={priceCoachRef}
+          showDelayMs={250}
+        />
+      )}
     </div>
   );
 }

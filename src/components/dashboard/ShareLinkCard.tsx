@@ -1,16 +1,23 @@
 "use client";
 
+import { useRef } from "react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 interface ShareLinkCardProps {
   handle: string;
 }
 
 export function ShareLinkCard({ handle }: ShareLinkCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const link = `kder.club/@${handle}`;
 
   return (
-    <div className="rounded-2xl border border-green-400/[0.25] bg-green-900/[0.40] p-4 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]">
+    <div
+      ref={cardRef}
+      className="rounded-2xl border border-green-400/[0.25] bg-green-900/[0.40] p-4 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]"
+    >
       <p className="text-xs font-medium text-green-300/70 uppercase tracking-wider">
         Your storefront link
       </p>
@@ -25,6 +32,16 @@ export function ShareLinkCard({ handle }: ShareLinkCardProps) {
       <div className="mt-3">
         <CopyLinkButton handle={handle} variant="share" />
       </div>
+
+      {/* First-visit tip on the dashboard's most-actionable surface.
+          A 600ms delay lets the dashboard's other content settle so
+          the spotlight measures the right rect. */}
+      <Coachmark
+        id="creator-share-link"
+        copy={COACHMARK_COPY["creator-share-link"]}
+        targetRef={cardRef}
+        showDelayMs={600}
+      />
     </div>
   );
 }

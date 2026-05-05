@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { OtpInput } from "@/components/auth/OtpInput";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { toast } from "sonner";
 
 const RESEND_COOLDOWN = 45;
@@ -19,6 +21,7 @@ export default function VerifyPage() {
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const [resendCount, setResendCount] = useState(0);
   const [locked, setLocked] = useState(false);
+  const otpCoachRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedPhone = sessionStorage.getItem("kder_signup_phone");
@@ -174,12 +177,14 @@ export default function VerifyPage() {
           </p>
         </div>
 
-        <OtpInput
-          onComplete={handleComplete}
-          error={error}
-          errorKey={errorKey}
-          disabled={loading}
-        />
+        <div ref={otpCoachRef} className="w-full flex justify-center">
+          <OtpInput
+            onComplete={handleComplete}
+            error={error}
+            errorKey={errorKey}
+            disabled={loading}
+          />
+        </div>
 
         {error && (
           <p className="text-sm text-red-400" role="alert">
@@ -223,6 +228,15 @@ export default function VerifyPage() {
           </Link>
         </div>
       </div>
+
+      {/* First-visit tip explaining the OTP code mechanics. Fires once
+          per device. */}
+      <Coachmark
+        id="creator-signup-otp"
+        copy={COACHMARK_COPY["creator-signup-otp"]}
+        targetRef={otpCoachRef}
+        showDelayMs={400}
+      />
     </main>
   );
 }

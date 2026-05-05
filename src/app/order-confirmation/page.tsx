@@ -15,6 +15,8 @@ import Link from "next/link";
 import { clearCart } from "@/lib/cart-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { cn } from "@/lib/utils";
 
 type OrderStatus =
@@ -61,6 +63,10 @@ function OrderConfirmationInner() {
   );
   const [showBanner, setShowBanner] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Coachmark anchor for the StatusTracker timeline. First-time tip
+  // explains that customers will get SMS updates as the order moves
+  // through the lifecycle.
+  const statusTrackerRef = useRef<HTMLDivElement>(null);
 
   // Clear the creator-scoped cart on first paint of the confirmation page.
   // (Intentionally not cleared at Pay time so customers backing out of Stripe
@@ -236,7 +242,9 @@ function OrderConfirmationInner() {
         </div>
 
         {/* Status tracker */}
-        <StatusTracker order={order} />
+        <div ref={statusTrackerRef}>
+          <StatusTracker order={order} />
+        </div>
 
         {/* Order summary card */}
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
@@ -341,6 +349,16 @@ function OrderConfirmationInner() {
           </Link>
         </div>
       </div>
+
+      {/* First-time tip on the status timeline. Anchored to the tracker
+          so the customer sees how their order moves through stages and
+          knows they'll get SMS updates + can message the creator. */}
+      <Coachmark
+        id="customer-order-status"
+        copy={COACHMARK_COPY["customer-order-status"]}
+        targetRef={statusTrackerRef}
+        showDelayMs={400}
+      />
     </main>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import type { EarningsAccountInfo } from "@/lib/earnings-types";
 
 interface KycBannerProps {
@@ -16,6 +19,8 @@ export function KycBanner({
   loading,
   onResume,
 }: KycBannerProps) {
+  const buttonCoachRef = useRef<HTMLButtonElement>(null);
+
   // Resolve effective state. If we don't have a Connect account yet,
   // that's `not_started` regardless of what's in `account.kycStatus`.
   const status = !hasConnectAccount
@@ -103,6 +108,7 @@ export function KycBanner({
           </p>
           <p className="mt-1 text-xs text-white/40">{subtitle}</p>
           <button
+            ref={buttonCoachRef}
             type="button"
             onClick={onResume}
             disabled={loading}
@@ -113,6 +119,16 @@ export function KycBanner({
           </button>
         </div>
       </div>
+
+      {/* First-visit tip — only fires when KYC is action-required (this
+          branch). Once verified, the component returns early above and
+          this never mounts, so there's no stale tip on a verified account. */}
+      <Coachmark
+        id="creator-stripe-verify"
+        copy={COACHMARK_COPY["creator-stripe-verify"]}
+        targetRef={buttonCoachRef}
+        showDelayMs={400}
+      />
     </div>
   );
 }
