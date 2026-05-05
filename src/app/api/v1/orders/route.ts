@@ -39,26 +39,10 @@ export async function GET(request: NextRequest) {
 
     if (!creator) return apiSuccess({ orders: [] });
 
-    // ── Lazy auto-decline ─────────────────────────────────────────
-    // Pending orders past their auto_decline_at deadline are stuck —
-    // creator never accepted, customer never abandoned formally, and
-    // they linger in the Active tab cluttering the list. Sweep them
-    // here on every list fetch, scoped to this creator only.
-    //
-    // No refund is issued: pending state means the customer never
-    // completed Stripe Checkout (the checkout.session.completed webhook
-    // would have moved the order to 'accepted'). So there's no captured
-    // payment to refund — only an abandoned order to clean up.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
-      .from("orders")
-      .update({
-        status: "declined",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("creator_id", creator.id)
-      .eq("status", "pending")
-      .lt("auto_decline_at", new Date().toISOString());
+    // Auto-decline removed (May 2026): pending orders now stay pending
+    // until the creator explicitly accepts or declines. The cron sweep
+    // at /api/v1/cron/order-reminders escalates email reminders at 15 min,
+    // 1 hr, 4 hr, and 24 hr instead of silently flipping to declined.
 
     // Single query, LEFT JOIN listings for the photo + name fallback. Using the
     // Supabase foreign-key relation syntax; `listing` here is an alias for the

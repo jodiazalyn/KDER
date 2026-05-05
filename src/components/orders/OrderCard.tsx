@@ -99,9 +99,9 @@ export function OrderCard({
               {order.fulfillment_type === "pickup" ? "Pickup" : "Delivery"}
             </span>
 
-            {/* Countdown for pending */}
+            {/* Elapsed-time pill for pending */}
             {isPending && (
-              <CountdownTimer autoDeclineAt={order.auto_decline_at} />
+              <CountdownTimer createdAt={order.created_at} />
             )}
           </div>
         </div>

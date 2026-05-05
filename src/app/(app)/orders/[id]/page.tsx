@@ -182,10 +182,10 @@ export default function OrderDetailPage({
           {isPending && (
             <div className="flex flex-col items-end">
               <span className="text-[10px] text-white/30 uppercase tracking-wider">
-                Auto-decline in
+                Customer waiting
               </span>
               <CountdownTimer
-                autoDeclineAt={order.auto_decline_at}
+                createdAt={order.created_at}
                 className="text-lg"
               />
             </div>

@@ -191,8 +191,8 @@ export default function SmsPolicyPage() {
               />
               <MsgCard
                 Icon={Clock}
-                title="Auto-Decline Alerts"
-                desc="Notifications to Members when an order is auto-declined and a refund is issued."
+                title="Decline Alerts"
+                desc="Notifications to Members when an order is declined by the Creator and a refund is issued."
               />
               <MsgCard
                 Icon={BellRing}

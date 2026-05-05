@@ -32,7 +32,7 @@ export const COACHMARK_COPY = {
   "creator-share-link":
     "This is your storefront link. Drop it in your IG bio, group chats, flyers — every tap is a potential order.",
   "creator-orders-pending":
-    "Accept within 15 minutes or the order auto-declines and clears from this list.",
+    "Accept fast — we'll keep emailing you reminders until you do, but the customer is waiting.",
   "creator-earn-balance":
     "This is what you've earned but Stripe hasn't sent yet. Tap Instant for a payout in ~30 minutes.",
 

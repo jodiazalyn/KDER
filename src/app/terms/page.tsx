@@ -180,9 +180,8 @@ export default function TermsPage() {
               Members may request a full refund within{" "}
               <strong className="text-white">30 minutes</strong> of placing an
               order. After 30 minutes, refunds are subject to the
-              Creator&apos;s stated refund policy. Orders that are
-              auto-declined (after 15 minutes with no Creator response) are
-              refunded in full automatically.
+              Creator&apos;s stated refund policy. Orders that the Creator
+              explicitly declines are refunded in full automatically.
             </p>
             <p className="mt-3">
               For disputes about quality or delivery, Members and Creators are

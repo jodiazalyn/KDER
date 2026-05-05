@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { isValidTransition } from "@/lib/order-state-machine";
 import { sendSms, isTwilioConfigured } from "@/lib/twilio";
+import { notifyOrderReady } from "@/lib/notifications";
+import { fetchOrderForNotification } from "@/lib/notifications-fetch";
 import type { OrderStatus } from "@/types";
 
 /**
@@ -100,6 +102,11 @@ export async function PUT(
         console.error("[orders/ready] SMS failed:", smsErr);
         // Intentionally do not fail the ready transition — SMS is best-effort.
       }
+    }
+
+    const ctx = await fetchOrderForNotification(supabase, id);
+    if (ctx) {
+      await notifyOrderReady(ctx.order, ctx.creator, ctx.member);
     }
 
     return apiSuccess({ order_id: id, status: "ready", sms_sent: smsSent });
