@@ -12,7 +12,11 @@ import { cn } from "@/lib/utils";
 
 const NAME_MAX = 40;
 const BIO_MAX = 160;
+const EMAIL_MAX = 254;
 const MAX_ZIPS = 5;
+
+// Loose RFC-5322-ish check, matching the onboarding-profile validator.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ZipEntry {
   zip: string;
@@ -22,6 +26,7 @@ interface ZipEntry {
 interface ProfileFormState {
   display_name: string;
   bio: string;
+  email: string;
   photo_url: string | null;
   handle: string; // kept for round-trip only; not editable here
   zips: ZipEntry[];
@@ -32,6 +37,7 @@ function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): Pro
   return {
     display_name: p.display_name || "",
     bio: p.bio || "",
+    email: p.email || "",
     photo_url: p.photo_url,
     handle: p.handle || "",
     zips: (p.neighborhoods || []).map((n) => ({ zip: n.zip, neighborhood: n.name })),
@@ -74,7 +80,19 @@ export default function SettingsPage() {
     return JSON.stringify(form) !== JSON.stringify(initial);
   }, [form, initial]);
 
-  const canSave = !!form && !!form.display_name.trim() && isDirty && !saving;
+  // Email is editable here. If the creator has one, edits must remain
+  // a valid format; if it's blank (legacy account before email collection
+  // landed), we let them save without one but the dashboard banner will
+  // keep nudging until they add it.
+  const emailTrimmed = form?.email.trim().toLowerCase() ?? "";
+  const isEmailValid = emailTrimmed === "" || EMAIL_RE.test(emailTrimmed);
+
+  const canSave =
+    !!form &&
+    !!form.display_name.trim() &&
+    isEmailValid &&
+    isDirty &&
+    !saving;
 
   const addZip = async () => {
     if (!form || currentZip.length !== 5 || addingZip) return;
@@ -142,6 +160,7 @@ export default function SettingsPage() {
           handle: form.handle, // unchanged — onboard route requires it
           photo_url: form.photo_url,
           bio: form.bio.trim() || null,
+          email: emailTrimmed || null,
           zips: form.zips.map((z) => z.zip),
           pickup_address: form.pickup_address.trim() || null,
         }),
@@ -259,6 +278,38 @@ export default function SettingsPage() {
             />
             <p className="mt-1 text-right text-xs text-white/30">
               {form.bio.length}/{BIO_MAX}
+            </p>
+          </div>
+
+          {/* Email — required for order alerts. We surface validation
+              inline so a blank settings save (e.g., dirty bio + empty
+              email field on a legacy account) doesn't get rejected
+              with a generic toast. */}
+          <div>
+            <label
+              htmlFor="settings-email"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
+              Email
+            </label>
+            <input
+              id="settings-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value.slice(0, EMAIL_MAX) })
+              }
+              placeholder="you@example.com"
+              className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+            />
+            <p className="mt-1 text-xs text-white/40">
+              {emailTrimmed === ""
+                ? "Add an email so you don't miss new-order alerts."
+                : isEmailValid
+                  ? "Used for order notifications only. Never shared."
+                  : "That doesn't look like a valid email."}
             </p>
           </div>
         </section>

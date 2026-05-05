@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pause, Play } from "lucide-react";
+import Link from "next/link";
+import { Pause, Play, Mail } from "lucide-react";
 import { StorefrontHeader } from "@/components/dashboard/StorefrontHeader";
 import { ShareLinkCard } from "@/components/dashboard/ShareLinkCard";
 import { QuickStats } from "@/components/dashboard/QuickStats";
@@ -118,6 +119,25 @@ export default function DashboardPage() {
 
       {/* Content */}
       <div className="space-y-5 px-4 pb-8 pt-4">
+        {/* Missing-email backfill nudge — legacy creators who onboarded
+            before the email-collection migration won't receive new-order
+            alerts until they add one. Surfaces persistently (no dismiss)
+            because the cost of missing an order is high. */}
+        {!profile.email && (
+          <Link
+            href="/settings"
+            className="flex w-full items-start gap-3 rounded-2xl border border-orange-400/30 bg-orange-900/20 px-4 py-3 text-sm text-orange-200 active:scale-[0.99] transition-transform"
+          >
+            <Mail size={18} className="mt-0.5 flex-shrink-0 text-orange-300" />
+            <div>
+              <p className="font-semibold">Add your email so you don&apos;t miss orders</p>
+              <p className="mt-0.5 text-xs text-orange-200/70">
+                We send new-order alerts to your email — tap to add one in Settings.
+              </p>
+            </div>
+          </Link>
+        )}
+
         {/* Storefront status */}
         <button
           type="button"

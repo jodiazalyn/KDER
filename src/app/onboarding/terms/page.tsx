@@ -140,6 +140,7 @@ export default function TermsPage() {
           handle: handle || "mystore",
           photo_url: profile.photo_url || null,
           bio: profile.bio || null,
+          email: profile.email || null,
           zips: zips.map((z) => z.zip),
           pickup_address: pickupAddress.trim() || null,
         }),

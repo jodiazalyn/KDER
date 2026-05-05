@@ -13,8 +13,8 @@ export type Database = {
   public: {
     Tables: {
       members: {
-        Row: { id: string; phone: string; display_name: string; handle: string | null; photo_url: string | null; bio: string | null; role: string; stripe_customer_id: string | null; inbox_active: boolean; last_handle_changed_at: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; phone: string; display_name: string; handle?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; phone: string; display_name: string; handle: string | null; email: string | null; photo_url: string | null; bio: string | null; role: string; stripe_customer_id: string | null; inbox_active: boolean; last_handle_changed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; phone: string; display_name: string; handle?: string | null; email?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; created_at?: string; updated_at?: string };
         Update: { id?: string; phone?: string; display_name?: string; handle?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; updated_at?: string };
       };
       creators: {

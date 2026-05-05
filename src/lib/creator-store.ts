@@ -17,6 +17,10 @@ export interface CreatorProfile {
   creator_id?: string | null;
   /** Creator's user id (members.id). Used as recipient_id for messaging. */
   member_id: string | null;
+  /** Email — required at onboarding for order notifications. Null only
+   *  for legacy creators who signed up before email collection landed
+   *  (surfaced via dashboard banner). */
+  email: string | null;
   neighborhoods: { name: string; zip: string }[];
   storefront_active: boolean;
   vibe_score: number | null;
@@ -42,13 +46,13 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("members")
-          .select("display_name, handle, photo_url, bio")
+          .select("display_name, handle, photo_url, bio, email")
           .eq("id", user.id)
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("creators")
-          .select("service_zip_codes, storefront_active, vibe_score")
+          .select("service_zip_codes, storefront_active, vibe_score, pickup_address")
           .eq("member_id", user.id)
           .single(),
       ]);
@@ -65,6 +69,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           photo_url: member.photo_url || null,
           handle: member.handle || "mystore",
           member_id: user.id,
+          email: member.email || null,
           neighborhoods,
           storefront_active: creator?.storefront_active ?? true,
           vibe_score: creator?.vibe_score
@@ -106,6 +111,7 @@ export function getCreatorProfile(): CreatorProfile {
     photo_url: profile.photo_url || null,
     handle: handle || "mystore",
     member_id: null,
+    email: profile.email || null,
     neighborhoods,
     storefront_active: storefrontActive !== "false",
     vibe_score: null,
@@ -140,6 +146,7 @@ function defaultProfile(): CreatorProfile {
     photo_url: null,
     handle: "mystore",
     member_id: null,
+    email: null,
     neighborhoods: [],
     storefront_active: true,
     vibe_score: null,
