@@ -83,11 +83,15 @@ export function PlateForm({ listing }: PlateFormProps) {
   // experienced creators editing their menu.
   const nameCoachRef = useRef<HTMLInputElement>(null);
   const photosCoachRef = useRef<HTMLDivElement>(null);
-  // Sequence: show the photos tip first; only render the name tip after
-  // photos has been dismissed (this session OR persistent). Prevents
-  // two simultaneous coachmark spotlights cluttering the screen.
+  const priceCoachRef = useRef<HTMLDivElement>(null);
+  // Sequence: photos tip first, then name, then price. Each tip only
+  // renders once the previous has been dismissed (this session OR
+  // persistent). Prevents simultaneous coachmark spotlights.
   const [photosCoachDone, setPhotosCoachDone] = useState<boolean>(() =>
     isCoachmarkDismissed("creator-plate-photos")
+  );
+  const [nameCoachDone, setNameCoachDone] = useState<boolean>(() =>
+    isCoachmarkDismissed("creator-plate-title")
   );
 
   const [name, setName] = useState(listing?.name ?? restored?.name ?? "");
@@ -375,7 +379,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             >
               Price *
             </label>
-            <div className="relative">
+            <div ref={priceCoachRef} className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
                 $
               </span>
@@ -516,8 +520,9 @@ export function PlateForm({ listing }: PlateFormProps) {
 
       {/* First-time-user coachmarks. Only fire on NEW plate creation
           (not editing) so existing creators editing a plate don't get
-          re-nagged. Sequenced: photos tip first, name tip after. The
-          250ms delay lets the form finish mounting before targeting. */}
+          re-nagged. Sequenced: photos → name → price. Each waits for
+          the previous to dismiss. The 250ms delay lets the form finish
+          mounting before targeting. */}
       {!isEditing && !photosCoachDone && (
         <Coachmark
           id="creator-plate-photos"
@@ -527,11 +532,20 @@ export function PlateForm({ listing }: PlateFormProps) {
           onDismiss={() => setPhotosCoachDone(true)}
         />
       )}
-      {!isEditing && photosCoachDone && (
+      {!isEditing && photosCoachDone && !nameCoachDone && (
         <Coachmark
           id="creator-plate-title"
           copy={COACHMARK_COPY["creator-plate-title"]}
           targetRef={nameCoachRef}
+          showDelayMs={250}
+          onDismiss={() => setNameCoachDone(true)}
+        />
+      )}
+      {!isEditing && photosCoachDone && nameCoachDone && (
+        <Coachmark
+          id="creator-plate-price"
+          copy={COACHMARK_COPY["creator-plate-price"]}
+          targetRef={priceCoachRef}
           showDelayMs={250}
         />
       )}
