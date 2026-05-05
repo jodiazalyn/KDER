@@ -126,11 +126,15 @@ export interface Order {
   auto_decline_at: string;
   created_at: string;
   updated_at: string;
+  // Reminder tracking — populated by the cron sweep
+  reminder_count: number;
+  last_reminder_at: string | null;
   // Address fields
   delivery_address: string | null;
   delivery_zip: string | null;
   pickup_address: string | null; // creator's address, revealed after accept
   member_phone: string | null;
+  customer_email: string | null;
   // Denormalized for display
   member_name: string;
   member_photo: string | null;

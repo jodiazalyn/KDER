@@ -95,8 +95,8 @@ export default function OrdersPage() {
   // is made and the customer is about to (or already at) pickup — creator
   // needs to hand it off, so it's the most urgent next action. "Accepted"
   // orders are being prepared and need the creator's kitchen time.
-  // "Pending" orders are still awaiting a decision — least urgent since the
-  // auto-decline timer handles them if the creator doesn't act in time.
+  // "Pending" orders are awaiting the creator's accept decision — they
+  // never auto-decline now, so the customer-waiting clock is what matters.
   // Within each status group, oldest first so longest-waiting orders rise.
   const STATUS_PRIORITY: Record<Order["status"], number> = {
     ready: 0,
@@ -112,14 +112,9 @@ export default function OrdersPage() {
       const ap = STATUS_PRIORITY[a.status];
       const bp = STATUS_PRIORITY[b.status];
       if (ap !== bp) return ap - bp;
-      // Within the same status: for pending, oldest auto_decline_at first
-      // (running out of time fastest). For others, oldest created_at first.
-      if (a.status === "pending" && b.status === "pending") {
-        return (
-          new Date(a.auto_decline_at).getTime() -
-          new Date(b.auto_decline_at).getTime()
-        );
-      }
+      // Within the same status: oldest created_at first (longest-waiting
+      // customer rises). Same rule for pending — the order that's been
+      // sitting longest is the most urgent reminder target.
       return (
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
