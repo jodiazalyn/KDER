@@ -119,6 +119,9 @@ async function loadStorefrontUncached(handle: string): Promise<{
     handle: member.handle,
     creator_id: creatorRow.id,
     member_id: member.id,
+    // Storefront viewers don't need (and shouldn't see) the creator's
+    // email — only used for backend notifications. Keep null here.
+    email: null,
     neighborhoods: resolveZips(creatorRow.service_zip_codes ?? []),
     storefront_active: creatorRow.storefront_active ?? true,
     vibe_score:

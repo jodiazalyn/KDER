@@ -10,15 +10,24 @@ import { cn } from "@/lib/utils";
 
 const NAME_MAX = 40;
 const BIO_MAX = 160;
+const EMAIL_MAX = 254; // RFC 5321 practical limit
+
+// Loose RFC-5322-ish check — keeps obvious typos out without being so
+// strict that we reject perfectly valid addresses. Real validation
+// happens via deliverability (SendGrid bounces).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ProfileSetupPage() {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [bio, setBio] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const isValid = name.trim().length > 0;
+  const trimmedEmail = email.trim().toLowerCase();
+  const isEmailValid = EMAIL_RE.test(trimmedEmail);
+  const isValid = name.trim().length > 0 && isEmailValid;
 
   const handleContinue = async () => {
     if (!isValid || loading) return;
@@ -29,6 +38,7 @@ export default function ProfileSetupPage() {
       "kder_onboarding_profile",
       JSON.stringify({
         display_name: name.trim(),
+        email: trimmedEmail,
         bio: bio.trim() || null,
         photo_url: photo,
       })
@@ -37,12 +47,15 @@ export default function ProfileSetupPage() {
     router.push("/onboarding/handle");
   };
 
+  // Skip is only available for the optional fields (bio, photo).
+  // Display name and email are required for any continue path.
   const handleSkip = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !isEmailValid) return;
     sessionStorage.setItem(
       "kder_onboarding_profile",
       JSON.stringify({
         display_name: name.trim(),
+        email: trimmedEmail,
         bio: null,
         photo_url: null,
       })
@@ -57,10 +70,10 @@ export default function ProfileSetupPage() {
         <ProgressDots current={1} total={3} />
         <button
           onClick={handleSkip}
-          disabled={!name.trim()}
+          disabled={!name.trim() || !isEmailValid}
           className={cn(
             "text-sm font-medium",
-            name.trim()
+            name.trim() && isEmailValid
               ? "text-white/60 hover:text-white"
               : "text-white/20 cursor-not-allowed"
           )}
@@ -97,6 +110,34 @@ export default function ProfileSetupPage() {
           />
           <p className="mt-1 text-right text-xs text-white/30">
             {name.length}/{NAME_MAX}
+          </p>
+        </div>
+
+        {/* Email — required so we can send order alerts. We don't have
+            an email field in Supabase Auth (signup is phone-only), so
+            the value is captured here and persisted to members.email
+            on the final onboarding step. */}
+        <div className="w-full">
+          <label
+            htmlFor="email"
+            className="mb-2 block text-sm font-medium text-white/60"
+          >
+            Email *
+          </label>
+          <input
+            id="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value.slice(0, EMAIL_MAX))
+            }
+            placeholder="you@example.com"
+            className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+          />
+          <p className="mt-1 text-xs text-white/40">
+            We email you the moment a new order comes in. Never shared with anyone.
           </p>
         </div>
 
