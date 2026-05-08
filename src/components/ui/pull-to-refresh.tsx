@@ -168,7 +168,9 @@ export function PullToRefresh({
       {showSpinner && (
         <div
           aria-hidden="true"
-          className="fixed left-1/2 top-3 z-[70] flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.12] bg-[#0A0A0A]/80 backdrop-blur-md"
+          // glass-btn-pill = circular glass affordance; matches the
+          // visual language of other floating chrome.
+          className="glass-btn-pill fixed left-1/2 top-3 z-[70] flex h-10 w-10 -translate-x-1/2 items-center justify-center"
           style={{
             transform: `translate(-50%, ${pullDistance - 20}px)`,
             opacity: spinnerOpacity,
@@ -198,7 +200,8 @@ export function PullToRefresh({
         onClick={handleManualRefresh}
         disabled={refreshing}
         aria-label="Refresh"
-        className="fixed right-4 top-3 z-[70] flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.10] bg-[#0A0A0A]/70 text-white/60 backdrop-blur-md hover:text-white/90 active:scale-90 transition-all disabled:opacity-50"
+        // glass-btn-pill for the circular floating button.
+        className="glass-btn-pill fixed right-4 top-3 z-[70] flex h-9 w-9 items-center justify-center text-white/60 hover:text-white/90 active:scale-90 transition-all disabled:opacity-50"
       >
         {refreshing ? (
           <Loader2 size={14} className="animate-spin" />

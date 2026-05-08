@@ -48,7 +48,11 @@ export function FloatingActionBar({
     <div
       className={cn(
         "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 px-4 py-3",
-        styled && "border-t border-white/[0.08] bg-[#0A0A0A]/95 backdrop-blur-md",
+        // glass-nav from liquidglass-tailwind: translucent floating
+        // chrome with backdrop blur + saturate + subtle inset border.
+        // The top-only border that used to be here is replaced by the
+        // glass surface's all-edge inset highlight (looks more iOS-y).
+        styled && "glass-nav",
         className
       )}
     >
