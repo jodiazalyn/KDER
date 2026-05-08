@@ -54,10 +54,12 @@ export function InfoTip({
           side={side}
           sideOffset={6}
           collisionPadding={16}
-          className="z-[80] max-w-[280px] rounded-xl border border-white/[0.12] bg-[#0A0A0A]/95 p-3 text-xs leading-relaxed text-white/85 shadow-xl backdrop-blur-md focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          // glass-card provides bg + blur + border + shadow + rounded.
+          // We only layer typography + sizing + open-state animation.
+          className="glass-card z-[80] max-w-[280px] p-3 text-xs leading-relaxed text-white/85 focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           {children}
-          <Popover.Arrow className="fill-[#0A0A0A]" />
+          <Popover.Arrow className="fill-white/10" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

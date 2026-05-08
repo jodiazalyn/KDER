@@ -18,6 +18,13 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        // Apple Liquid Glass variants from liquidglass-tailwind.
+        // See docs/DESIGN_SYSTEM.md for when to use which.
+        // Combine with `bg-{accent}-500/25 border-{accent}-400/20`
+        // for tinted CTAs (KDER green-tinted Accept buttons, etc.).
+        glass: "glass-btn text-white",
+        "glass-secondary": "glass-btn-secondary text-white/90",
+        "glass-pill": "glass-btn-pill text-white/90",
       },
       size: {
         default: "h-10 px-4 py-2",

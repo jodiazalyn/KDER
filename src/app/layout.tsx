@@ -85,8 +85,10 @@ export default function RootLayout({
         <Toaster
           position="bottom-center"
           toastOptions={{
-            className:
-              "bg-white/[0.18] backdrop-blur-[40px] border border-white/[0.28] rounded-2xl text-white",
+            // Liquid Glass treatment via the plugin's glass-modal
+            // utility — matches the Sheet/Dialog substrate so toasts
+            // feel like part of the same material system.
+            className: "glass-modal text-white",
           }}
         />
       </body>
