@@ -217,21 +217,205 @@ The plugin and our `globals.css` already wire two media queries globally — con
 
 ---
 
-## What ships next (Phase 2)
+## Complete migration inventory
 
-The next PR migrates these primitives to the new system. Reviewers should expect to see them touched:
+Every page and component in the app, mapped to the phase it gets touched in. Nothing should be missed in the rollout.
 
-| File | Current | After Phase 2 |
-|---|---|---|
-| [src/components/ui/coachmark.tsx](../src/components/ui/coachmark.tsx) | hand-rolled bubble | `glass-card-elevated glass-shine` |
-| [src/components/ui/info-tip.tsx](../src/components/ui/info-tip.tsx) | Radix popover w/ hand-rolled bg | `glass-card` content |
-| [src/components/ui/floating-action-bar.tsx](../src/components/ui/floating-action-bar.tsx) | custom blur + border | `glass-nav` |
-| [src/components/ui/sheet.tsx](../src/components/ui/sheet.tsx) | Radix Dialog w/ hand-rolled bg | `glass-modal` |
-| [src/components/ui/dialog.tsx](../src/components/ui/dialog.tsx) | shadcn dialog | `glass-modal` |
-| [src/components/ui/button.tsx](../src/components/ui/button.tsx) | shadcn variants | + `glass-btn` / `glass-btn-secondary` / `glass-btn-pill` variants |
-| [src/components/ui/input.tsx](../src/components/ui/input.tsx) | shadcn input | `glass-input` |
-| Toast (sonner integration) | default theme | themed via toaster options to match `glass-modal` |
+### Three glass approaches currently coexist (cleanup needed)
+1. **Hand-rolled inline** — `bg-white/[0.06] backdrop-blur-[8px] border ...` repeated across most components. Most code.
+2. **Custom `<GlassSurface>` component** ([src/components/glass/GlassSurface.tsx](../src/components/glass/GlassSurface.tsx)) — defines 5 tiers, **currently unused** anywhere in src/. **Delete in Phase 2.**
+3. **`liquidglass-tailwind` plugin** — installed, only the basic `glass-surface*` utilities used (8 occurrences). The semantic component classes (`glass-card`, `glass-btn`, etc.) are unused. **This is the destination.**
 
-**Estimated:** 1 day, single PR. Cascades to every screen because these primitives are used everywhere.
+### Phase 2 — Primitives (`src/components/ui/`, 12 files)
+Migrating these cascades to every screen. Single PR.
 
-After Phase 2, **Phase 3** standardizes motion (framer-motion springs across sheets, press feedback, list animations), **Phase 4** migrates per-surface (Dashboard, Orders, Earnings, Storefront, PlateForm, Settings), and **Phase 5** polishes icons + typography.
+| File | Action |
+|---|---|
+| `coachmark.tsx` | bubble → `glass-card-elevated glass-shine` |
+| `info-tip.tsx` | popover content → `glass-card` |
+| `sheet.tsx` | bottom sheet wrapper → `glass-modal` |
+| `dialog.tsx` | modal dialog → `glass-modal` |
+| `floating-action-bar.tsx` | bottom dock → `glass-nav` |
+| `button.tsx` | add `glass-btn` / `glass-btn-secondary` / `glass-btn-pill` variants alongside shadcn variants |
+| `input.tsx` | text input → `glass-input` |
+| `pull-to-refresh.tsx` | spinner pill → `glass-card` (subtle) |
+| `page-transition.tsx` | confirm spring physics; tweak if linear |
+| `skeleton.tsx` | shimmer using `glass-shine`-style overlay |
+| `form.tsx` | field wrapper styling alignment |
+| `label.tsx` | typography pass (no glass surface but check letter-spacing) |
+| (sonner toast theming) | configure via `<Toaster />` toastOptions to match `glass-modal` |
+| **DELETE** `src/components/glass/GlassSurface.tsx` | unused; superseded by plugin utilities |
+
+### Phase 3 — Motion (cross-cutting)
+Single PR. No new files; touches existing transitions everywhere.
+- Replace linear `transition-all` with framer-motion springs on: sheets, coachmarks, list items, button press feedback
+- Standard spring presets in a new `src/lib/motion.ts` constant export
+- Loading-state shimmer via `glass-shine`
+- Verify `prefers-reduced-motion` honors via globals.css (already wired)
+
+### Phase 4 — Per-surface migration
+
+Multiple PRs (one per surface group). Apply primitives + tokens.
+
+#### 4a — Creator app shell + dashboard
+| File | Notes |
+|---|---|
+| [src/app/(app)/layout.tsx](../src/app/%28app%29/layout.tsx) | App shell wrapper, BottomNav |
+| [src/components/layout/BottomNav.tsx](../src/components/layout/BottomNav.tsx) | → `glass-nav` |
+| [src/app/(app)/dashboard/page.tsx](../src/app/%28app%29/dashboard/page.tsx) | Dashboard composition |
+| `src/components/dashboard/StorefrontHeader.tsx` | Hero header |
+| `src/components/dashboard/ShareLinkCard.tsx` | → `glass-card-elevated glass-shine` (green-tinted) |
+| `src/components/dashboard/QuickStats.tsx` | → `glass-card` |
+| `src/components/dashboard/ActivePlatesPreview.tsx` | → `glass-card` |
+| `src/components/dashboard/RecentOrders.tsx` | row items → `glass-card` (subtle) |
+| `src/components/dashboard/StreakBanner.tsx` | → `glass-card-elevated glass-shine` |
+| `src/components/dashboard/BadgeShelf.tsx` | badge tiles → `glass-card` |
+| `src/components/dashboard/Leaderboard.tsx` | sheet → `glass-modal` |
+| `src/components/dashboard/LeaderboardButton.tsx` | floating crown → `glass-btn-pill` |
+| `src/components/dashboard/LeaderboardButtonLazy.tsx` | dynamic-import wrapper, no UI |
+
+#### 4b — Orders flow
+| File | Notes |
+|---|---|
+| [src/app/(app)/orders/page.tsx](../src/app/%28app%29/orders/page.tsx) | tabs → `glass-segment` |
+| [src/app/(app)/orders/[id]/page.tsx](../src/app/%28app%29/orders/%5Bid%5D/page.tsx) | order detail |
+| `src/components/orders/OrderCard.tsx` | → `glass-card` (pending: accent-tinted) |
+| `src/components/orders/CountdownTimer.tsx` | inline pill → `glass-btn-pill` style |
+| `src/components/orders/OrderMessages.tsx` | embedded chat → `glass-card` container |
+
+#### 4c — Earnings + Stripe Connect
+| File | Notes |
+|---|---|
+| [src/app/(app)/earnings/page.tsx](../src/app/%28app%29/earnings/page.tsx) | composition |
+| `src/components/earnings/EarningsView.tsx` | top-level layout |
+| `src/components/earnings/BalanceHero.tsx` | → `glass-card-elevated glass-shine` (the hero of the page) |
+| `src/components/earnings/KycBanner.tsx` | → `glass-card` (orange/red-tinted) |
+| `src/components/earnings/FailedPayoutBanner.tsx` | → `glass-card` (red-tinted) |
+| `src/components/earnings/InstantPayoutSheet.tsx` | → `glass-modal` |
+| `src/components/earnings/PayoutScheduleSheet.tsx` | → `glass-modal` |
+| `src/components/earnings/OrderTransferDrawer.tsx` | → `glass-modal` |
+| `src/components/earnings/StandardPayoutButton.tsx` | → `glass-btn` |
+| `src/components/earnings/ExpressLoginLinkButton.tsx` | → `glass-btn-secondary` |
+| `src/components/earnings/PayoutHistoryList.tsx` | rows → `glass-card` (subtle) |
+| `src/components/earnings/TransactionRow.tsx` | row item |
+| `src/components/earnings/LifetimeStatsCard.tsx` | → `glass-card` |
+| `src/components/earnings/CollapsibleSection.tsx` | accordion shell |
+| `src/components/earnings/HowEarningsWorkAccordion.tsx` | FAQ rows |
+
+#### 4d — Plate listing + creation
+| File | Notes |
+|---|---|
+| [src/app/(app)/listings/page.tsx](../src/app/%28app%29/listings/page.tsx) | listing index |
+| [src/app/(app)/listings/new/page.tsx](../src/app/%28app%29/listings/new/page.tsx) | new plate route |
+| [src/app/(app)/listings/[id]/edit/page.tsx](../src/app/%28app%29/listings/%5Bid%5D/edit/page.tsx) | edit route |
+| `src/components/listings/PlateForm.tsx` | inputs → `glass-input`, container cards → `glass-card` |
+| `src/components/listings/PlateCard.tsx` | listing tile → `glass-card` |
+| `src/components/listings/MediaUpload.tsx` | upload area → `glass-card` (subtle, dashed) |
+| `src/components/listings/CategoryChips.tsx` | chips → `glass-btn-pill` |
+| `src/components/listings/FulfillmentPicker.tsx` | option group → `glass-segment` |
+| `src/components/listings/QuantityStepper.tsx` | stepper → `glass-btn-pill` (compact) |
+
+#### 4e — Messaging
+| File | Notes |
+|---|---|
+| [src/app/(app)/messages/page.tsx](../src/app/%28app%29/messages/page.tsx) | inbox |
+| [src/app/(app)/messages/[threadId]/page.tsx](../src/app/%28app%29/messages/%5BthreadId%5D/page.tsx) | thread |
+| `src/components/messages/ConversationRow.tsx` | row → `glass-card` (subtle) |
+| `src/components/messages/ChatThread.tsx` | bubbles → `glass-card` (sender vs receiver tint) |
+| `src/components/messages/ComposeSheet.tsx` | → `glass-modal` |
+
+#### 4f — Settings
+| File | Notes |
+|---|---|
+| [src/app/(app)/settings/page.tsx](../src/app/%28app%29/settings/page.tsx) | section cards → `glass-card`, save bar → `glass-nav` (already uses `<FloatingActionBar>`) |
+
+#### 4g — Storefront (customer-facing) + checkout
+| File | Notes |
+|---|---|
+| [src/app/[handle]/page.tsx](../src/app/%5Bhandle%5D/page.tsx) | server-rendered storefront |
+| `src/app/[handle]/storefront-client.tsx` | client wrapper |
+| `src/components/storefront/CreatorHeader.tsx` | → `glass-card-elevated glass-shine` |
+| `src/components/storefront/PlateTile.tsx` | → `glass-card` (the IG-style grid tiles) |
+| `src/components/storefront/PlateCard.tsx` | row variant |
+| `src/components/storefront/PlateDetailSheet.tsx` | → `glass-modal` |
+| `src/components/storefront/CategoryFilter.tsx` | → `glass-segment` |
+| `src/components/storefront/CartSheet.tsx` | → `glass-modal` |
+| `src/components/storefront/CheckoutSheet.tsx` | → `glass-modal` |
+| `src/components/storefront/ActiveOrderBanner.tsx` | → `glass-card` (accent-tinted, sticky) |
+| [src/app/order-confirmation/page.tsx](../src/app/order-confirmation/page.tsx) | confirmation → `glass-card-elevated glass-shine` |
+
+#### 4h — Auth + onboarding
+| File | Notes |
+|---|---|
+| [src/app/(auth)/signup/page.tsx](../src/app/%28auth%29/signup/page.tsx) | phone input |
+| [src/app/(auth)/signup/verify/page.tsx](../src/app/%28auth%29/signup/verify/page.tsx) | OTP |
+| [src/app/(auth)/signup/waitlist/page.tsx](../src/app/%28auth%29/signup/waitlist/page.tsx) | waitlist |
+| [src/app/onboarding/customer/page.tsx](../src/app/onboarding/customer/page.tsx) | customer onboarding |
+| [src/app/onboarding/handle/page.tsx](../src/app/onboarding/handle/page.tsx) | handle picker |
+| [src/app/onboarding/profile/page.tsx](../src/app/onboarding/profile/page.tsx) | display name + email + bio |
+| [src/app/onboarding/terms/page.tsx](../src/app/onboarding/terms/page.tsx) | terms accept |
+| `src/components/auth/PhoneInput.tsx` | → `glass-input` |
+| `src/components/auth/OtpInput.tsx` | each box → `glass-input` (compact) |
+| `src/components/onboarding/PhotoUpload.tsx` | upload → `glass-card` (subtle, dashed) |
+| `src/components/onboarding/ProgressDots.tsx` | dots — typography/stroke tweaks only |
+
+#### 4i — Marketing landing (light theme)
+The landing page intentionally uses the cream/paper light palette, NOT the dark glass aesthetic. Glass utilities still apply where appropriate but with the light token set (`bg-glass-light` over the cream backdrop). Phase 4i is mostly a verification pass to ensure consistency.
+
+| File | Notes |
+|---|---|
+| [src/app/page.tsx](../src/app/page.tsx) | landing composition |
+| `src/components/landing/MarketingNav.tsx` | sticky → `glass-nav` (light variant) |
+| `src/components/landing/MarketingFooter.tsx` | footer |
+| `src/components/landing/Hero.tsx` | hero composition |
+| `src/components/landing/HandleClaimInput.tsx` | input → light `glass-input` variant |
+| `src/components/landing/MissionAnchor.tsx` | typography section |
+| `src/components/landing/TrustStrip.tsx` | marquee chips |
+| `src/components/landing/HowItWorks.tsx` | step cards → light `glass-card` |
+| `src/components/landing/ListingShowcase.tsx` | tiles → light `glass-card` |
+| `src/components/landing/ListingChip.tsx` | metadata chips |
+| `src/components/landing/CreatorProgram.tsx` | section copy + cards |
+| `src/components/landing/PayoutShowcase.tsx` | hero card + phone mockup |
+| `src/components/landing/BuiltForHouston.tsx` | photo + caption |
+| `src/components/landing/Testimonials.tsx` | ⚠️ STILL HAS PLACEHOLDER QUOTES — remove or replace before any rollout |
+| `src/components/landing/PaymentMethods.tsx` | logo strip |
+| `src/components/landing/CreatorCards.tsx` | metal-card forward-positioning section |
+| `src/components/landing/PhoneFrame.tsx` | device chrome wrapper |
+| `src/components/landing/phones/*` | StorefrontPhoneScreen / OrderPhoneScreen / EarningsPhoneScreen / PhoneStatusBar — these mock the in-app dark glass UI; should migrate alongside Phase 4a–4f for visual parity |
+
+#### 4j — Static legal pages
+| File | Notes |
+|---|---|
+| [src/app/privacy/page.tsx](../src/app/privacy/page.tsx) | text + section cards → light `glass-card` |
+| [src/app/terms/page.tsx](../src/app/terms/page.tsx) | same |
+| [src/app/sms-policy/page.tsx](../src/app/sms-policy/page.tsx) | same |
+
+#### 4k — Shared + cross-cutting
+| File | Notes |
+|---|---|
+| `src/components/shared/ShareSheet.tsx` | bottom sheet → `glass-modal` (already 8 backdrop-blur uses) |
+| `src/components/shared/CopyLinkButton.tsx` | three variants (icon, compact, share) → `glass-btn` family |
+| `src/components/shared/AiDraftButton.tsx` | inline button → `glass-btn-secondary` (subtle) |
+
+### Phase 5 — Icons + typography polish
+Cross-cutting; no new files. Touches every screen lightly.
+- Standardize lucide-react sizes (16/18/20/24 only) and stroke weights (1.5 default, 2 for emphasis)
+- Letter-spacing pass on display headings (`tracking-[-0.02em]` for 24px+)
+- Ensure SF Pro fallbacks render consistently across browsers
+- Verify color contrast on all glass surfaces (WCAG AA minimum)
+
+### Cleanup checklist
+- [ ] Delete `src/components/glass/GlassSurface.tsx` (unused, superseded by plugin)
+- [ ] Replace placeholder `<Testimonials />` on landing — real quotes or remove component
+- [ ] Audit pass: zero `backdrop-blur-[Npx]` arbitrary values remain in `src/` after Phases 2 + 4
+- [ ] Audit pass: zero `bg-white/[0.0X]` + `border-white/[0.YY]` combos remain — all replaced by `glass-*` utilities or `bg-glass-*` tokens
+- [ ] Verify `prefers-reduced-motion` + `prefers-reduced-transparency` still honor on every surface
+
+### Phase totals
+- **Phase 2:** 12 ui/ files + 1 deletion + sonner theming ≈ **1 day**, 1 PR
+- **Phase 3:** motion constants + transitions across primitives ≈ **half a day**, 1 PR
+- **Phase 4:** **63 files** across 11 sub-groups ≈ **3–4 days**, 4–6 PRs (group sub-phases by surface so each PR is reviewable)
+- **Phase 5:** typography + icon polish ≈ **half a day**, 1 PR
+- **Total:** ~6 days of focused work across ~8 PRs, fully accounting for every page and component in the app
+
+After all phases land, every surface in `src/` has been touched. The cleanup checklist above is the verifiable proof.
