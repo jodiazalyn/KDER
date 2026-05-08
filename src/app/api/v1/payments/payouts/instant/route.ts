@@ -110,6 +110,13 @@ export async function POST(request: NextRequest) {
           amount: amountCents,
           currency: "usd",
           method: "instant",
+          // Most banks (Chase/BofA/Wells/etc.) surface this on the
+          // recipient's statement so creators recognize the credit.
+          // Apple Cash specifically ignores it — there's no Stripe
+          // field that overrides Apple's "Refund" labeling for
+          // Visa Direct OCT inbound credits. Constraints: ≤22 chars,
+          // alphanumeric + spaces + periods only.
+          statement_descriptor: "KDER PAYOUT",
           metadata: {
             creator_id: creator.id,
           },
