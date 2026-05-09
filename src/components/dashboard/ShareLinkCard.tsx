@@ -16,7 +16,11 @@ export function ShareLinkCard({ handle }: ShareLinkCardProps) {
   return (
     <div
       ref={cardRef}
-      className="rounded-2xl border border-green-400/[0.25] bg-green-900/[0.40] p-4 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]"
+      // glass-card-elevated for the dashboard's most-actionable card
+      // + glass-shine for the specular highlight. KDER green tint
+      // layered on top via Tailwind utilities (per design-system.md
+      // pattern for accent-tinted glass surfaces).
+      className="glass-card-elevated glass-shine rounded-glass-lg border-emerald-400/30 bg-emerald-500/15 p-4"
     >
       <p className="text-xs font-medium text-green-300/70 uppercase tracking-wider">
         Your storefront link
