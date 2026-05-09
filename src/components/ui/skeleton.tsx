@@ -6,7 +6,15 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      // Liquid Glass shimmer (defined in globals.css) replaces the
+      // original animate-pulse + bg-muted. Reads as a translucent
+      // sheen sweeping across the surface — consistent with the
+      // glass-shine specular highlight on cards/buttons. Honors
+      // prefers-reduced-motion via globals.css.
+      className={cn(
+        "rounded-glass bg-white/[0.04] animate-glass-shimmer",
+        className
+      )}
       {...props}
     />
   )

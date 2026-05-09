@@ -34,8 +34,9 @@ const sheetVariants = cva(
   // glass-modal from liquidglass-tailwind provides the translucent
   // sheet substrate (bg + blur + border + shadow). Layout (fixed,
   // padding, transitions) stays here. Per-side slide animations are
-  // composed in the side variants below.
-  "glass-modal fixed z-50 gap-4 p-6 transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  // composed in the side variants below. iOS-feel timing: 380ms in,
+  // 280ms out — see src/lib/motion.ts DURATION constants.
+  "glass-modal fixed z-50 gap-4 p-6 transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-[280ms] data-[state=open]:duration-[380ms]",
   {
     variants: {
       side: {
