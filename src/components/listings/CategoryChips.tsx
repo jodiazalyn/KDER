@@ -34,10 +34,10 @@ export function CategoryChips({
               type="button"
               onClick={() => toggle(opt)}
               className={cn(
-                "rounded-full px-4 py-2 text-sm font-medium transition-all active:scale-95",
+                "glass-btn-pill px-4 py-2 text-sm font-medium",
                 isSelected
-                  ? "bg-green-900/40 border border-green-400/25 text-green-300"
-                  : "border border-white/[0.12] bg-white/[0.06] text-white/60 hover:bg-white/[0.1]"
+                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                  : "text-white/60 hover:text-white/80"
               )}
               aria-pressed={isSelected}
             >

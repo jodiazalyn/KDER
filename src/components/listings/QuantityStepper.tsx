@@ -23,7 +23,7 @@ export function QuantityStepper({
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={value <= min}
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.06] text-white active:scale-90 transition-all",
+          "glass-btn-pill flex h-11 w-11 items-center justify-center text-white active:scale-90 transition-transform",
           value <= min && "opacity-30 cursor-not-allowed"
         )}
         aria-label="Decrease quantity"
@@ -40,7 +40,7 @@ export function QuantityStepper({
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={value >= max}
         className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.06] text-white active:scale-90 transition-all",
+          "glass-btn-pill flex h-11 w-11 items-center justify-center text-white active:scale-90 transition-transform",
           value >= max && "opacity-30 cursor-not-allowed"
         )}
         aria-label="Increase quantity"

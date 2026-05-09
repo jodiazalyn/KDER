@@ -254,12 +254,15 @@ export function PlateForm({ listing }: PlateFormProps) {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
+      {/* Header — translucent sticky chrome via raw backdrop-filter
+          (the plugin's `glass-nav` forces `position: fixed; top: 0`
+          which would detach the header from this scroll container).
+          Back button is 44px (h-11 w-11) per Apple HIG tap target. */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
@@ -319,7 +322,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
               placeholder="e.g., Smoked Brisket Plate"
-              className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+              className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
             />
             <p className="mt-1 text-right text-xs text-white/30">
               {name.length}/{NAME_MAX}
@@ -364,7 +367,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               }
               placeholder="What makes this plate special?"
               rows={3}
-              className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors resize-none"
+              className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
             />
             <p className="mt-1 text-right text-xs text-white/30">
               {description.length}/{DESC_MAX}
@@ -393,7 +396,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                   if (val.split(".").length <= 2) setPrice(val);
                 }}
                 placeholder="0.00"
-                className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+                className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
               />
             </div>
           </section>
@@ -461,7 +464,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                   if (val.split(".").length <= 2) setMinOrder(val);
                 }}
                 placeholder="No minimum"
-                className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] pl-10 pr-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+                className="glass-input h-12 w-full pl-10 pr-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
               />
             </div>
           </CollapsibleSection>
@@ -492,10 +495,10 @@ export function PlateForm({ listing }: PlateFormProps) {
               onClick={() => handleSave(LISTING_STATUS.DRAFT)}
               disabled={!canDraft || saving}
               className={cn(
-                "flex h-12 flex-1 items-center justify-center rounded-full border text-sm font-bold transition-all active:scale-95",
+                "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold transition-transform active:scale-95",
                 canDraft && !saving
-                  ? "border-white/25 text-white hover:bg-white/[0.08]"
-                  : "border-white/10 text-white/30 cursor-not-allowed"
+                  ? "glass-btn-secondary text-white"
+                  : "border border-white/10 text-white/30 cursor-not-allowed"
               )}
             >
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save as Draft"}
