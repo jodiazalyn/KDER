@@ -39,10 +39,11 @@ export function OrderCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-white/[0.10] backdrop-blur-[16px] shadow-[inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]",
-        isPending
-          ? "border-2 border-orange-400/60"
-          : "border-white/[0.18]"
+        // glass-card-elevated for the in-app order card surface.
+        // Pending gets a stronger orange border to draw the eye to
+        // the action-required state.
+        "glass-card-elevated rounded-glass-lg",
+        isPending && "border-2 border-orange-400/60"
       )}
     >
       <Link
@@ -126,7 +127,7 @@ export function OrderCard({
                   decline from there via the confirmed decline flow. */}
               <Link
                 href={`/orders/${order.id}`}
-                className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/20 bg-white/[0.04] text-sm font-semibold text-white/80 active:scale-95 transition-transform hover:bg-white/[0.08]"
+                className="glass-btn-secondary flex h-12 flex-1 items-center justify-center rounded-full text-sm font-semibold text-white/80 active:scale-95 transition-transform"
               >
                 Review
               </Link>
