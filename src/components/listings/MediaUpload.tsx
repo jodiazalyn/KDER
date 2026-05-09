@@ -148,7 +148,7 @@ export function MediaUpload({
             <button
               type="button"
               onClick={() => removePhoto(i)}
-              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
+              className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
               aria-label={`Remove photo ${i + 1}`}
             >
               <X size={14} />
@@ -171,7 +171,7 @@ export function MediaUpload({
             <button
               type="button"
               onClick={() => onVideoChange(null)}
-              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
+              className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
               aria-label="Remove video"
             >
               <X size={14} />
@@ -185,7 +185,10 @@ export function MediaUpload({
             type="button"
             onClick={() => photoInputRef.current?.click()}
             disabled={uploadingCount > 0}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] text-white/40 hover:border-green-400/40 hover:bg-white/[0.08] hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
+            // Dashed-border upload affordance — keep the dashed look
+            // (Apple's empty-state convention); use glass-card for the
+            // base substrate so it matches sibling cards.
+            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add photo"
           >
             {uploadingCount > 0 ? (
@@ -207,7 +210,7 @@ export function MediaUpload({
           <button
             type="button"
             onClick={() => videoInputRef.current?.click()}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-white/20 bg-white/[0.04] text-white/40 hover:border-green-400/40 hover:bg-white/[0.08] hover:text-white/60 active:scale-95 transition-all"
+            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all"
             aria-label="Add video"
           >
             <Film size={24} />
