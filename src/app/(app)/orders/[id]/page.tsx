@@ -142,9 +142,11 @@ export default function OrderDetailPage({
 
   return (
     <main className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
-      {/* Header — glass-nav for translucent sticky chrome. Back
-          button bumped to 44px (h-11 w-11) per Apple HIG tap target. */}
-      <div className="glass-nav sticky top-0 z-30 flex items-center gap-3 px-4 py-3">
+      {/* Header — translucent sticky chrome via raw backdrop-filter
+          (the plugin's `glass-nav` forces `position: fixed; top: 0`
+          which overrides `sticky` and detaches the header from the
+          scroll container). Back button is 44px per Apple HIG. */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
