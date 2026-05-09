@@ -32,7 +32,8 @@ export function OrderTransferDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+        // Sheet primitive provides glass-modal substrate from Phase 2.
+        className="rounded-t-glass-lg text-white"
       >
         <SheetHeader>
           <SheetTitle className="text-white">
@@ -92,7 +93,7 @@ function DrawerBody({
   return (
     <div className="mt-4 space-y-4 pb-6">
       {transaction && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 space-y-2">
+        <div className="glass-card rounded-glass-lg p-4 space-y-2">
           <Row
             label="Customer"
             value={transaction.memberName}
@@ -118,7 +119,7 @@ function DrawerBody({
         </div>
       )}
 
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 space-y-2">
+      <div className="glass-card rounded-glass-lg p-4 space-y-2">
         <p className="text-[10px] uppercase tracking-wider text-white/40">
           Stripe IDs
         </p>

@@ -42,7 +42,7 @@ export function ExpressLoginLinkButton() {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="flex w-full items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-left active:bg-white/[0.06] transition-colors disabled:opacity-60"
+      className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-white/[0.18] transition-colors disabled:opacity-60"
     >
       <div className="flex items-center gap-3">
         <ExternalLink size={18} className="text-white/60" />

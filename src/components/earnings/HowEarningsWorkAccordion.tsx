@@ -16,11 +16,11 @@ export function HowEarningsWorkAccordion() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04]">
+    <div className="glass-card rounded-glass-lg">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between p-4 text-left active:bg-white/[0.06] transition-colors rounded-2xl"
+        className="flex w-full items-center justify-between p-4 text-left active:bg-white/[0.06] transition-colors rounded-glass-lg"
       >
         <div className="flex items-center gap-3">
           <Info size={18} className="text-white/60" />
@@ -41,7 +41,7 @@ export function HowEarningsWorkAccordion() {
             happens to a $20 plate:
           </p>
 
-          <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 space-y-1.5 text-xs">
+          <div className="glass-card rounded-glass mt-3 p-3 space-y-1.5 text-xs">
             <Row
               label="Order total"
               value="+$20.00"

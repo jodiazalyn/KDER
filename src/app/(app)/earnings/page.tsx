@@ -33,7 +33,7 @@ function EnvNotConfiguredState() {
   return (
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Earnings</h1>
-      <div className="mt-4 rounded-2xl border border-orange-400/20 bg-orange-900/20 p-4 text-sm text-orange-200">
+      <div className="glass-card rounded-glass-lg mt-4 border-orange-400/30 bg-orange-500/15 p-4 text-sm text-orange-200">
         <p className="font-medium">Earnings unavailable in this environment.</p>
         <p className="mt-1 text-xs text-white/60">
           The Earn tab requires <code>NEXT_PUBLIC_SUPABASE_URL</code>,{" "}

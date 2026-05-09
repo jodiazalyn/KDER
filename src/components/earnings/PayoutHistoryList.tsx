@@ -26,7 +26,7 @@ export function PayoutHistoryList({
 }: PayoutHistoryListProps) {
   if (errorCode) {
     return (
-      <div className="rounded-2xl border border-red-400/20 bg-red-900/10 p-4 text-sm text-red-300">
+      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-4 text-sm text-red-300">
         Couldn&apos;t load payout history. [{errorCode}]
       </div>
     );
@@ -34,7 +34,7 @@ export function PayoutHistoryList({
 
   if (payouts.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 text-center text-sm text-white/50">
+      <div className="glass-card rounded-glass-lg p-6 text-center text-sm text-white/50">
         No payouts yet — earnings auto-pay on your schedule.
       </div>
     );
@@ -48,7 +48,7 @@ export function PayoutHistoryList({
         return (
           <div
             key={p.id}
-            className="rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)]"
+            className="glass-card rounded-glass-lg p-4"
           >
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">

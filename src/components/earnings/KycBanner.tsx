@@ -29,7 +29,7 @@ export function KycBanner({
 
   if (status === "verified") {
     return (
-      <div className="rounded-2xl border border-green-400/30 bg-green-900/15 p-4">
+      <div className="glass-card rounded-glass-lg border-emerald-400/30 bg-emerald-500/10 p-4">
         <div className="flex items-start gap-3">
           <CheckCircle2
             size={18}
@@ -96,7 +96,7 @@ export function KycBanner({
         : "Continue Setup";
 
   return (
-    <div className={`rounded-2xl border ${tone.border} ${tone.bg} p-4`}>
+    <div className={`glass-card rounded-glass-lg ${tone.border} ${tone.bg} p-4`}>
       <div className="flex items-start gap-3">
         <AlertTriangle
           size={18}
