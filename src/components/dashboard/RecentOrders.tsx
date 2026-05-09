@@ -33,7 +33,7 @@ export function RecentOrders({ handle, orders }: RecentOrdersProps) {
         >
           Recent Orders
         </h2>
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 flex flex-col items-center">
+        <div className="glass-card rounded-glass-lg flex flex-col items-center p-6">
           <p className="text-sm text-white/50 text-center">
             No pending orders. Share your link to get your first order.
           </p>
@@ -68,7 +68,7 @@ export function RecentOrders({ handle, orders }: RecentOrdersProps) {
             <li key={order.id}>
               <Link
                 href={`/orders/${order.id}`}
-                className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 active:scale-[0.98] transition-transform"
+                className="glass-card rounded-glass-lg flex items-center gap-3 p-3 active:scale-[0.98] transition-transform"
               >
                 <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-white/[0.1]">
                   {order.member_photo ? (

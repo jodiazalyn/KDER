@@ -60,7 +60,9 @@ export function LeaderboardPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full max-w-sm border-white/[0.12] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white p-0 overflow-y-auto"
+        // Sheet primitive already applies `glass-modal` (Phase 2);
+        // we only override sizing/text/scroll here.
+        className="w-full max-w-sm text-white p-0 overflow-y-auto"
       >
         <SheetHeader className="px-5 pt-6 pb-3">
           <SheetTitle className="flex items-center gap-2 text-white">
@@ -70,9 +72,10 @@ export function LeaderboardPanel({
         </SheetHeader>
 
         <div className="px-5 pb-8 space-y-5">
-          {/* Your Rankings — all 3 categories */}
+          {/* Your Rankings — all 3 categories. glass-card with KDER
+              green tint to highlight as "your" section. */}
           {!anonymous && userRanks && (
-            <div className="rounded-2xl border border-green-400/20 bg-green-900/15 p-4">
+            <div className="glass-card rounded-glass-lg border-emerald-400/25 bg-emerald-500/10 p-4">
               <p className="text-xs font-medium text-green-300/60 uppercase tracking-wider mb-3">
                 Your Rankings
               </p>
@@ -96,16 +99,17 @@ export function LeaderboardPanel({
             </div>
           )}
 
-          {/* Sort tabs */}
-          <div className="flex gap-1 rounded-xl border border-white/[0.08] bg-white/[0.04] p-1">
+          {/* Sort tabs — glass-segment is the iOS-style segmented
+              control from liquidglass-tailwind. */}
+          <div className="glass-segment flex gap-1 p-1">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setSortBy(tab.key)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-xs font-medium transition-all",
+                  "glass-segment-item flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium",
                   sortBy === tab.key
-                    ? "bg-white/[0.12] text-white"
+                    ? "glass-segment-item-active text-white"
                     : "text-white/40 hover:text-white/60"
                 )}
               >
@@ -141,7 +145,7 @@ function RankCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-xl border border-white/[0.06] bg-white/[0.04] p-3">
+    <div className="glass-card rounded-glass flex flex-col items-center gap-1 p-3">
       {icon}
       <span className="text-xl font-black text-white">
         #{rank ?? "—"}
@@ -178,10 +182,10 @@ function LeaderboardRow({
       onClick={handleClick}
       disabled={entry.isCurrentUser}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl p-2.5 transition-all text-left",
+        "glass-card rounded-glass flex w-full items-center gap-3 p-2.5 transition-all text-left",
         entry.isCurrentUser
-          ? "border border-green-400/20 bg-green-900/20 cursor-default"
-          : "border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.08] cursor-pointer active:scale-[0.98]"
+          ? "border-emerald-400/25 bg-emerald-500/15 cursor-default"
+          : "hover:bg-white/[0.18] cursor-pointer active:scale-[0.98]"
       )}
     >
       {/* Rank */}

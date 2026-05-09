@@ -12,7 +12,7 @@ interface ActivePlatesPreviewProps {
 export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
   if (plates.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 text-center">
+      <div className="glass-card rounded-glass-lg p-6 text-center">
         <p className="text-sm text-white/50">
           No active plates yet. Add your first plate and start earning.
         </p>
@@ -49,7 +49,7 @@ export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
           <Link
             key={plate.id}
             href={`/listings/${plate.id}/edit`}
-            className="flex-shrink-0 w-36 overflow-hidden rounded-2xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] active:scale-95 transition-transform"
+            className="glass-card rounded-glass-lg flex-shrink-0 w-36 overflow-hidden active:scale-95 transition-transform"
           >
             <div className="relative h-24 w-full">
               {plate.photos.length > 0 ? (

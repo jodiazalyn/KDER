@@ -10,7 +10,7 @@ interface StreakBannerProps {
 export function StreakBanner({ streak }: StreakBannerProps) {
   if (streak.currentStreak === 0 && streak.longestStreak === 0) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 backdrop-blur-[8px]">
+      <div className="glass-card rounded-glass-lg p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06]">
             <Flame size={20} className="text-white/20" />
@@ -27,7 +27,10 @@ export function StreakBanner({ streak }: StreakBannerProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-r from-orange-900/30 to-red-900/20 p-4 backdrop-blur-[8px] shadow-[0_0_20px_rgba(249,115,22,0.1)]">
+    // glass-card-elevated + glass-shine for the active-streak hero
+    // treatment. Orange/red gradient kept as the brand-feel tint
+    // overlay (overrides glass-card-elevated's default bg).
+    <div className="glass-card-elevated glass-shine rounded-glass-lg border-orange-500/30 bg-gradient-to-r from-orange-900/40 to-red-900/30 p-4 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div

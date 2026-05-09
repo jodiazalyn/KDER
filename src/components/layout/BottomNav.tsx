@@ -21,7 +21,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.08] bg-[#0A0A0A]/95 backdrop-blur-[24px] pb-[env(safe-area-inset-bottom)]"
+      // glass-nav from liquidglass-tailwind: translucent saturated
+      // bottom-bar substrate. Replaces the hand-rolled top-border +
+      // dark-bg + blur stack with the Liquid Glass material.
+      className="glass-nav fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
       role="navigation"
       aria-label="Main navigation"
     >

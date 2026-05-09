@@ -85,7 +85,11 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
           setHasOpened(true);
         }}
         aria-label="Open leaderboard"
-        className="fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl border border-yellow-400/20 bg-[#0A0A0A]/80 backdrop-blur-[40px] shadow-[0_0_16px_rgba(234,179,8,0.15)] transition-all hover:border-yellow-400/40 active:scale-90"
+        // glass-btn-pill = circular Liquid Glass affordance. Yellow
+        // tint kept as accent (combine glass utilities with Tailwind
+        // color/opacity utilities per design-system.md). 44px tap
+        // target preserved (h-11 w-11) per Apple HIG.
+        className="glass-btn-pill fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center border-yellow-400/30 bg-yellow-500/10 shadow-[0_0_16px_rgba(234,179,8,0.15)] hover:border-yellow-400/50 active:scale-90"
       >
         <Crown size={18} className="text-yellow-400" />
         {bestRank !== null && bestRank <= 10 && (

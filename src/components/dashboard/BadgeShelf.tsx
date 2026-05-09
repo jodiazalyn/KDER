@@ -57,7 +57,9 @@ export function BadgeShelf({ badges }: BadgeShelfProps) {
         {locked.slice(0, 3).map((badge) => (
           <div
             key={badge.id}
-            className="flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3 w-20 opacity-40"
+            // Locked badges use glass-card for the consistent tile
+            // substrate; opacity-40 dims to indicate locked state.
+            className="glass-card rounded-glass-lg flex-shrink-0 flex flex-col items-center gap-1.5 p-3 w-20 opacity-40"
           >
             <Lock size={22} className="text-white/30" />
             <span className="text-[10px] font-medium text-white/30 text-center leading-tight">
