@@ -74,7 +74,8 @@ export function PayoutScheduleSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+        // Sheet primitive provides glass-modal substrate from Phase 2.
+        className="rounded-t-glass-lg text-white"
       >
         <SheetHeader>
           <SheetTitle className="text-white">Payout Schedule</SheetTitle>
@@ -166,8 +167,8 @@ function ScheduleOption({
       onClick={onChange}
       className={
         checked
-          ? "flex w-full items-start gap-3 rounded-2xl border border-green-400/30 bg-green-900/15 p-4 text-left"
-          : "flex w-full items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-left hover:bg-white/[0.06]"
+          ? "glass-card rounded-glass-lg flex w-full items-start gap-3 border-emerald-400/30 bg-emerald-500/10 p-4 text-left"
+          : "glass-card rounded-glass-lg flex w-full items-start gap-3 p-4 text-left hover:bg-white/[0.18]"
       }
     >
       <div

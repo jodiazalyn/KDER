@@ -58,7 +58,9 @@ export function BalanceHero({
   return (
     <div
       ref={heroRef}
-      className="rounded-3xl border border-green-400/[0.25] bg-green-900/[0.40] p-6 backdrop-blur-[20px] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),inset_0_-1px_0_rgba(0,0,0,0.20),0_8px_32px_rgba(0,0,0,0.40)]"
+      // The Earn page hero — glass-card-elevated + glass-shine for the
+      // most-visible KDER surface. Green tint preserved as brand accent.
+      className="glass-card-elevated glass-shine rounded-glass-xl border-emerald-400/30 bg-emerald-500/15 p-6"
     >
       <div className="flex items-center gap-2">
         <Wallet size={16} className="text-green-300/60" />
@@ -113,7 +115,7 @@ export function BalanceHero({
             type="button"
             onClick={onInstantPayout}
             aria-label="Request instant payout, 1.5 percent fee, within 30 minutes"
-            className="flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all"
+            className="glass-btn flex h-12 flex-1 flex-col items-center justify-center text-white active:scale-95 transition-transform"
           >
             <span className="flex items-center gap-1 text-sm font-bold">
               <Zap size={12} />
