@@ -142,12 +142,13 @@ export default function OrderDetailPage({
 
   return (
     <main className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
+      {/* Header — glass-nav for translucent sticky chrome. Back
+          button bumped to 44px (h-11 w-11) per Apple HIG tap target. */}
+      <div className="glass-nav sticky top-0 z-30 flex items-center gap-3 px-4 py-3">
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
@@ -193,7 +194,7 @@ export default function OrderDetailPage({
         </div>
 
         {/* Member profile card */}
-        <div className="rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)]">
+        <div className="glass-card rounded-glass-lg p-4">
           <div className="flex items-center gap-3">
             <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-white/[0.1]">
               {order.member_photo ? (
@@ -219,7 +220,7 @@ export default function OrderDetailPage({
         </div>
 
         {/* Plate summary */}
-        <div className="rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)]">
+        <div className="glass-card rounded-glass-lg p-4">
           <div className="flex gap-3">
             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/[0.12]">
               {order.listing_photo ? (
@@ -262,7 +263,7 @@ export default function OrderDetailPage({
         <button
           type="button"
           onClick={() => setShowTransaction(!showTransaction)}
-          className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-left active:scale-[0.98] transition-transform"
+          className="glass-card rounded-glass-lg w-full p-4 text-left active:scale-[0.98] transition-transform"
           aria-expanded={showTransaction}
         >
           <div className="flex items-center justify-between">
@@ -366,7 +367,7 @@ export default function OrderDetailPage({
 
         {/* Post-acceptance: address reveal */}
         {(isAccepted || isReady) && (
-          <div className="rounded-2xl border border-green-400/20 bg-green-900/20 p-4">
+          <div className="glass-card rounded-glass-lg border-emerald-400/25 bg-emerald-500/10 p-4">
             <div className="flex items-center gap-2">
               <MapPin size={16} className="text-green-400" />
               <p className="text-sm font-medium text-green-300">
@@ -450,7 +451,7 @@ export default function OrderDetailPage({
         open={showDeclineDialog}
         onOpenChange={setShowDeclineDialog}
       >
-        <DialogContent className="rounded-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-w-sm">
+        <DialogContent className="text-white max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-white">
               Decline this order?
