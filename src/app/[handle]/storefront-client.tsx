@@ -464,7 +464,7 @@ export function StorefrontClient({
 
         {/* Storefront paused banner */}
         {!creator.storefront_active && (
-          <div className="mx-4 mb-4 rounded-2xl border border-orange-400/20 bg-orange-900/20 p-3 text-center">
+          <div className="glass-card mx-4 mb-4 border-orange-400/[0.30] bg-orange-900/[0.25] p-3 text-center">
             <p className="text-sm text-orange-300">
               This storefront is currently paused.
             </p>
@@ -583,7 +583,7 @@ export function StorefrontClient({
       <Sheet open={messageOpen} onOpenChange={setMessageOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[80vh] flex flex-col"
+          className="rounded-t-3xl border-white/[0.22] text-white max-h-[80vh] flex flex-col"
         >
           <SheetHeader>
             <SheetTitle className="text-white">
@@ -607,7 +607,7 @@ export function StorefrontClient({
                   onChange={(e) => setGateName(e.target.value)}
                   placeholder="Your name"
                   autoComplete="name"
-                  className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
+                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
                   aria-label="Your name"
                 />
                 <input
@@ -617,7 +617,7 @@ export function StorefrontClient({
                   placeholder="Phone number"
                   autoComplete="tel"
                   inputMode="tel"
-                  className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors"
+                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
                   aria-label="Phone number"
                 />
                 <p className="text-[11px] text-white/40">
@@ -632,7 +632,7 @@ export function StorefrontClient({
                   "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold transition-all active:scale-95",
                   gateValid && !gateSubmitting
                     ? "bg-[#1B5E20] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                    : "bg-white/10 text-white/30 cursor-not-allowed"
+                    : "glass-btn-pill text-white/30 cursor-not-allowed"
                 )}
               >
                 {gateSubmitting
@@ -660,8 +660,8 @@ export function StorefrontClient({
                       className={cn(
                         "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm",
                         isMine
-                          ? "bg-green-900/[0.40] border border-green-400/[0.25] text-white"
-                          : "bg-white/[0.06] border border-white/[0.12] text-white/90"
+                          ? "border border-green-400/[0.22] bg-green-900/[0.45] text-white backdrop-blur-[24px] backdrop-saturate-[200%] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.30)]"
+                          : "border border-white/[0.12] bg-white/[0.08] text-white/90 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
                       )}
                     >
                       <p>{msg.body}</p>
@@ -707,7 +707,7 @@ export function StorefrontClient({
               }}
               placeholder={`Message ${creator.display_name}...`}
               disabled={sending}
-              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors disabled:opacity-50"
+              className="glass-input h-11 flex-1 rounded-full px-4 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors disabled:opacity-50"
             />
             <button
               type="button"
@@ -717,8 +717,9 @@ export function StorefrontClient({
                 "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
                 messageText.trim() && !sending
                   ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
-                  : "bg-white/10 text-white/30 cursor-not-allowed"
+                  : "glass-btn-pill text-white/30 cursor-not-allowed"
               )}
+              aria-label="Send message"
             >
               <Send size={18} />
             </button>
