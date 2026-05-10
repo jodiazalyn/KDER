@@ -92,12 +92,13 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
         )}
       </div>
 
-      {/* CTA row — Message + Share side-by-side */}
+      {/* CTA row — Message + Share side-by-side. Bumped 40→44px (Apple HIG)
+          and migrated to glass-btn-pill for the iOS Liquid Glass material. */}
       <div className="mt-4 flex gap-2">
         <button
           type="button"
           onClick={onMessageClick}
-          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.06] text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
         >
           <MessageCircle size={15} />
           Message
@@ -105,7 +106,7 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
         <button
           type="button"
           onClick={handleShare}
-          className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.12] bg-white/[0.06] text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
           aria-label="Share profile"
         >
           <Share2 size={15} />

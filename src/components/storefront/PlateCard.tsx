@@ -34,7 +34,7 @@ export function PlateCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] transition-opacity",
+        "glass-card-elevated overflow-hidden rounded-3xl transition-opacity",
         soldOut && "opacity-60"
       )}
     >
@@ -102,13 +102,13 @@ export function PlateCard({
 
         {/* Action row */}
         {soldOut ? (
-          <div className="mt-4 flex h-11 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-sm font-semibold text-white/40">
+          <div className="glass-btn-pill mt-4 flex h-11 items-center justify-center text-sm font-semibold text-white/40">
             Sold out
           </div>
         ) : (
           <div className="mt-4 flex items-center gap-2">
             {/* Qty stepper */}
-            <div className="flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04]">
+            <div className="glass-btn-pill flex items-center gap-1 !p-0">
               <button
                 type="button"
                 onClick={() => setQty(Math.max(1, qty - 1))}
