@@ -143,7 +143,7 @@ function SignupPageInner() {
             "active:scale-95",
             isValid && !loading
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {loading ? (

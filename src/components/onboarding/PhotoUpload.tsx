@@ -75,7 +75,7 @@ export function PhotoUpload({
       onClick={() => inputRef.current?.click()}
       disabled={loading}
       className={cn(
-        "relative flex items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-white/20 bg-white/[0.06] transition-colors hover:border-green-400/40 hover:bg-white/[0.1] disabled:cursor-wait",
+        "relative flex items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-white/20 bg-white/[0.06] backdrop-blur-[16px] backdrop-saturate-[180%] transition-all hover:border-green-400/40 hover:bg-white/[0.10] active:scale-95 disabled:cursor-wait",
         className
       )}
       style={{ width: size, height: size }}

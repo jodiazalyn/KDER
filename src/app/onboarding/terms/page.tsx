@@ -160,7 +160,7 @@ export default function TermsPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
@@ -194,7 +194,7 @@ export default function TermsPage() {
                 if (e.key === "Enter") addZip();
               }}
               placeholder="Enter zip code"
-              className="h-12 flex-1 rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+              className="glass-input h-12 flex-1 px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
               aria-label="Zip code"
             />
             <button
@@ -203,8 +203,8 @@ export default function TermsPage() {
               className={cn(
                 "flex h-12 w-12 items-center justify-center rounded-2xl transition-all active:scale-95",
                 currentZip.length === 5 && !addingZip
-                  ? "bg-[#1B5E20] text-white"
-                  : "bg-white/10 text-white/30 cursor-not-allowed"
+                  ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.40)]"
+                  : "glass-btn-pill !rounded-2xl text-white/30 cursor-not-allowed"
               )}
               aria-label="Add zip code"
             >
@@ -222,7 +222,7 @@ export default function TermsPage() {
               {zips.map((z) => (
                 <div
                   key={z.zip}
-                  className="flex items-center justify-between rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 backdrop-blur-[8px]"
+                  className="glass-card flex items-center justify-between px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
                     <MapPin size={16} className="text-green-400" />
@@ -235,7 +235,7 @@ export default function TermsPage() {
                   </div>
                   <button
                     onClick={() => removeZip(z.zip)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-white/30 hover:text-red-400 active:scale-95"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-400 active:scale-90 transition-all"
                     aria-label={`Remove ${z.neighborhood}`}
                   >
                     <Trash2 size={16} />
@@ -273,7 +273,7 @@ export default function TermsPage() {
             value={pickupAddress}
             onChange={(e) => setPickupAddress(e.target.value)}
             placeholder="1234 Main St, Houston, TX 77001"
-            className="w-full rounded-2xl border border-white/[0.15] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/50 focus:outline-none focus:ring-0 transition-colors"
+            className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
           />
         </div>
 
@@ -281,7 +281,7 @@ export default function TermsPage() {
         <div className="mt-4">
           <label
             htmlFor="terms-checkbox"
-            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] transition-colors hover:bg-white/[0.1]"
+            className="glass-card flex cursor-pointer items-start gap-3 p-4 transition-colors hover:bg-white/[0.10]"
           >
             <input
               id="terms-checkbox"
@@ -304,7 +304,7 @@ export default function TermsPage() {
                 </SheetTrigger>
                 <SheetContent
                   side="bottom"
-                  className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[70vh] overflow-y-auto"
+                  className="rounded-t-3xl border-white/[0.22] text-white max-h-[70vh] overflow-y-auto"
                 >
                   <SheetHeader>
                     <SheetTitle className="text-white">
@@ -352,7 +352,7 @@ export default function TermsPage() {
             "active:scale-95",
             isValid && !loading
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {loading ? (
