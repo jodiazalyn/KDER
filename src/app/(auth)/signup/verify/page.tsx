@@ -151,18 +151,18 @@ export default function VerifyPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center px-6 py-12 bg-[#0A0A0A]">
-      {/* Back button */}
+      {/* Back button — glass-btn-pill at Apple HIG 44px tap target */}
       <button
         onClick={() => router.back()}
-        className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+        className="glass-btn-pill absolute left-4 top-4 flex h-12 w-12 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
         aria-label="Go back"
       >
         <ArrowLeft size={24} />
       </button>
 
-      {/* Loading overlay */}
+      {/* Loading overlay — translucent glass scrim */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0A0A0A]/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%]">
           <Loader2 className="h-10 w-10 animate-spin text-green-400" />
           <p className="mt-4 text-lg text-white/80">Verifying...</p>
         </div>

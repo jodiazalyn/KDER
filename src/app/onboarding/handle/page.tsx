@@ -141,7 +141,7 @@ export default function HandlePage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
@@ -162,7 +162,7 @@ export default function HandlePage() {
 
         {/* Handle input with preview */}
         <div className="w-full">
-          <div className="flex items-center rounded-2xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] transition-colors focus-within:border-green-400/60 focus-within:bg-white/[0.12]">
+          <div className="flex items-center rounded-2xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[16px] backdrop-saturate-[180%] transition-colors focus-within:border-green-400/60 focus-within:bg-white/[0.12]">
             <span className="pl-4 text-base text-white/40 select-none">
               kder.club/@
             </span>
@@ -221,7 +221,7 @@ export default function HandlePage() {
                 <button
                   key={s}
                   onClick={() => selectSuggestion(s)}
-                  className="rounded-full border border-white/[0.15] bg-white/[0.06] px-4 py-2 text-sm text-white/80 backdrop-blur-[8px] hover:border-green-400/40 hover:bg-white/[0.1] active:scale-95 transition-all"
+                  className="glass-btn-pill px-4 py-2 text-sm text-white/80 hover:border-green-400/40 hover:bg-white/[0.10] active:scale-95 transition-all"
                 >
                   {s}
                 </button>
@@ -241,7 +241,7 @@ export default function HandlePage() {
             "active:scale-95",
             canContinue && !loading
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {loading ? (

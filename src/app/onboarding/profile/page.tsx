@@ -106,7 +106,7 @@ export default function ProfileSetupPage() {
             }
             placeholder="What should people call you?"
             autoFocus
-            className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+            className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
           />
           <p className="mt-1 text-right text-xs text-white/30">
             {name.length}/{NAME_MAX}
@@ -134,7 +134,7 @@ export default function ProfileSetupPage() {
               setEmail(e.target.value.slice(0, EMAIL_MAX))
             }
             placeholder="you@example.com"
-            className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+            className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
           />
           <p className="mt-1 text-xs text-white/40">
             We email you the moment a new order comes in. Never shared with anyone.
@@ -168,7 +168,7 @@ export default function ProfileSetupPage() {
             }
             placeholder="Tell people about your food..."
             rows={3}
-            className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors resize-none"
+            className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
           />
           <p className="mt-1 text-right text-xs text-white/30">
             {bio.length}/{BIO_MAX}
@@ -186,7 +186,7 @@ export default function ProfileSetupPage() {
             "active:scale-95",
             isValid && !loading
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {loading ? (

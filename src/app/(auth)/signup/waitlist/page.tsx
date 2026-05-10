@@ -171,7 +171,7 @@ function WaitlistInner() {
 
       {/* Center — message */}
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-5 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-green-400/30 bg-green-900/30 backdrop-blur-[8px]">
+        <div className="glass-card flex h-14 w-14 items-center justify-center rounded-full border-green-400/30 bg-green-900/30 p-0">
           <Check size={28} className="text-green-300" />
         </div>
 
@@ -186,7 +186,7 @@ function WaitlistInner() {
         </p>
 
         {tail && (
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-sm text-white/80">
+          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-white/80">
             <Phone size={14} className="text-white/50" />
             Got your number — {display || `…${tail}`}
           </div>
@@ -198,13 +198,13 @@ function WaitlistInner() {
             The "error" state intentionally renders nothing — see the
             ReserveState type comment above. */}
         {isCreator && reserve.kind === "reserving" && (
-          <div className="flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-sm text-white/70">
+          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-white/70">
             <Loader2 size={14} className="animate-spin text-white/60" />
             Locking in your handle…
           </div>
         )}
         {isCreator && reserve.kind === "reserved" && (
-          <div className="flex items-center gap-2 rounded-full border border-green-400/30 bg-green-900/30 px-4 py-2 text-sm text-green-200">
+          <div className="glass-btn-pill flex items-center gap-2 border-green-400/30 bg-green-900/30 px-4 py-2 text-sm text-green-200 shadow-[0_0_12px_rgba(27,94,32,0.30)]">
             <Check size={14} />
             @{reserve.handle} is yours when you get access
           </div>
@@ -222,7 +222,7 @@ function WaitlistInner() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="DM KDER on Facebook"
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.06] text-white/85 transition-all hover:border-blue-400/40 hover:bg-blue-900/30 hover:text-blue-300 active:scale-90"
+              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-white/85 transition-all hover:border-blue-400/40 hover:bg-blue-900/30 hover:text-blue-300 active:scale-90"
             >
               <FacebookIcon />
             </a>
@@ -231,7 +231,7 @@ function WaitlistInner() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="DM KDER on Instagram"
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.06] text-white/85 transition-all hover:border-pink-400/40 hover:bg-pink-900/20 hover:text-pink-300 active:scale-90"
+              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-white/85 transition-all hover:border-pink-400/40 hover:bg-pink-900/20 hover:text-pink-300 active:scale-90"
             >
               <InstagramIcon />
             </a>
@@ -243,7 +243,7 @@ function WaitlistInner() {
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-3 pb-4">
         <Link
           href="/"
-          className="flex h-14 w-full items-center justify-center rounded-full border border-white/[0.16] bg-white/[0.06] text-base font-semibold text-white/90 backdrop-blur-[8px] transition-all active:scale-95 hover:bg-white/[0.1]"
+          className="glass-btn-pill flex h-14 w-full items-center justify-center text-base font-semibold text-white/90 transition-all active:scale-95 hover:bg-white/[0.10]"
         >
           Back to home
         </Link>
