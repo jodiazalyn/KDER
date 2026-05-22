@@ -81,7 +81,7 @@ export async function notifyOrderReminder(
   order: Order,
   creator: CreatorContext,
   member: MemberContext,
-  reminderNumber: 1 | 2 | 3 | 4
+  reminderNumber: 1 | 2 | 3 | 4 | 5 | 6
 ): Promise<void> {
   const thread = orderThreadIds(order.id);
   const c = t.orderReminderCreator({ order, creator, member, reminderNumber });
