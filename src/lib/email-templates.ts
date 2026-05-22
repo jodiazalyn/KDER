@@ -178,3 +178,100 @@ export function orderDeclinedCustomer(args: {
     ),
   };
 }
+
+export function orderAcceptedCreator(args: {
+  order: Order;
+  member: MemberLite;
+}) {
+  const { order, member } = args;
+  return {
+    subject: `You confirmed ${member.display_name}'s order`,
+    html: shell(
+      "Order confirmed ✓",
+      `<p>You accepted <strong>${member.display_name}</strong>'s order for <strong>${order.listing_name} × ${order.quantity}</strong>.</p>
+       <p>They've been notified. Mark it ready when it's time for pickup or delivery.</p>`,
+      `${APP_URL}/orders/${order.id}`,
+      "View order"
+    ),
+  };
+}
+
+export function orderReadyCreator(args: {
+  order: Order;
+  member: MemberLite;
+}) {
+  const { order, member } = args;
+  return {
+    subject: `You marked ${member.display_name}'s order as ready`,
+    html: shell(
+      "Order marked ready",
+      `<p>You marked <strong>${member.display_name}</strong>'s <strong>${order.listing_name}</strong> as ready. They've been notified to come pick it up.</p>`,
+      `${APP_URL}/orders/${order.id}`,
+      "View order"
+    ),
+  };
+}
+
+export function orderCompletedCreator(args: {
+  order: Order;
+  member: MemberLite;
+}) {
+  const { order, member } = args;
+  return {
+    subject: `Order complete — you earned ${dollars(order.creator_payout)}`,
+    html: shell(
+      "Order complete 💰",
+      `<p><strong>${member.display_name}</strong>'s order for <strong>${order.listing_name} × ${order.quantity}</strong> is done.</p>
+       <p>You earned <strong>${dollars(order.creator_payout)}</strong> on this order (after platform fee).</p>`,
+      `${APP_URL}/orders/${order.id}`,
+      "View order"
+    ),
+  };
+}
+
+export function orderDeclinedCreator(args: {
+  order: Order;
+  member: MemberLite;
+}) {
+  const { order, member } = args;
+  return {
+    subject: `You declined ${member.display_name}'s order`,
+    html: shell(
+      "Order declined",
+      `<p>You declined <strong>${member.display_name}</strong>'s order for <strong>${order.listing_name} × ${order.quantity}</strong>.</p>
+       <p>They won't be charged. If this was a mistake, reach out to them directly.</p>`,
+      `${APP_URL}/orders/${order.id}`,
+      "View order"
+    ),
+  };
+}
+
+// ── Message notifications ────────────────────────────────────
+
+export function newMessageRecipient(args: {
+  senderName: string;
+  messagePreview: string;
+  orderId: string | null;
+  creatorHandle: string | null;
+}) {
+  const { senderName, messagePreview, orderId, creatorHandle } = args;
+  const ctaHref = orderId
+    ? `${APP_URL}/orders/${orderId}`
+    : creatorHandle
+      ? `${APP_URL}/@${creatorHandle}`
+      : APP_URL;
+  const preview =
+    messagePreview.length > 120
+      ? messagePreview.slice(0, 120) + "…"
+      : messagePreview;
+  return {
+    subject: `New message from ${senderName} on KDER`,
+    html: shell(
+      `Message from ${senderName}`,
+      `<p style="background:#f5f5f5;border-left:3px solid #2E7D32;padding:10px 14px;border-radius:0 8px 8px 0;font-style:italic;color:#333">${preview}</p>
+       <p>Reply in the app to keep the conversation going.</p>`,
+      ctaHref,
+      "Reply now"
+    ),
+  };
+}
