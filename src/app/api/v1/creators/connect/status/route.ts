@@ -73,6 +73,22 @@ export async function GET(request: NextRequest) {
           ? "failed"
           : "pending";
 
+      // Write back if Stripe and DB disagree — this is the fallback for cases
+      // where the account.updated webhook failed (e.g. missing service role key,
+      // misconfigured webhook endpoint, or first-deploy race). Uses the
+      // authenticated session client so RLS allows the write via member_id.
+      if (liveStatus !== creator.kyc_status) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from("creators")
+          .update({
+            kyc_status: liveStatus,
+            payouts_enabled: Boolean(account.payouts_enabled),
+            default_currency: account.default_currency ?? "usd",
+          })
+          .eq("member_id", user.id);
+      }
+
       return apiSuccess({
         ...dbBundle,
         kyc_status: liveStatus,
