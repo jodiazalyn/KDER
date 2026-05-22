@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useId } from "react";
+import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import {
   ActiveOrderBanner,
   type ActiveOrderSummary,
@@ -83,6 +84,7 @@ export function StorefrontClient({
   const searchParams = useSearchParams();
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedPlate, setSelectedPlate] = useState<Listing | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -435,6 +437,20 @@ export function StorefrontClient({
     }
   }, [messageText, sending, currentUserId, creator?.member_id]);
 
+  const availableTags = useMemo(() => {
+    const tags = new Set<string>();
+    listings.forEach((l) => l.category_tags.forEach((t) => tags.add(t)));
+    return Array.from(tags);
+  }, [listings]);
+
+  const filteredListings = useMemo(
+    () =>
+      selectedTag
+        ? listings.filter((l) => l.category_tags.includes(selectedTag))
+        : listings,
+    [listings, selectedTag]
+  );
+
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
 
@@ -477,10 +493,19 @@ export function StorefrontClient({
           Plates
         </div>
 
+        {/* Two-tier category filter — group row + tag row */}
+        {availableTags.length > 0 && (
+          <CategoryFilter
+            availableTags={availableTags}
+            selected={selectedTag}
+            onSelect={setSelectedTag}
+          />
+        )}
+
         {/* 3-column square grid of plate tiles with 2px gutter */}
-        {listings.length > 0 ? (
+        {filteredListings.length > 0 ? (
           <div className="grid grid-cols-3 gap-[2px]">
-            {listings.map((listing, idx) => (
+            {filteredListings.map((listing, idx) => (
               <div
                 key={listing.id}
                 ref={idx === 0 ? firstTileRef : undefined}
@@ -498,7 +523,9 @@ export function StorefrontClient({
               <UtensilsCrossed size={28} className="text-white/20" />
             </div>
             <p className="text-center text-sm text-white/50">
-              No plates available right now. Check back soon!
+              {selectedTag
+                ? `No plates tagged "${selectedTag}" right now.`
+                : "No plates available right now. Check back soon!"}
             </p>
           </div>
         )}

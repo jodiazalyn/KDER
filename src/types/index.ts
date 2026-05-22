@@ -81,19 +81,68 @@ export interface Listing {
 }
 
 export const CATEGORIES = [
+  // Cuisines & regional
   "Soul Food",
   "BBQ",
   "Seafood",
   "Mexican",
+  "Tex-Mex",
   "Caribbean",
+  "Jamaican",
+  "West African",
+  "Nigerian",
+  "Ethiopian",
+  "Cajun & Creole",
+  "Salvadoran",
+  "Indian",
+  "Vietnamese",
+  "Thai",
+  "Filipino",
+  "Chinese",
+  "Korean",
+  "Japanese",
+  "Mediterranean",
+  "Italian",
+  // Food types
+  "Breakfast & Brunch",
   "Desserts",
-  "Breakfast",
-  "Vegan",
+  "Baked Goods",
   "Sides",
+  "Snacks",
+  "Soups & Stews",
+  "Pasta",
+  "Rice Dishes",
+  "Tacos",
+  "Wings",
+  "Sandwiches",
+  "Bowls",
+  "Platters",
+  "Salads",
   "Drinks",
+  // Dietary
+  "Vegan",
+  "Vegetarian",
+  "Keto",
+  "Gluten-Free",
+  "Halal",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
+
+export const CATEGORY_GROUPS: Record<string, string[]> = {
+  Cuisines: [
+    "Soul Food", "BBQ", "Seafood", "Mexican", "Tex-Mex", "Caribbean",
+    "Jamaican", "West African", "Nigerian", "Ethiopian", "Cajun & Creole",
+    "Salvadoran", "Indian", "Vietnamese", "Thai", "Filipino", "Chinese",
+    "Korean", "Japanese", "Mediterranean", "Italian",
+  ],
+  "Food Types": [
+    "Breakfast & Brunch", "Desserts", "Baked Goods", "Sides", "Snacks",
+    "Soups & Stews", "Pasta", "Rice Dishes", "Tacos", "Wings",
+    "Sandwiches", "Bowls", "Platters", "Salads", "Drinks",
+  ],
+  Dietary: ["Vegan", "Vegetarian", "Keto", "Gluten-Free", "Halal"],
+};
 
 export const ALLERGENS = [
   "Peanuts",
