@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
           : [],
       fulfillment_type: body.fulfillment_type || "pickup",
       photos,
+      video: typeof body.video === "string" ? body.video : null,
       min_order: body.min_order_amount
         ? Number(body.min_order_amount)
         : body.min_order

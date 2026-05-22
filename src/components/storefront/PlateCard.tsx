@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Plus, Minus, ShoppingCart } from "lucide-react";
 import type { Listing } from "@/types";
@@ -23,6 +23,25 @@ export function PlateCard({
   const [qty, setQty] = useState(1);
   const photo = listing.photos[0] || "/icons/kder-logo.png";
   const soldOut = listing.quantity <= 0;
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Autoplay video when card scrolls into view, pause when it leaves.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.play().catch(() => {});
+        } else {
+          el.pause();
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const fulfillmentLabel =
     listing.fulfillment_type === "both"
@@ -38,16 +57,33 @@ export function PlateCard({
         soldOut && "opacity-60"
       )}
     >
-      {/* Hero photo */}
-      <div className="relative aspect-[16/10] overflow-hidden">
-        <Image
-          src={photo}
-          alt={listing.name}
-          fill
-          sizes="(max-width: 640px) 100vw, 600px"
-          priority={priority}
-          className="object-cover"
-        />
+      {/* Hero — autoplaying video or static photo */}
+      <div className="relative aspect-[16/10] overflow-hidden bg-black">
+        {listing.video ? (
+          <>
+            <video
+              ref={videoRef}
+              src={listing.video}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 backdrop-blur-sm">
+              <span className="text-[10px] font-bold text-white">▶ VIDEO</span>
+            </div>
+          </>
+        ) : (
+          <Image
+            src={photo}
+            alt={listing.name}
+            fill
+            sizes="(max-width: 640px) 100vw, 600px"
+            priority={priority}
+            className="object-cover"
+          />
+        )}
         {soldOut && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-bold uppercase tracking-wide text-white backdrop-blur-md">
