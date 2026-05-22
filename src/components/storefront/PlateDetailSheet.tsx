@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ImageOff, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
+import { MediaCarousel } from "./MediaCarousel";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { Listing } from "@/types";
 import { cn } from "@/lib/utils";
@@ -57,8 +58,8 @@ export function PlateDetailSheet({
 
   if (!listing) return null;
 
-  const photo = listing.photos[0] || null;
   const soldOut = listing.quantity <= 0;
+  const hasMedia = listing.photos.length > 0 || !!listing.video;
   const maxQty = Math.max(1, listing.quantity);
 
   const fulfillmentLabel =
@@ -84,19 +85,17 @@ export function PlateDetailSheet({
               soldOut && "opacity-60"
             )}
           >
-            {/* Hero photo — aspect 16:10 like the original PlateCard */}
-            <div className="relative aspect-[16/10] overflow-hidden bg-white/[0.04]">
-              {photo ? (
-                <Image
-                  src={photo}
-                  alt={listing.name}
-                  fill
+            {/* Hero — media carousel (video-first) or fallback placeholder */}
+            <div className="relative overflow-hidden">
+              {hasMedia ? (
+                <MediaCarousel
+                  photos={listing.photos}
+                  video={listing.video}
+                  title={listing.name}
                   priority
-                  sizes="(max-width: 640px) 100vw, 640px"
-                  className="object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center">
+                <div className="flex aspect-[16/10] items-center justify-center bg-white/[0.04]">
                   <ImageOff size={48} className="text-white/20" />
                 </div>
               )}

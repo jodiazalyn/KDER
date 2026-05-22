@@ -61,6 +61,13 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
         </p>
       </div>
 
+      {/* Video badge */}
+      {listing.video && (
+        <div className="absolute top-1.5 left-1.5 rounded-full bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
+          <span className="text-[10px] font-bold text-white">▶</span>
+        </div>
+      )}
+
       {/* Sold-out pill — translucent glass over the photo */}
       {soldOut && (
         <span className="absolute right-1.5 top-1.5 rounded-full border border-white/[0.10] bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-[16px] backdrop-saturate-[180%]">

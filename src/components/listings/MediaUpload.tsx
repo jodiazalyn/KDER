@@ -27,6 +27,7 @@ export function MediaUpload({
   const photoInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [videoUploading, setVideoUploading] = useState(false);
 
   const handlePhotoSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -102,11 +103,11 @@ export function MediaUpload({
       return;
     }
 
-    // Client-side duration check (BR-009)
+    // Client-side duration check before uploading
     const videoEl = document.createElement("video");
     videoEl.preload = "metadata";
     videoEl.src = URL.createObjectURL(file);
-    videoEl.onloadedmetadata = () => {
+    videoEl.onloadedmetadata = async () => {
       URL.revokeObjectURL(videoEl.src);
       if (videoEl.duration > 60) {
         toast.error(
@@ -115,11 +116,25 @@ export function MediaUpload({
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        onVideoChange(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      setVideoUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/v1/listings/video", {
+          method: "POST",
+          body: formData,
+        });
+        const body = await res.json();
+        if (!res.ok || !body?.data?.url) {
+          toast.error(body?.error || "Video upload failed. Try again.");
+          return;
+        }
+        onVideoChange(body.data.url);
+      } catch {
+        toast.error("Video upload failed. Check your connection.");
+      } finally {
+        setVideoUploading(false);
+      }
     };
 
     e.target.value = "";
@@ -209,12 +224,22 @@ export function MediaUpload({
         {!video && (
           <button
             type="button"
-            onClick={() => videoInputRef.current?.click()}
-            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all"
+            onClick={() => !videoUploading && videoInputRef.current?.click()}
+            disabled={videoUploading}
+            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add video"
           >
-            <Film size={24} />
-            <span className="text-[10px]">Video</span>
+            {videoUploading ? (
+              <>
+                <Loader2 size={24} className="animate-spin" />
+                <span className="text-[10px]">Uploading…</span>
+              </>
+            ) : (
+              <>
+                <Film size={24} />
+                <span className="text-[10px]">Video</span>
+              </>
+            )}
           </button>
         )}
       </div>
