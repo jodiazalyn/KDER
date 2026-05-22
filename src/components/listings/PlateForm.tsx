@@ -127,16 +127,29 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [showMinOrder, setShowMinOrder] = useState(!!listing?.min_order || !!restored?.minOrder);
 
   // Load Connect status once on mount.
-  // UX hint only — the server route also enforces this. A slow fetch
-  // briefly disables the Publish button; acceptable.
+  // Fast DB read first. If not yet verified, fire a ?fresh=1 call to sync
+  // with live Stripe and trigger the DB write-back — so creators who just
+  // finished onboarding don't need a manual DB fix or a trip to Earnings.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/v1/creators/connect/status")
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
+      .then(async (j) => {
         if (cancelled) return;
         const kyc = j?.data?.kyc_status ?? "not_started";
-        setConnectVerified(kyc === "verified");
+        if (kyc === "verified") {
+          setConnectVerified(true);
+          return;
+        }
+        // DB shows pending/not_started — check live Stripe and write back.
+        try {
+          const res = await fetch("/api/v1/creators/connect/status?fresh=1");
+          if (cancelled) return;
+          const fresh = res.ok ? await res.json() : null;
+          setConnectVerified((fresh?.data?.kyc_status ?? "not_started") === "verified");
+        } catch {
+          if (!cancelled) setConnectVerified(false);
+        }
       })
       .catch(() => {
         if (!cancelled) setConnectVerified(false);
