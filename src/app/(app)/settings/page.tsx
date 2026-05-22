@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { PhotoUpload } from "@/components/onboarding/PhotoUpload";
+import { EditableAvatar } from "@/components/shared/EditableAvatar";
 import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
@@ -229,9 +229,9 @@ export default function SettingsPage() {
           </h2>
 
           <div className="flex justify-center">
-            <PhotoUpload
+            <EditableAvatar
               value={form.photo_url}
-              onChange={(url) => setForm({ ...form, photo_url: url })}
+              onSaved={(url) => setForm({ ...form, photo_url: url })}
             />
           </div>
 

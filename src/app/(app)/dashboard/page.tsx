@@ -107,14 +107,7 @@ export default function DashboardPage() {
       <StorefrontHeader
         profile={profile}
         heroImage={heroImage}
-        onPhotoChange={(dataUrl) => {
-          // Persist to sessionStorage so it survives page navigations
-          const raw = sessionStorage.getItem("kder_onboarding_profile");
-          const data = raw ? JSON.parse(raw) : {};
-          data.photo_url = dataUrl;
-          sessionStorage.setItem("kder_onboarding_profile", JSON.stringify(data));
-          setProfile({ ...profile, photo_url: dataUrl });
-        }}
+        onPhotoChange={(url) => setProfile({ ...profile, photo_url: url })}
       />
 
       {/* Content */}
