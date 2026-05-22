@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
       email,
       zips,
       pickup_address,
+      instagram_handle,
+      tiktok_handle,
+      website_url,
+      facebook_handle,
+      whatsapp_number,
     } = await request.json();
 
     const trimmedName = display_name?.trim();
@@ -60,6 +65,16 @@ export async function POST(request: NextRequest) {
     // `email` when the caller actually supplied one, so a settings-
     // page save that omits email doesn't accidentally null out an
     // existing value.
+    // Sanitize social handles: strip leading @, strip HTML, max lengths.
+    const igHandle = instagram_handle?.trim().replace(/^@/, "").replace(/<[^>]*>/g, "").slice(0, 30) || null;
+    const ttHandle = tiktok_handle?.trim().replace(/^@/, "").replace(/<[^>]*>/g, "").slice(0, 24) || null;
+    const fbHandle = facebook_handle?.trim().replace(/^@/, "").replace(/<[^>]*>/g, "").slice(0, 50) || null;
+    // Keep only digits for WhatsApp; international format without leading +.
+    const waNumber = whatsapp_number?.replace(/\D/g, "").slice(0, 15) || null;
+    // Website must be http(s) or empty.
+    const rawWebsite = website_url?.trim() || null;
+    const siteUrl = rawWebsite && /^https?:\/\/.+/.test(rawWebsite) ? rawWebsite.slice(0, 500) : null;
+
     const memberPatch: Record<string, unknown> = {
       id: user.id,
       phone: user.phone || "",
@@ -68,6 +83,11 @@ export async function POST(request: NextRequest) {
       photo_url: photo_url?.trim()?.startsWith("javascript:") ? null : (photo_url?.trim() || null),
       bio: bio?.trim()?.replace(/<[^>]*>/g, "") || null,
       role: "creator",
+      instagram_handle: igHandle,
+      tiktok_handle: ttHandle,
+      website_url: siteUrl,
+      facebook_handle: fbHandle,
+      whatsapp_number: waNumber,
       updated_at: new Date().toISOString(),
     };
     if (trimmedEmail) {

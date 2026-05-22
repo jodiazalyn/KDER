@@ -1,43 +1,18 @@
 "use client";
 
-import { useRef, type ChangeEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Star, MapPin, Camera, Settings } from "lucide-react";
+import { Star, MapPin, Settings } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
-import { toast } from "sonner";
+import { EditableAvatar } from "@/components/shared/EditableAvatar";
 
 interface StorefrontHeaderProps {
   profile: CreatorProfile;
   heroImage: string | null;
-  onPhotoChange?: (dataUrl: string) => void;
+  onPhotoChange?: (url: string) => void;
 }
 
 export function StorefrontHeader({ profile, heroImage, onPhotoChange }: StorefrontHeaderProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("That photo is too large. Use a photo under 10MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      onPhotoChange?.(reader.result as string);
-      toast.success("Profile photo updated!");
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
   return (
     <div className="relative h-72 w-full overflow-hidden">
       {/* Hero background */}
@@ -68,37 +43,12 @@ export function StorefrontHeader({ profile, heroImage, onPhotoChange }: Storefro
       <div className="absolute inset-x-0 bottom-0 p-4">
         <div className="glass-card-elevated glass-shine rounded-glass-xl px-5 py-4">
           <div className="flex items-start gap-4">
-            {/* Avatar — tappable to upload */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="group relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-2 border-white/20 bg-white/[0.1] active:scale-95 transition-transform"
-              aria-label={profile.photo_url ? "Change profile photo" : "Upload profile photo"}
-            >
-              {profile.photo_url ? (
-                <Image
-                  src={profile.photo_url}
-                  alt={profile.display_name}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-2xl font-black text-white/40">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              {/* Camera overlay on hover/focus */}
-              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
-                <Camera size={18} className="text-white" />
-              </div>
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-              aria-hidden
+            {/* Avatar — tappable to upload + auto-saves to DB */}
+            <EditableAvatar
+              value={profile.photo_url}
+              onSaved={(url) => onPhotoChange?.(url)}
+              size={64}
+              className="flex-shrink-0 border-2 border-white/20"
             />
 
             {/* Info */}
