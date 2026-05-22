@@ -18,6 +18,7 @@ interface CheckoutBody {
   notes: string;
   creator_handle: string;
   delivery_address?: string;
+  customer_email?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest) {
       creator_handle,
       delivery_address,
     } = body;
+
+    const customerEmail =
+      typeof body.customer_email === "string" && body.customer_email.trim()
+        ? body.customer_email.trim().toLowerCase().slice(0, 254)
+        : null;
 
     if (!items || items.length === 0) {
       return apiError("Cart is empty", 400);
@@ -170,6 +176,7 @@ export async function POST(request: NextRequest) {
         member_phone: member_phone.trim(),
         fulfillment_type,
         delivery_address: delivery_address?.trim() || null,
+        customer_email: customerEmail,
         notes: sanitizedNotes || null,
         quantity: verifiedItems.reduce((s, i) => s + i.quantity, 0),
         total_amount: totalAmount,
@@ -203,6 +210,7 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
+      ...(customerEmail ? { customer_email: customerEmail } : {}),
       metadata: {
         order_id: orderId,
         creator_handle,
