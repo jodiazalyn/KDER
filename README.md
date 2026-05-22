@@ -2,7 +2,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+First, copy the environment template and fill in your service keys (Supabase, Stripe, Cloudinary, Twilio, OneSignal, Anthropic):
+
+```bash
+cp .env.local.example .env.local
+```
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are required — without them the dev server logs a clear error on first request.
+
+Then run the development server:
 
 ```bash
 npm run dev

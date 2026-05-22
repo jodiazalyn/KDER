@@ -70,7 +70,7 @@ export function StandardPayoutButton({
       onClick={handleClick}
       disabled={submitting}
       aria-label="Request standard payout, free, 2 to 3 business days"
-      className="flex h-12 flex-1 flex-col items-center justify-center rounded-full border border-white/25 bg-white/[0.08] text-white hover:bg-white/[0.12] active:scale-95 transition-all disabled:opacity-60"
+      className="glass-btn-secondary flex h-12 flex-1 flex-col items-center justify-center text-white active:scale-95 transition-transform disabled:opacity-60"
     >
       <span className="text-sm font-bold">
         {submitting ? "Requesting…" : "Standard"}

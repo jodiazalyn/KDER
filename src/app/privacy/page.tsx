@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "How KDER collects, uses, and protects the information of creators and members on the platform.",
 };
 
-const LAST_UPDATED = "April 18, 2026";
+const LAST_UPDATED = "April 29, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -69,6 +69,9 @@ export default function PrivacyPage() {
           </p>
         </div>
 
+        {/* ── SMS Required Disclosure (regulatory component) ── */}
+        <SmsDisclosureBox />
+
         <div className="mt-12 space-y-10 text-[15px] leading-relaxed text-white/75">
           <Section title="1. What we collect">
             <p>
@@ -95,6 +98,15 @@ export default function PrivacyPage() {
                 basic technical information (IP address, browser, session
                 events) used to keep the platform secure and reliable.
               </li>
+              <li>
+                <span className="text-white">SMS consent records</span> —
+                consent timestamp (
+                <code className="rounded bg-white/10 px-1.5 py-0.5 text-[13px] font-mono text-green-300">
+                  terms_accepted_at
+                </code>
+                ), phone number, and account identifier, retained for
+                compliance purposes.
+              </li>
             </ul>
           </Section>
 
@@ -103,8 +115,15 @@ export default function PrivacyPage() {
               We use this information to run KDER — to create your account,
               power your storefront, process orders and payouts, deliver
               notifications, enforce the platform&apos;s rules, and prevent
-              fraud. We do not sell your personal information.
+              fraud.
             </p>
+            <Highlight>
+              <strong className="text-white">
+                We do not sell your personal information.
+              </strong>{" "}
+              We do not share your mobile phone number with third parties for
+              marketing or promotional purposes.
+            </Highlight>
           </Section>
 
           <Section title="3. Who we share it with">
@@ -122,8 +141,8 @@ export default function PrivacyPage() {
                 payouts, and identity verification for creators.
               </li>
               <li>
-                <span className="text-white">Twilio</span> — phone
-                verification and SMS notifications.
+                <span className="text-white">Twilio</span> — phone number
+                verification (OTP) and SMS notification delivery.
               </li>
               <li>
                 <span className="text-white">Cloudinary</span> — image and
@@ -140,7 +159,9 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-4">
               We may also disclose information when required by law or to
-              protect the safety of our members and creators.
+              protect the safety of our members and creators. No service
+              provider listed above receives your mobile phone number for
+              marketing purposes.
             </p>
           </Section>
 
@@ -158,9 +179,10 @@ export default function PrivacyPage() {
           <Section title="5. How long we keep it">
             <p>
               We keep your account information for as long as your account is
-              active. Transaction records (orders, payouts, ratings) may be
-              retained longer to satisfy tax, accounting, and anti-fraud
-              obligations. You can request deletion at any time — see below.
+              active. Transaction records (orders, payouts, ratings) and SMS
+              consent records may be retained longer to satisfy tax,
+              accounting, anti-fraud, and regulatory compliance obligations.
+              You can request deletion at any time — see below.
             </p>
           </Section>
 
@@ -174,13 +196,25 @@ export default function PrivacyPage() {
                 strangers.
               </li>
               <li>
+                Opt out of SMS messages by replying{" "}
+                <strong className="text-white">STOP</strong> to any KDER
+                message, or visiting{" "}
+                <Link
+                  href="/settings"
+                  className="font-medium text-green-300 underline-offset-4 hover:underline"
+                >
+                  kder.club/settings
+                </Link>
+                .
+              </li>
+              <li>
                 Request a copy of your data, or request deletion of your
                 account, by contacting us at{" "}
                 <a
-                  href="mailto:privacy@kder.club"
+                  href="mailto:privacy@kder.org"
                   className="font-medium text-green-300 underline-offset-4 hover:underline"
                 >
-                  privacy@kder.club
+                  privacy@kder.org
                 </a>
                 .
               </li>
@@ -207,10 +241,10 @@ export default function PrivacyPage() {
             <p>
               Questions about privacy or your data? Email us at{" "}
               <a
-                href="mailto:privacy@kder.club"
+                href="mailto:privacy@kder.org"
                 className="font-medium text-green-300 underline-offset-4 hover:underline"
               >
-                privacy@kder.club
+                privacy@kder.org
               </a>
               .
             </p>
@@ -224,6 +258,12 @@ export default function PrivacyPage() {
             className="font-medium text-green-300 transition-colors hover:text-green-200"
           >
             Read the Terms of Service →
+          </Link>
+          <Link
+            href="/sms-policy"
+            className="font-medium text-green-300 transition-colors hover:text-green-200"
+          >
+            SMS Consent Policy →
           </Link>
           <Link
             href="/"
@@ -249,5 +289,148 @@ function Section({
       <h2 className="mb-3 text-lg font-bold text-white lg:text-xl">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function Highlight({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mt-4 rounded-r-xl border-l-4 border-green-400 bg-green-900/15 px-5 py-4 text-sm leading-relaxed text-white/85">
+      <p>{children}</p>
+    </div>
+  );
+}
+
+/**
+ * SMS Required Disclosure — A2P 10DLC regulatory component.
+ * Surfaced near the top of the policy so the program details, opt-out
+ * keywords, and help keywords are visible without scrolling through the
+ * full document.
+ */
+function SmsDisclosureBox() {
+  return (
+    <div className="mt-10 rounded-2xl border border-white/[0.10] bg-black/60 p-6 backdrop-blur-sm">
+      <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-green-300">
+        SMS Messaging — Required Disclosure
+      </p>
+      <h2 className="mb-5 border-b border-white/10 pb-3 text-xl font-bold text-white">
+        SMS Communications &amp; Mobile Data
+      </h2>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <DisclosureField label="Program Name" value="KDER Alerts" />
+        <DisclosureField
+          label="Message Frequency"
+          value="Varies based on your order activity"
+        />
+        <DisclosureField
+          label="Support"
+          value={
+            <a
+              href="mailto:support@kder.org"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              support@kder.org
+            </a>
+          }
+        />
+        <DisclosureField
+          label="SMS Consent Policy"
+          value={
+            <Link
+              href="/sms-policy"
+              className="text-green-300 underline-offset-4 hover:underline"
+            >
+              kder.club/sms-policy
+            </Link>
+          }
+        />
+      </div>
+
+      <div className="mt-5 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+        <p className="text-[13px] leading-relaxed text-white/70">
+          <strong className="text-white/95">
+            KDER does not sell, rent, or share your mobile phone number with
+            third parties for marketing or promotional purposes.
+          </strong>{" "}
+          Your phone number is used exclusively to deliver the transactional
+          SMS messages described in this policy — order alerts, order
+          confirmations, fulfillment updates, account notifications, and
+          authentication OTPs.
+        </p>
+        <p className="mt-2 text-[13px] leading-relaxed text-white/70">
+          Message and data rates may apply. Message frequency varies based on
+          your activity on KDER.
+        </p>
+      </div>
+
+      <div className="mt-5">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+          To opt out — reply with any of these keywords
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {["STOP", "CANCEL", "UNSUBSCRIBE", "END", "QUIT"].map((kw) => (
+            <KwPill key={kw} tone="red">
+              {kw}
+            </KwPill>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-white/45">
+          Opt-out takes effect immediately. A single confirmation is sent and
+          no further messages will follow except authentication OTPs.
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+          For help — reply with any of these keywords
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <KwPill tone="green">HELP</KwPill>
+          <KwPill tone="green">INFO</KwPill>
+        </div>
+        <p className="mt-2 text-xs text-white/45">
+          Response: &ldquo;KDER Alerts: Get order updates &amp; notifications
+          from KDER. Msg &amp; data rates may apply. Msg frequency varies.
+          Reply STOP to unsubscribe. Support: support@kder.org&rdquo;
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function DisclosureField({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-white/40">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-medium text-white/85">{value}</p>
+    </div>
+  );
+}
+
+function KwPill({
+  tone,
+  children,
+}: {
+  tone: "red" | "green";
+  children: React.ReactNode;
+}) {
+  const classes =
+    tone === "red"
+      ? "border-red-400/40 bg-red-900/25 text-red-200"
+      : "border-green-400/40 bg-green-900/25 text-green-200";
+  return (
+    <span
+      className={`inline-flex items-center rounded-md border-[1.5px] px-3 py-0.5 text-xs font-extrabold tracking-wider ${classes}`}
+    >
+      {children}
+    </span>
   );
 }

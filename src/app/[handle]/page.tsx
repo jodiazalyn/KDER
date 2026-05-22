@@ -2,9 +2,11 @@ import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { StorefrontClient } from "./storefront-client";
 import { createClient } from "@/lib/supabase/server";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/env";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing } from "@/types";
+import type { ActiveOrderSummary } from "@/components/storefront/ActiveOrderBanner";
 
 interface StorefrontPageProps {
   params: Promise<{ handle: string }>;
@@ -22,8 +24,8 @@ const STOREFRONT_CACHE_TTL_SECONDS = 60;
  *  rows (active listings, public member fields), so anon access is enough. */
 function createPublicSupabaseClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     { auth: { persistSession: false } }
   );
 }
@@ -115,7 +117,11 @@ async function loadStorefrontUncached(handle: string): Promise<{
     bio: member.bio,
     photo_url: member.photo_url,
     handle: member.handle,
+    creator_id: creatorRow.id,
     member_id: member.id,
+    // Storefront viewers don't need (and shouldn't see) the creator's
+    // email — only used for backend notifications. Keep null here.
+    email: null,
     neighborhoods: resolveZips(creatorRow.service_zip_codes ?? []),
     storefront_active: creatorRow.storefront_active ?? true,
     vibe_score:
@@ -144,6 +150,60 @@ function loadStorefront(handle: string) {
   )();
 }
 
+/**
+ * Per-creator metadata so social shares of `/@handle` URLs render
+ * with the creator's name + bio, not the generic root site copy.
+ *
+ * The OG image itself comes from the dynamic route handler at
+ * `src/app/[handle]/opengraph-image.tsx` — Next.js auto-wires it to
+ * this metadata via the `opengraph-image` file convention. Twitter
+ * card mirrors via `twitter-image.tsx`.
+ *
+ * Re-uses the same edge-cached `loadStorefront` so we don't pay an
+ * extra Supabase round-trip for the metadata lookup — the same data
+ * powers the page render too.
+ */
+export async function generateMetadata({
+  params,
+}: StorefrontPageProps): Promise<import("next").Metadata> {
+  const { handle } = await params;
+  const cleanHandle = decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
+  const { creator } = await loadStorefront(cleanHandle);
+
+  if (!creator) {
+    return {
+      title: "Creator not found — KDER",
+      description: "This KDER storefront doesn't exist.",
+    };
+  }
+
+  const title = `${creator.display_name} on KDER`;
+  const description =
+    creator.bio?.trim() ||
+    `Order plates from ${creator.display_name} in Houston. ${creator.total_plates} plate${
+      creator.total_plates === 1 ? "" : "s"
+    } available now on KDER.`;
+  const url = `https://kder.club/@${cleanHandle}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      siteName: "KDER",
+      url,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { handle } = await params;
   // Strip @ prefix and decode URI component (handles %40 encoding)
@@ -160,12 +220,63 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
   const { creator, listings } = storefront;
   const currentUserId = authResult.data.user?.id ?? null;
 
+  // Per-visitor: if they're signed in (incl. anon-auth) and have an
+  // in-flight order with THIS creator, surface a banner linking back
+  // to /order-confirmation. Skipped entirely for non-signed visitors.
+  const activeOrder = await loadActiveOrder({
+    supabase,
+    creatorId: creator?.creator_id ?? null,
+    userId: currentUserId,
+    handle: cleanHandle,
+  });
+
   return (
     <StorefrontClient
       handle={cleanHandle}
       initialCreator={creator}
       initialListings={listings}
       initialUserId={currentUserId}
+      initialActiveOrder={activeOrder}
     />
   );
+}
+
+/**
+ * Most-recent in-flight order between this visitor and this creator.
+ * "In-flight" = pending | accepted | ready (not declined / completed /
+ * cancelled). Returns null when there isn't one or the visitor isn't
+ * signed in.
+ *
+ * Runs against the cookie-bound supabase client so RLS scopes the
+ * read to the visitor's own orders only.
+ */
+async function loadActiveOrder({
+  supabase,
+  creatorId,
+  userId,
+  handle,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any;
+  creatorId: string | null;
+  userId: string | null;
+  handle: string;
+}): Promise<ActiveOrderSummary | null> {
+  if (!creatorId || !userId) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = (await (supabase as any)
+    .from("orders")
+    .select("id, status")
+    .eq("creator_id", creatorId)
+    .eq("member_id", userId)
+    .in("status", ["pending", "accepted", "ready"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()) as {
+    data: { id: string; status: ActiveOrderSummary["status"] } | null;
+  };
+
+  if (!data) return null;
+  return { id: data.id, status: data.status, creatorHandle: handle };
 }

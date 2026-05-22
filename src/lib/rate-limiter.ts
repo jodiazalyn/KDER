@@ -63,9 +63,18 @@ export function checkRateLimit(
   };
 }
 
-// Rate limit configs
+// Rate limit configs.
+//
+// Twilio Verify enforces its OWN per-recipient ceilings server-side
+// (≈5 sends per phone per 10min plus a daily cap, and 5 wrong-check
+// attempts per individual verification). Our app-level limits below
+// run BEFORE we touch Supabase/Twilio — they exist as a fast-path
+// 429 to bounce abuse before paying for the round trip. The numbers
+// are intentionally close to Verify's limits so users hit "real"
+// caps on the same rough timeline regardless of which layer trips
+// first.
 export const OTP_REQUEST_LIMIT = { maxRequests: 5, windowMs: 10 * 60 * 1000 }; // 5 per 10 min
-export const OTP_VERIFY_LIMIT = { maxRequests: 10, windowMs: 10 * 60 * 1000 }; // 10 per 10 min
+export const OTP_VERIFY_LIMIT = { maxRequests: 10, windowMs: 10 * 60 * 1000 }; // 10 per 10 min (across multiple verifications)
 
 /** Reset rate limiter (for testing only) */
 export function _resetForTesting() {

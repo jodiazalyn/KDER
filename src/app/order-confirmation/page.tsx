@@ -15,6 +15,8 @@ import Link from "next/link";
 import { clearCart } from "@/lib/cart-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { cn } from "@/lib/utils";
 
 type OrderStatus =
@@ -61,6 +63,10 @@ function OrderConfirmationInner() {
   );
   const [showBanner, setShowBanner] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Coachmark anchor for the StatusTracker timeline. First-time tip
+  // explains that customers will get SMS updates as the order moves
+  // through the lifecycle.
+  const statusTrackerRef = useRef<HTMLDivElement>(null);
 
   // Clear the creator-scoped cart on first paint of the confirmation page.
   // (Intentionally not cleared at Pay time so customers backing out of Stripe
@@ -174,7 +180,7 @@ function OrderConfirmationInner() {
         </p>
         <Link
           href="/"
-          className="mt-6 flex h-11 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-bold text-white hover:bg-white/[0.06] active:scale-95 transition-all"
+          className="glass-btn-pill mt-6 flex h-11 items-center justify-center px-6 text-sm font-bold text-white active:scale-95 transition-all"
         >
           Back to KDER
         </Link>
@@ -187,7 +193,7 @@ function OrderConfirmationInner() {
       <div className="mx-auto max-w-lg space-y-5">
         {/* One-time success banner */}
         {showBanner && (
-          <div className="flex items-start gap-3 rounded-2xl border border-green-400/30 bg-green-900/20 p-4">
+          <div className="glass-card flex items-start gap-3 border-green-400/[0.30] bg-green-900/[0.20] p-4">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-900/60">
               <CheckCircle2 size={22} className="text-green-400" />
             </div>
@@ -236,10 +242,12 @@ function OrderConfirmationInner() {
         </div>
 
         {/* Status tracker */}
-        <StatusTracker order={order} />
+        <div ref={statusTrackerRef}>
+          <StatusTracker order={order} />
+        </div>
 
         {/* Order summary card */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="glass-card p-4">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-white/40">
             Order summary
           </p>
@@ -270,7 +278,10 @@ function OrderConfirmationInner() {
             </div>
           </div>
 
-          {/* Fulfillment detail */}
+          {/* Fulfillment detail. Pickup address is HIDDEN until the creator
+              marks the order ready — keeps the creator's home address
+              private during the prep window and turns "Ready" into a
+              meaningful state change for the customer. */}
           <div className="mt-4 flex items-start gap-2 border-t border-white/[0.06] pt-3 text-xs text-white/60">
             {order.fulfillment_type === "pickup" ? (
               <>
@@ -280,11 +291,13 @@ function OrderConfirmationInner() {
                 />
                 <div>
                   <p className="font-medium text-white/80">Pickup</p>
-                  {order.pickup_address ? (
+                  {(order.status === "ready" || order.status === "completed") &&
+                  order.pickup_address ? (
                     <p className="mt-0.5">{order.pickup_address}</p>
                   ) : (
                     <p className="mt-0.5 text-white/40">
-                      Creator will share pickup details
+                      Pickup details will appear here once your order is
+                      ready.
                     </p>
                   )}
                 </div>
@@ -320,7 +333,7 @@ function OrderConfirmationInner() {
               recipientId={order.creator_member_id}
             />
           ) : (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 text-center text-xs text-white/40">
+            <div className="glass-card p-6 text-center text-xs text-white/40">
               Loading messages…
             </div>
           )}
@@ -330,12 +343,22 @@ function OrderConfirmationInner() {
         <div className="pt-2">
           <Link
             href={handle ? `/@${handle}` : "/"}
-            className="flex h-11 w-full items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white hover:bg-white/[0.06] active:scale-95 transition-all"
+            className="glass-btn-pill flex h-11 w-full items-center justify-center text-sm font-bold text-white active:scale-95 transition-all"
           >
             {handle ? `Back to @${handle}` : "Back to KDER"}
           </Link>
         </div>
       </div>
+
+      {/* First-time tip on the status timeline. Anchored to the tracker
+          so the customer sees how their order moves through stages and
+          knows they'll get SMS updates + can message the creator. */}
+      <Coachmark
+        id="customer-order-status"
+        copy={COACHMARK_COPY["customer-order-status"]}
+        targetRef={statusTrackerRef}
+        showDelayMs={400}
+      />
     </main>
   );
 }

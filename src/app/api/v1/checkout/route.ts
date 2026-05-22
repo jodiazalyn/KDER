@@ -181,6 +181,12 @@ export async function POST(request: NextRequest) {
           name: i.name,
           price: i.price,
           quantity: i.quantity,
+          // Snapshot the photo at checkout time so the order page can show
+          // the correct plate image even if the listing is later edited or
+          // removed. Was previously omitted, which made every order page
+          // render a "No photo" placeholder for multi-item orders (where the
+          // listings JOIN can't pick a single image).
+          photo: i.photo ?? null,
         })),
       })
       .select("id")

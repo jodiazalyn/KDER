@@ -146,7 +146,9 @@ export default function ListingsPage() {
 
       <Link
         href="/listings/new"
-        className="fixed right-4 top-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-green-900/40 border border-green-400/25 backdrop-blur-[20px] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-90 transition-transform"
+        // glass-btn-pill with KDER green tint + glow. h-12 w-12 = 48px,
+        // exceeds Apple HIG 44px tap target.
+        className="glass-btn-pill fixed right-4 top-4 z-40 flex h-12 w-12 items-center justify-center border-emerald-400/30 bg-emerald-500/15 text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-90 transition-transform"
         aria-label="Add new plate"
       >
         <Plus size={22} />
@@ -186,7 +188,7 @@ export default function ListingsPage() {
         </div>
       ) : (
         <>
-          <div className="mt-4 flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-1">
+          <div className="glass-segment mt-4 flex gap-1 p-1">
             {TABS.map((tab) => {
               const count = allCounts[tab.key] || 0;
               return (
@@ -194,9 +196,9 @@ export default function ListingsPage() {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={cn(
-                    "flex-1 rounded-xl py-2 text-xs font-medium transition-all",
+                    "glass-segment-item flex-1 py-2 text-xs font-medium",
                     activeTab === tab.key
-                      ? "bg-white/[0.12] text-white"
+                      ? "glass-segment-item-active text-white"
                       : "text-white/40 hover:text-white/60"
                   )}
                 >
@@ -239,7 +241,8 @@ export default function ListingsPage() {
       >
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+          // Sheet primitive provides glass-modal substrate from Phase 2.
+          className="rounded-t-glass-lg text-white"
         >
           <SheetHeader>
             <SheetTitle className="text-white">

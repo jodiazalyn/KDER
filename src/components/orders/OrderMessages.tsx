@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
@@ -23,15 +23,27 @@ export function OrderMessages({
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
 
-  // Load existing messages
+  // Load existing messages — scoped to the conversation between this
+  // member and creator regardless of order_id. Both surfaces (storefront
+  // chat sheet + order page thread) now show the same continuous thread,
+  // so a message sent from one place appears in the other. order_id is
+  // still set on inserts here for analytics, but it no longer fragments
+  // the conversation.
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const load = async () => {
         const { data, error } = await supabase
           .from("messages")
           .select("*")
-          .eq("order_id", orderId)
+          .or(
+            `and(sender_id.eq.${currentUserId},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentUserId})`
+          )
           .order("created_at", { ascending: true });
 
         if (!error && data) {
@@ -41,22 +53,31 @@ export function OrderMessages({
       load();
     });
     return () => cancelAnimationFrame(frame);
-  }, [orderId, recipientId, currentUserId, supabase]);
+  }, [recipientId, currentUserId, supabase]);
 
-  // Subscribe to new messages via Realtime
+  // Subscribe to new messages via Realtime — filter client-side by
+  // participants since Postgres-changes filter syntax doesn't support
+  // OR conditions on multiple columns.
   useEffect(() => {
     const channel = supabase
-      .channel(`order-messages-${orderId}`)
+      .channel(
+        `order-messages-${currentUserId}-${recipientId}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `order_id=eq.${orderId}`,
         },
         (payload) => {
           const newMsg = payload.new as Message;
+          const involvesMe =
+            (newMsg.sender_id === currentUserId &&
+              newMsg.recipient_id === recipientId) ||
+            (newMsg.sender_id === recipientId &&
+              newMsg.recipient_id === currentUserId);
+          if (!involvesMe) return;
           setMessages((prev) => {
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
@@ -68,7 +89,7 @@ export function OrderMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderId, supabase]);
+  }, [currentUserId, recipientId, supabase, instanceId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -102,7 +123,7 @@ export function OrderMessages({
   };
 
   return (
-    <div className="flex flex-col rounded-2xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)]">
+    <div className="glass-card rounded-glass-lg flex flex-col">
       {/* Messages area */}
       <div
         ref={scrollRef}
@@ -125,10 +146,10 @@ export function OrderMessages({
               >
                 <div
                   className={cn(
-                    "max-w-[75%] rounded-2xl px-3 py-2 text-sm",
+                    "glass-card rounded-glass max-w-[75%] px-3 py-2 text-sm",
                     isMine
-                      ? "bg-green-900/[0.40] backdrop-blur-[20px] border border-green-400/[0.25] text-white"
-                      : "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] text-white/90"
+                      ? "border-emerald-400/30 bg-emerald-500/15 text-white"
+                      : "text-white/90"
                   )}
                 >
                   <p>{msg.body}</p>
@@ -163,7 +184,7 @@ export function OrderMessages({
             }
           }}
           placeholder="Type a message..."
-          className="h-10 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 backdrop-blur-[8px] focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none transition-colors"
+          className="glass-input h-10 flex-1 rounded-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
           aria-label="Message input"
         />
         <button

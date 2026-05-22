@@ -61,9 +61,9 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
         </p>
       </div>
 
-      {/* Sold-out pill */}
+      {/* Sold-out pill — translucent glass over the photo */}
       {soldOut && (
-        <span className="absolute right-1.5 top-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+        <span className="absolute right-1.5 top-1.5 rounded-full border border-white/[0.10] bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-[16px] backdrop-saturate-[180%]">
           Sold out
         </span>
       )}

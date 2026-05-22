@@ -20,6 +20,7 @@ import { OrderTransferDrawer } from "./OrderTransferDrawer";
 import { PayoutHistoryList } from "./PayoutHistoryList";
 import { PayoutScheduleSheet } from "./PayoutScheduleSheet";
 import { TransactionRow } from "./TransactionRow";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { getInstantPayoutState } from "@/lib/earnings-instant";
 import type {
   EarningsData,
@@ -108,6 +109,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
   }, [searchParams]);
 
   return (
+    <PullToRefresh onRefresh={() => router.refresh()}>
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Earnings</h1>
 
@@ -169,7 +171,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
           <button
             type="button"
             onClick={() => setShowScheduleSheet(true)}
-            className="flex w-full items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 text-left active:bg-white/[0.06] transition-colors"
+            className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-white/[0.18] transition-colors"
           >
             <div className="flex items-center gap-3">
               <CalendarClock size={18} className="text-white/60" />
@@ -269,5 +271,6 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
         transaction={activeTransaction}
       />
     </main>
+    </PullToRefresh>
   );
 }

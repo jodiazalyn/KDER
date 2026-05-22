@@ -39,6 +39,11 @@ export async function GET(request: NextRequest) {
 
     if (!creator) return apiSuccess({ orders: [] });
 
+    // Auto-decline removed (May 2026): pending orders now stay pending
+    // until the creator explicitly accepts or declines. The cron sweep
+    // at /api/v1/cron/order-reminders escalates email reminders at 15 min,
+    // 1 hr, 4 hr, and 24 hr instead of silently flipping to declined.
+
     // Single query, LEFT JOIN listings for the photo + name fallback. Using the
     // Supabase foreign-key relation syntax; `listing` here is an alias for the
     // related row.

@@ -1,10 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
 import { PhoneInput } from "@/components/auth/PhoneInput";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -13,6 +15,7 @@ function SignupPageInner() {
   const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const phoneCoachRef = useRef<HTMLDivElement>(null);
 
   const isValid = phone.length === 10;
 
@@ -121,11 +124,13 @@ function SignupPageInner() {
         <h2 className="text-xl font-bold text-white">
           Enter your phone number
         </h2>
-        <PhoneInput
-          value={phone}
-          onChange={setPhone}
-          disabled={loading}
-        />
+        <div ref={phoneCoachRef} className="w-full">
+          <PhoneInput
+            value={phone}
+            onChange={setPhone}
+            disabled={loading}
+          />
+        </div>
       </div>
 
       {/* Bottom section — CTA + legal */}
@@ -138,7 +143,7 @@ function SignupPageInner() {
             "active:scale-95",
             isValid && !loading
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {loading ? (
@@ -159,6 +164,15 @@ function SignupPageInner() {
           </button>
         </p>
       </div>
+
+      {/* First-visit tip pointing at the phone input. Fires once, then
+          never again on this device. Delay lets the form layout settle. */}
+      <Coachmark
+        id="creator-signup-phone"
+        copy={COACHMARK_COPY["creator-signup-phone"]}
+        targetRef={phoneCoachRef}
+        showDelayMs={400}
+      />
     </main>
   );
 }

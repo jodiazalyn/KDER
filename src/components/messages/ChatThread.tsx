@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { Send, Camera, Check, CheckCheck, Image as ImageIcon, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
@@ -79,7 +79,7 @@ function groupMessages(messages: Message[]): { date: Date; groups: MessageGroup[
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="rounded-2xl rounded-bl-md bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_12px_rgba(0,0,0,0.3)]">
+      <div className="rounded-2xl rounded-bl-md border border-white/[0.12] bg-white/[0.08] px-4 py-3 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]">
         <div className="flex items-center gap-1">
           <span className="h-2 w-2 rounded-full bg-white/40 animate-[bounce_1.4s_ease-in-out_infinite]" />
           <span className="h-2 w-2 rounded-full bg-white/40 animate-[bounce_1.4s_ease-in-out_0.2s_infinite]" />
@@ -108,6 +108,11 @@ export function ChatThread({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
 
   // Fire-and-forget: mark any unread messages from partnerId as read for this
   // user + thread. Relies on the "Recipient can mark read" RLS policy.
@@ -123,28 +128,32 @@ export function ChatThread({
 
   const loadMessages = useCallback(() => {
     const load = async () => {
-      let query = supabase
+      // Load the unified conversation between this creator and partner
+      // regardless of order_id. Customer-side surfaces (storefront chat,
+      // order-confirmation thread) already query without order_id
+      // filtering — keeping the creator inbox in sync with that means
+      // both parties see the same continuous message history.
+      //
+      // order_id is still set on inserts for analytics / per-order linking,
+      // but it no longer fragments the visible thread. The threadId URL
+      // pattern (`order_<id>_<partner>` vs `general_<partner>`) survives
+      // for forward-compat with deep links from the order pages — both
+      // patterns now render the same conversation, just with different
+      // banner context.
+      const { data } = await supabase
         .from("messages")
         .select("*")
         .or(
           `and(sender_id.eq.${currentUserId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${currentUserId})`
         )
         .order("created_at", { ascending: true });
-
-      if (orderId) {
-        query = query.eq("order_id", orderId);
-      } else {
-        query = query.is("order_id", null);
-      }
-
-      const { data } = await query;
       if (data) setMessages(data as Message[]);
       // The thread is now visible to the user — mark any unread incoming
       // messages from the partner as read.
       markRead();
     };
     load();
-  }, [partnerId, currentUserId, orderId, supabase, markRead]);
+  }, [partnerId, currentUserId, supabase, markRead]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => loadMessages());
@@ -156,7 +165,9 @@ export function ChatThread({
   // the thread (UPDATE sets messages.read_at).
   useEffect(() => {
     const channel = supabase
-      .channel(`chat-${partnerId}-${orderId || "general"}`)
+      .channel(
+        `chat-${partnerId}-${orderId || "general"}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
@@ -173,8 +184,6 @@ export function ChatThread({
               newMsg.recipient_id === partnerId);
 
           if (!isRelevant) return;
-          if (orderId && newMsg.order_id !== orderId) return;
-          if (!orderId && newMsg.order_id) return;
 
           setMessages((prev) => {
             // Skip if we already have this real id.
@@ -218,8 +227,6 @@ export function ChatThread({
             (updated.sender_id === currentUserId &&
               updated.recipient_id === partnerId);
           if (!isRelevant) return;
-          if (orderId && updated.order_id !== orderId) return;
-          if (!orderId && updated.order_id) return;
           // Merge server-updated fields (typically read_at) into local state
           // so the sender's "Pending" badge flips to "Read".
           setMessages((prev) =>
@@ -232,7 +239,7 @@ export function ChatThread({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partnerId, currentUserId, orderId, supabase, markRead]);
+  }, [partnerId, currentUserId, orderId, supabase, markRead, instanceId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -386,7 +393,7 @@ export function ChatThread({
             <div key={si}>
               {/* Date separator */}
               <div className="flex justify-center my-4">
-                <span className="rounded-full bg-white/[0.06] border border-white/[0.08] px-3 py-1 text-[11px] font-medium text-white/40 backdrop-blur-[8px]">
+                <span className="rounded-full border border-white/[0.10] bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/40 backdrop-blur-[16px] backdrop-saturate-[180%]">
                   {formatDateSeparator(section.date)}
                 </span>
               </div>
@@ -432,8 +439,8 @@ export function ChatThread({
                               "max-w-[78%] px-3.5 py-2 text-[15px] leading-snug",
                               radiusClass,
                               isMine
-                                ? "bg-green-900/[0.45] backdrop-blur-[20px] border border-green-400/[0.20] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
-                                : "bg-white/[0.08] backdrop-blur-[8px] border border-white/[0.10] text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_2px_8px_rgba(0,0,0,0.25)]"
+                                ? "border border-green-400/[0.22] bg-green-900/[0.45] text-white backdrop-blur-[24px] backdrop-saturate-[200%] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.30)]"
+                                : "border border-white/[0.12] bg-white/[0.08] text-white/90 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
                             )}
                           >
                             {msg.media_url && (
@@ -495,9 +502,10 @@ export function ChatThread({
         )}
       </div>
 
-      {/* Media preview */}
+      {/* Media preview — translucent backdrop matches the input bar
+          below so the two stack as a single iOS-style attachment chrome. */}
       {mediaPreview && (
-        <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#1a1a1a] px-3 pt-2">
+        <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-3 pt-2 backdrop-blur-[24px] backdrop-saturate-[180%]">
           <div className="relative inline-block">
             <img
               src={mediaPreview}
@@ -507,17 +515,18 @@ export function ChatThread({
             <button
               type="button"
               onClick={clearMedia}
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-lg"
+              className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-lg active:scale-90 transition-transform"
               aria-label="Remove photo"
             >
-              <X size={12} />
+              <X size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Input bar — iOS style */}
-      <div className="flex-shrink-0 border-t border-white/[0.15] bg-[#1a1a1a] px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+      {/* Input bar — iOS-style translucent chrome. Camera/Send buttons
+          bumped to 44px (h-11 w-11) per Apple HIG tap targets. */}
+      <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="flex items-end gap-2">
           {/* Camera/attachment — opens native file picker */}
           <input
@@ -530,15 +539,15 @@ export function ChatThread({
           />
           <button
             type="button"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/40 mb-0.5 active:scale-90 transition-transform"
+            className="glass-btn-pill flex h-11 w-11 flex-shrink-0 items-center justify-center text-white/50 active:scale-90 transition-transform"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Attach photo"
           >
             <Camera size={18} />
           </button>
 
-          {/* Auto-resize textarea */}
-          <div className="flex-1 flex items-end rounded-[22px] border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] transition-colors focus-within:border-green-400/50 focus-within:bg-white/[0.10]">
+          {/* Auto-resize textarea — translucent pill substrate. */}
+          <div className="flex flex-1 items-end rounded-[22px] border border-white/[0.12] bg-white/[0.06] backdrop-blur-[16px] backdrop-saturate-[180%] transition-colors focus-within:border-green-400/50 focus-within:bg-white/[0.10]">
             <textarea
               ref={textareaRef}
               value={input}
@@ -551,26 +560,26 @@ export function ChatThread({
               }}
               placeholder={`Message ${partnerName}...`}
               rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-2 text-[15px] text-white placeholder:text-white/35 focus:outline-none max-h-[100px] leading-snug"
-              style={{ minHeight: "36px" }}
+              className="flex-1 resize-none bg-transparent px-4 py-2.5 text-base text-white placeholder:text-white/35 focus:outline-none max-h-[100px] leading-snug"
+              style={{ minHeight: "44px" }}
               aria-label="Message input"
             />
           </div>
 
-          {/* Send button — morphs from grey to green */}
+          {/* Send button — morphs from glass to green when active. */}
           <button
             type="button"
             onClick={handleSend}
             disabled={!input.trim() || sending}
             className={cn(
-              "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full mb-0.5 transition-all duration-200 active:scale-85",
+              "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-90",
               input.trim() && !sending
-                ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.5)] scale-100"
-                : "bg-white/[0.08] text-white/25 scale-95"
+                ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.5)]"
+                : "glass-btn-pill text-white/30"
             )}
             aria-label="Send message"
           >
-            <Send size={16} className={cn(input.trim() ? "-rotate-0" : "rotate-0", "transition-transform")} />
+            <Send size={16} />
           </button>
         </div>
       </div>

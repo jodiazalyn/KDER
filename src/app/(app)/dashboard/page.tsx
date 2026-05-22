@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pause, Play } from "lucide-react";
+import Link from "next/link";
+import { Pause, Play, Mail } from "lucide-react";
 import { StorefrontHeader } from "@/components/dashboard/StorefrontHeader";
 import { ShareLinkCard } from "@/components/dashboard/ShareLinkCard";
 import { QuickStats } from "@/components/dashboard/QuickStats";
@@ -10,13 +11,11 @@ import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { getCreatorProfileAsync, setStorefrontActive } from "@/lib/creator-store";
 import { getStreak } from "@/lib/streak-store";
 import { getBadges } from "@/lib/badges-store";
-import { getOrders } from "@/lib/orders-store";
 import { StreakBanner } from "@/components/dashboard/StreakBanner";
 import { BadgeShelf } from "@/components/dashboard/BadgeShelf";
-import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 // Leaderboard moved to floating button in layout
 import type { CreatorProfile } from "@/lib/creator-store";
-import type { Listing, Streak, Badge } from "@/types";
+import type { Listing, Order, Streak, Badge } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -26,18 +25,21 @@ export default function DashboardPage() {
   const [activeCount, setActiveCount] = useState(0);
   const [streak, setStreak] = useState<Streak>({ currentStreak: 0, longestStreak: 0, lastOrderDate: null, isActive: false });
   const [badges, setBadges] = useState<Badge[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      // Profile + active-plates queries are independent (the listings API
-      // resolves the creator from the auth cookie, not from the profile we
-      // load on the side). Run them in parallel — saves ~400-800ms on
-      // mobile cellular cold loads of the dashboard.
-      const [p, listingsRes] = await Promise.all([
+      // Profile + active-plates + orders queries are independent (each API
+      // resolves the creator from the auth cookie). Run them in parallel —
+      // saves ~400-800ms on mobile cellular cold loads.
+      const [p, listingsRes, ordersRes] = await Promise.all([
         getCreatorProfileAsync(),
         fetch("/api/v1/listings?mine=true&status=active")
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+        fetch("/api/v1/orders")
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
       ]);
@@ -50,13 +52,24 @@ export default function DashboardPage() {
         setActiveCount(plates.length);
       }
 
-      const s = getStreak();
+      // Fetch returns all statuses, newest-first. Derive the subsets each
+      // dashboard widget needs from the single response.
+      const allOrders: Order[] = ordersRes?.data?.orders ?? [];
+      const completedOrders = allOrders.filter((o) => o.status === "completed");
+
+      // RecentOrders shows the 5 most recent live orders (declined/cancelled
+      // are noise on the dashboard — those have a dedicated tab on /orders).
+      const recent = allOrders
+        .filter((o) => o.status !== "declined" && o.status !== "cancelled")
+        .slice(0, 5);
+      setRecentOrders(recent);
+
+      const s = getStreak(completedOrders);
       setStreak(s);
 
-      const completedOrders = getOrders().filter((o) => o.status === "completed").length;
       const b = getBadges({
         streak: s,
-        totalOrders: completedOrders,
+        totalOrders: completedOrders.length,
         vibeScore: p.vibe_score,
         leaderboardRank: null,
       });
@@ -106,11 +119,24 @@ export default function DashboardPage() {
 
       {/* Content */}
       <div className="space-y-5 px-4 pb-8 pt-4">
-        {/* Live demand counter — keeps creators visually aware that the
-            market is growing every time they open their dashboard. */}
-        <div className="flex justify-center">
-          <LiveUserTicker />
-        </div>
+        {/* Missing-email backfill nudge — legacy creators who onboarded
+            before the email-collection migration won't receive new-order
+            alerts until they add one. Surfaces persistently (no dismiss)
+            because the cost of missing an order is high. */}
+        {!profile.email && (
+          <Link
+            href="/settings"
+            className="flex w-full items-start gap-3 rounded-2xl border border-orange-400/30 bg-orange-900/20 px-4 py-3 text-sm text-orange-200 active:scale-[0.99] transition-transform"
+          >
+            <Mail size={18} className="mt-0.5 flex-shrink-0 text-orange-300" />
+            <div>
+              <p className="font-semibold">Add your email so you don&apos;t miss orders</p>
+              <p className="mt-0.5 text-xs text-orange-200/70">
+                We send new-order alerts to your email — tap to add one in Settings.
+              </p>
+            </div>
+          </Link>
+        )}
 
         {/* Storefront status */}
         <button
@@ -169,7 +195,7 @@ export default function DashboardPage() {
         <ActivePlatesPreview plates={activePlates} />
 
         {/* Recent orders */}
-        <RecentOrders handle={profile.handle} />
+        <RecentOrders handle={profile.handle} orders={recentOrders} />
       </div>
     </main>
   );

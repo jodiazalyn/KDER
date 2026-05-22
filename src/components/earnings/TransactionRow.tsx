@@ -31,7 +31,7 @@ export function TransactionRow({ transaction, onClick }: TransactionRowProps) {
     <Wrapper
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`block w-full text-left rounded-2xl border border-white/[0.12] bg-white/[0.06] p-4 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] ${onClick ? "active:bg-white/[0.10] transition-colors" : ""}`}
+      className={`glass-card rounded-glass-lg block w-full text-left p-4 ${onClick ? "active:bg-white/[0.18] transition-colors" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">

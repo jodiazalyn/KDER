@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import type { Order } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -92,8 +95,8 @@ export default function OrdersPage() {
   // is made and the customer is about to (or already at) pickup — creator
   // needs to hand it off, so it's the most urgent next action. "Accepted"
   // orders are being prepared and need the creator's kitchen time.
-  // "Pending" orders are still awaiting a decision — least urgent since the
-  // auto-decline timer handles them if the creator doesn't act in time.
+  // "Pending" orders are awaiting the creator's accept decision — they
+  // never auto-decline now, so the customer-waiting clock is what matters.
   // Within each status group, oldest first so longest-waiting orders rise.
   const STATUS_PRIORITY: Record<Order["status"], number> = {
     ready: 0,
@@ -109,14 +112,9 @@ export default function OrdersPage() {
       const ap = STATUS_PRIORITY[a.status];
       const bp = STATUS_PRIORITY[b.status];
       if (ap !== bp) return ap - bp;
-      // Within the same status: for pending, oldest auto_decline_at first
-      // (running out of time fastest). For others, oldest created_at first.
-      if (a.status === "pending" && b.status === "pending") {
-        return (
-          new Date(a.auto_decline_at).getTime() -
-          new Date(b.auto_decline_at).getTime()
-        );
-      }
+      // Within the same status: oldest created_at first (longest-waiting
+      // customer rises). Same rule for pending — the order that's been
+      // sitting longest is the most urgent reminder target.
       return (
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
@@ -136,6 +134,15 @@ export default function OrdersPage() {
       : activeTab === "completed"
         ? completedOrders
         : declinedOrders;
+
+  // Coachmark anchor: ID of the first pending order in the active tab.
+  // We attach a ref conditionally during the .map so the coachmark can
+  // highlight that specific row.
+  const firstPendingRef = useRef<HTMLDivElement>(null);
+  const firstPendingId =
+    activeTab === "active"
+      ? (activeOrders.find((o) => o.status === "pending")?.id ?? null)
+      : null;
 
   const handleAccept = async (id: string) => {
     const result = await transitionOrder(id, "accept");
@@ -173,11 +180,12 @@ export default function OrdersPage() {
       : "mystore";
 
   return (
+    <PullToRefresh onRefresh={refresh}>
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Orders</h1>
 
-      {/* Tab bar */}
-      <div className="mt-4 flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-1">
+      {/* Tab bar — iOS-style segmented control via glass-segment */}
+      <div className="glass-segment mt-4 flex gap-1 p-1">
         {TABS.map((tab) => {
           const count = counts[tab.key] || 0;
           return (
@@ -185,9 +193,9 @@ export default function OrdersPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "flex-1 rounded-xl py-2 text-xs font-medium transition-all",
+                "glass-segment-item flex-1 py-2 text-xs font-medium",
                 activeTab === tab.key
-                  ? "bg-white/[0.12] text-white"
+                  ? "glass-segment-item-active text-white"
                   : "text-white/40 hover:text-white/60"
               )}
             >
@@ -214,15 +222,25 @@ export default function OrdersPage() {
         </div>
       ) : visibleOrders.length > 0 ? (
         <div className="mt-4 space-y-3">
-          {visibleOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onAccept={handleAccept}
-              onMarkReady={handleMarkReady}
-              onMarkComplete={handleMarkComplete}
-            />
-          ))}
+          {visibleOrders.map((order) => {
+            const isFirstPending =
+              activeTab === "active" &&
+              order.status === "pending" &&
+              order.id === firstPendingId;
+            return (
+              <div
+                key={order.id}
+                ref={isFirstPending ? firstPendingRef : undefined}
+              >
+                <OrderCard
+                  order={order}
+                  onAccept={handleAccept}
+                  onMarkReady={handleMarkReady}
+                  onMarkComplete={handleMarkComplete}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 pt-24">
@@ -251,6 +269,17 @@ export default function OrdersPage() {
         </div>
       )}
 
+      {/* First-time tip on the active-tab pending row. Fires only when
+          there's actually a pending row to point at. */}
+      {firstPendingId && (
+        <Coachmark
+          id="creator-orders-pending"
+          copy={COACHMARK_COPY["creator-orders-pending"]}
+          targetRef={firstPendingRef}
+          showDelayMs={300}
+        />
+      )}
     </main>
+    </PullToRefresh>
   );
 }

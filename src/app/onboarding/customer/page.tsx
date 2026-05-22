@@ -87,7 +87,7 @@ export default function CustomerOnboardingPage() {
           }}
           placeholder="Your name"
           autoFocus
-          className="h-14 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+          className="glass-input h-14 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
         />
         <p className="self-end text-xs text-white/30">
           {displayName.length}/{NAME_MAX}
@@ -103,7 +103,7 @@ export default function CustomerOnboardingPage() {
             "flex h-14 w-full items-center justify-center rounded-full text-lg font-bold text-white transition-all active:scale-95",
             canSubmit
               ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "bg-white/10 cursor-not-allowed opacity-50"
+              : "glass-btn-pill cursor-not-allowed opacity-50"
           )}
         >
           {saving ? <Loader2 className="h-6 w-6 animate-spin" /> : "Continue"}

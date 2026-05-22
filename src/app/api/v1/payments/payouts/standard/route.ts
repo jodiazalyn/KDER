@@ -124,6 +124,12 @@ export async function POST(request: NextRequest) {
           amount: amountCents,
           currency: "usd",
           method: "standard",
+          // Surfaces on the recipient's statement so creators recognize
+          // the credit. ≤22 chars, alphanumeric + spaces + periods only.
+          // ACH (standard) payouts to bank accounts typically respect
+          // this field — usually shows up as "KDER PAYOUT" alongside
+          // the ACH origin info.
+          statement_descriptor: "KDER PAYOUT",
           metadata: {
             creator_id: creator.id,
           },

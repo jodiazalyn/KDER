@@ -163,13 +163,11 @@ function OtpInputInner({
           onPaste={i === 0 ? handlePaste : undefined}
           aria-label={`Digit ${i + 1} of ${length}`}
           className={cn(
-            "h-14 w-12 rounded-xl border bg-white/[0.06] text-center text-2xl font-bold text-white backdrop-blur-[8px]",
-            "focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700",
+            "glass-input h-14 !w-12 px-0 text-center text-2xl font-bold text-white",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40",
             "disabled:cursor-not-allowed disabled:opacity-50",
             "transition-all duration-200",
-            error
-              ? "border-red-500/60 bg-red-500/[0.08]"
-              : "border-white/[0.12]"
+            error && "!border-red-500/60 !bg-red-500/[0.08]"
           )}
         />
       ))}

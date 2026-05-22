@@ -10,8 +10,10 @@ import type { Order } from "@/types";
  *  - member_photo: null (UI falls back to an initial-letter avatar)
  *  - listing_name: prefer the per-item snapshot in the `items` JSONB, fall
  *    back to the joined listing row for legacy orders pre-`items`
- *  - listing_photo: first photo from the joined listing (null if the listing
- *    was deleted; UI has an ImageOff fallback)
+ *  - listing_photo: prefer the per-item snapshot in the `items` JSONB
+ *    (set at checkout time so future listing edits / deletions don't break
+ *    historical order pages), fall back to the joined listing row for
+ *    pre-snapshot orders
  *  - pickup_address / delivery_zip: not used by the current UI beyond a
  *    confirmation banner; return null
  */
@@ -37,16 +39,22 @@ export function rowToOrder(row: any): Order {
     auto_decline_at: row.auto_decline_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    reminder_count: Number(row.reminder_count ?? 0),
+    last_reminder_at: row.last_reminder_at ?? null,
     delivery_address: row.delivery_address ?? null,
     delivery_zip: null,
     pickup_address: null,
     member_phone: row.member_phone ?? null,
+    customer_email: row.customer_email ?? null,
     member_name: row.member_name ?? "Customer",
     member_photo: null,
     listing_name: firstItem?.name ?? joinedListing?.name ?? "Plate",
     listing_photo:
-      Array.isArray(joinedListing?.photos) && joinedListing.photos.length > 0
+      // Prefer the snapshotted photo from items JSONB so legacy listing
+      // edits / deletions don't break historical order pages.
+      firstItem?.photo ??
+      (Array.isArray(joinedListing?.photos) && joinedListing.photos.length > 0
         ? joinedListing.photos[0]
-        : null,
+        : null),
   };
 }

@@ -5,13 +5,18 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PhotoUpload } from "@/components/onboarding/PhotoUpload";
+import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import { cn } from "@/lib/utils";
 
 const NAME_MAX = 40;
 const BIO_MAX = 160;
+const EMAIL_MAX = 254;
 const MAX_ZIPS = 5;
+
+// Loose RFC-5322-ish check, matching the onboarding-profile validator.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ZipEntry {
   zip: string;
@@ -21,6 +26,7 @@ interface ZipEntry {
 interface ProfileFormState {
   display_name: string;
   bio: string;
+  email: string;
   photo_url: string | null;
   handle: string; // kept for round-trip only; not editable here
   zips: ZipEntry[];
@@ -31,6 +37,7 @@ function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): Pro
   return {
     display_name: p.display_name || "",
     bio: p.bio || "",
+    email: p.email || "",
     photo_url: p.photo_url,
     handle: p.handle || "",
     zips: (p.neighborhoods || []).map((n) => ({ zip: n.zip, neighborhood: n.name })),
@@ -73,7 +80,19 @@ export default function SettingsPage() {
     return JSON.stringify(form) !== JSON.stringify(initial);
   }, [form, initial]);
 
-  const canSave = !!form && !!form.display_name.trim() && isDirty && !saving;
+  // Email is editable here. If the creator has one, edits must remain
+  // a valid format; if it's blank (legacy account before email collection
+  // landed), we let them save without one but the dashboard banner will
+  // keep nudging until they add it.
+  const emailTrimmed = form?.email.trim().toLowerCase() ?? "";
+  const isEmailValid = emailTrimmed === "" || EMAIL_RE.test(emailTrimmed);
+
+  const canSave =
+    !!form &&
+    !!form.display_name.trim() &&
+    isEmailValid &&
+    isDirty &&
+    !saving;
 
   const addZip = async () => {
     if (!form || currentZip.length !== 5 || addingZip) return;
@@ -141,6 +160,7 @@ export default function SettingsPage() {
           handle: form.handle, // unchanged — onboard route requires it
           photo_url: form.photo_url,
           bio: form.bio.trim() || null,
+          email: emailTrimmed || null,
           zips: form.zips.map((z) => z.zip),
           pickup_address: form.pickup_address.trim() || null,
         }),
@@ -167,7 +187,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          className="mt-4 rounded-full border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/[0.06]"
+          className="glass-btn-pill mt-4 px-4 py-2 text-sm text-white"
         >
           Try again
         </button>
@@ -184,13 +204,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="relative min-h-screen bg-[#0A0A0A] pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 backdrop-blur-sm">
+    <main className="relative min-h-[100dvh] bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
+      {/* Header — translucent sticky chrome via raw backdrop-filter
+          (the plugin's `glass-nav` forces `position: fixed; top: 0`
+          which would detach this from its scroll container).
+          Back button bumped to 44px (Apple HIG tap target). */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
@@ -200,7 +223,7 @@ export default function SettingsPage() {
 
       <div className="mx-auto max-w-lg px-4 py-6 space-y-6">
         {/* Profile section */}
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 space-y-5">
+        <section className="glass-card p-5 space-y-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Profile
           </h2>
@@ -231,7 +254,7 @@ export default function SettingsPage() {
                 })
               }
               placeholder="What should people call you?"
-              className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+              className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
             />
             <p className="mt-1 text-right text-xs text-white/30">
               {form.display_name.length}/{NAME_MAX}
@@ -254,16 +277,48 @@ export default function SettingsPage() {
               }
               placeholder="Tell customers about your food"
               rows={3}
-              className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors resize-none"
+              className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
             />
             <p className="mt-1 text-right text-xs text-white/30">
               {form.bio.length}/{BIO_MAX}
             </p>
           </div>
+
+          {/* Email — required for order alerts. We surface validation
+              inline so a blank settings save (e.g., dirty bio + empty
+              email field on a legacy account) doesn't get rejected
+              with a generic toast. */}
+          <div>
+            <label
+              htmlFor="settings-email"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
+              Email
+            </label>
+            <input
+              id="settings-email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={(e) =>
+                setForm({ ...form, email: e.target.value.slice(0, EMAIL_MAX) })
+              }
+              placeholder="you@example.com"
+              className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+            />
+            <p className="mt-1 text-xs text-white/40">
+              {emailTrimmed === ""
+                ? "Add an email so you don't miss new-order alerts."
+                : isEmailValid
+                  ? "Used for order notifications only. Never shared."
+                  : "That doesn't look like a valid email."}
+            </p>
+          </div>
         </section>
 
         {/* Service area section */}
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 space-y-4">
+        <section className="glass-card p-5 space-y-4">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
               Service area
@@ -291,7 +346,7 @@ export default function SettingsPage() {
               }}
               placeholder="Enter zip code"
               disabled={form.zips.length >= MAX_ZIPS}
-              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none disabled:opacity-50"
+              className="glass-input h-11 flex-1 rounded-full px-4 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 disabled:opacity-50"
             />
             <button
               type="button"
@@ -301,7 +356,7 @@ export default function SettingsPage() {
                 "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
                 currentZip.length === 5 && !addingZip && form.zips.length < MAX_ZIPS
                   ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
-                  : "bg-white/10 text-white/30 cursor-not-allowed"
+                  : "glass-btn-pill text-white/30 cursor-not-allowed"
               )}
               aria-label="Add zip code"
             >
@@ -319,7 +374,7 @@ export default function SettingsPage() {
               {form.zips.map((z) => (
                 <div
                   key={z.zip}
-                  className="flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2"
+                  className="glass-card flex items-center justify-between px-3 py-2"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <MapPin size={16} className="flex-shrink-0 text-green-400" />
@@ -333,7 +388,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => removeZip(z.zip)}
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-400 active:scale-90"
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-400 active:scale-90 transition-all"
                     aria-label={`Remove ${z.neighborhood}`}
                   >
                     <Trash2 size={16} />
@@ -347,7 +402,7 @@ export default function SettingsPage() {
         </section>
 
         {/* Pickup address section */}
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 space-y-3">
+        <section className="glass-card p-5 space-y-3">
           <div>
             <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
               Pickup address
@@ -361,12 +416,12 @@ export default function SettingsPage() {
             value={form.pickup_address}
             onChange={(e) => setForm({ ...form, pickup_address: e.target.value })}
             placeholder="1234 Main St, Houston, TX 77001"
-            className="h-12 w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.12] focus:outline-none focus:ring-2 focus:ring-green-700 transition-colors"
+            className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
           />
         </section>
 
         {/* Handle is shown read-only so users know what their URL is */}
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5 space-y-2">
+        <section className="glass-card p-5 space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50">
             Your KDER link
           </h2>
@@ -379,30 +434,28 @@ export default function SettingsPage() {
         </section>
       </div>
 
-      {/* Sticky save bar */}
-      <div className="fixed bottom-20 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 py-3 backdrop-blur-md">
-        <div className="mx-auto max-w-lg">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!canSave}
-            className={cn(
-              "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
-              canSave
-                ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                : "bg-white/10 text-white/30 cursor-not-allowed"
-            )}
-          >
-            {saving ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : isDirty ? (
-              "Save changes"
-            ) : (
-              "No changes"
-            )}
-          </button>
-        </div>
-      </div>
+      {/* Save bar — disabled when nothing's dirty. */}
+      <FloatingActionBar>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave}
+          className={cn(
+            "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
+            canSave
+              ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+              : "bg-white/10 text-white/30 cursor-not-allowed"
+          )}
+        >
+          {saving ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isDirty ? (
+            "Save changes"
+          ) : (
+            "No changes"
+          )}
+        </button>
+      </FloatingActionBar>
     </main>
   );
 }

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import type { OrderStatus } from "@/types";
 import { isValidTransition } from "@/lib/order-state-machine";
 import { notifyDispute } from "@/lib/dispute-notifier";
+import { notifyOrderPlaced } from "@/lib/notifications";
+import { fetchOrderForNotification } from "@/lib/notifications-fetch";
 
 // We use (supabase as any) for payment-related writes because the
 // generated DB types haven't been regenerated since migration 001+004
@@ -10,8 +12,11 @@ import { notifyDispute } from "@/lib/dispute-notifier";
 // and these casts can be removed.
 
 // ── checkout.session.completed ──────────────────────────────────
-// A member paid for an order via Checkout. Mark order as paid and
-// record the payment intent for later refund/payout tracking.
+// A member paid for an order via Stripe Checkout. Capture payment
+// metadata + customer email, then notify the creator that they have
+// a new order to accept. The order intentionally stays in `pending`
+// status — the creator must explicitly accept it via the dashboard
+// (or it will keep firing escalation reminders via the cron sweep).
 export async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session
 ) {
@@ -22,39 +27,30 @@ export async function handleCheckoutCompleted(
   }
 
   const supabase = await createClient();
+  const customerEmail = session.customer_details?.email ?? null;
 
+  // Capture payment metadata + customer email. Status stays at `pending`
+  // so the creator's accept action remains the explicit gate.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: order } = await (supabase as any)
-    .from("orders")
-    .select("status")
-    .eq("id", orderId)
-    .single() as { data: { status: OrderStatus } | null };
-
-  const currentStatus = order?.status || "pending";
-  const targetStatus: OrderStatus = "accepted";
-
-  if (!isValidTransition(currentStatus, targetStatus)) {
-    console.warn(
-      `[webhook] Skipping invalid transition ${currentStatus} → ${targetStatus} for order ${orderId}`
-    );
-    return;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error: updateErr } = await (supabase as any)
     .from("orders")
     .update({
-      status: targetStatus,
       stripe_payment_intent_id: session.payment_intent as string,
       paid_at: new Date().toISOString(),
+      customer_email: customerEmail,
       updated_at: new Date().toISOString(),
     })
     .eq("id", orderId);
 
-  if (error) {
-    console.error("[webhook] Failed to update order", orderId, error.message);
-  } else {
-    console.log("[webhook] Order", orderId, "marked as paid/accepted");
+  if (updateErr) {
+    console.error("[webhook] Failed to update order", orderId, updateErr.message);
+    return;
+  }
+  console.log("[webhook] Order", orderId, "paid; awaiting creator accept");
+
+  const ctx = await fetchOrderForNotification(supabase, orderId);
+  if (ctx) {
+    await notifyOrderPlaced(ctx.order, ctx.creator, ctx.member);
   }
 }
 

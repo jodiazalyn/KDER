@@ -41,7 +41,9 @@ export function QuickStats({
         <Link
           key={stat.label}
           href={stat.href}
-          className="flex flex-col items-center gap-1.5 rounded-2xl border border-white/[0.12] bg-white/[0.06] p-3 backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] hover:bg-white/[0.1] active:scale-95 transition-all"
+          // glass-card for each tile — the standard in-app card
+          // surface. Hover/active states preserved.
+          className="glass-card rounded-glass-lg flex flex-col items-center gap-1.5 p-3 hover:bg-white/[0.18] active:scale-95 transition-transform"
         >
           <stat.icon size={18} className="text-green-400" />
           <span className="text-xl font-bold text-white">{stat.value}</span>

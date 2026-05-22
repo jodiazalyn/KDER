@@ -17,7 +17,7 @@ interface FulfillmentPickerProps {
 export function FulfillmentPicker({ value, onChange }: FulfillmentPickerProps) {
   return (
     <div
-      className="flex rounded-2xl border border-white/[0.12] bg-white/[0.04] p-1"
+      className="glass-segment flex p-1"
       role="radiogroup"
       aria-label="Fulfillment type"
     >
@@ -29,9 +29,9 @@ export function FulfillmentPicker({ value, onChange }: FulfillmentPickerProps) {
           aria-checked={value === opt.value}
           onClick={() => onChange(opt.value)}
           className={cn(
-            "flex-1 rounded-xl py-2.5 text-sm font-medium transition-all active:scale-95",
+            "glass-segment-item flex-1 py-2.5 text-sm font-medium",
             value === opt.value
-              ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
+              ? "glass-segment-item-active border-emerald-400/30 bg-emerald-500/15 text-white"
               : "text-white/50 hover:text-white/70"
           )}
         >

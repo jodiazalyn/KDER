@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { isValidTransition } from "@/lib/order-state-machine";
 import { sendSms, isTwilioConfigured } from "@/lib/twilio";
+import { notifyOrderAccepted } from "@/lib/notifications";
+import { fetchOrderForNotification } from "@/lib/notifications-fetch";
 import type { OrderStatus } from "@/types";
 
 /**
@@ -107,6 +109,12 @@ export async function PUT(
         console.error("[orders/accept] SMS failed:", smsErr);
         // Intentionally do not fail the accept — SMS is best-effort.
       }
+    }
+
+    // Best-effort customer email — never blocks the response.
+    const ctx = await fetchOrderForNotification(supabase, id);
+    if (ctx) {
+      await notifyOrderAccepted(ctx.order, ctx.creator, ctx.member);
     }
 
     return apiSuccess({ order_id: id, status: "accepted", sms_sent: smsSent });

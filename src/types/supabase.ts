@@ -13,8 +13,8 @@ export type Database = {
   public: {
     Tables: {
       members: {
-        Row: { id: string; phone: string; display_name: string; handle: string | null; photo_url: string | null; bio: string | null; role: string; stripe_customer_id: string | null; inbox_active: boolean; last_handle_changed_at: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; phone: string; display_name: string; handle?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; phone: string; display_name: string; handle: string | null; email: string | null; photo_url: string | null; bio: string | null; role: string; stripe_customer_id: string | null; inbox_active: boolean; last_handle_changed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; phone: string; display_name: string; handle?: string | null; email?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; created_at?: string; updated_at?: string };
         Update: { id?: string; phone?: string; display_name?: string; handle?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; updated_at?: string };
       };
       creators: {
@@ -28,9 +28,9 @@ export type Database = {
         Update: { name?: string; description?: string; price?: number; quantity?: number; min_order?: number | null; photos?: string[]; video?: string | null; fulfillment_type?: string; status?: string; category_tags?: string[]; allergens?: string[]; availability_windows?: Json; discount_codes?: Json; order_count?: number; updated_at?: string };
       };
       orders: {
-        Row: { id: string; listing_id: string; member_id: string; creator_id: string; quantity: number; fulfillment_type: string; status: string; total_amount: number; platform_fee: number; creator_payout: number; notes: string | null; stripe_payment_intent_id: string | null; terms_accepted_at: string; auto_decline_at: string; created_at: string; updated_at: string };
-        Insert: { id?: string; listing_id: string; member_id: string; creator_id: string; quantity?: number; fulfillment_type: string; status?: string; total_amount: number; platform_fee: number; creator_payout: number; notes?: string | null; stripe_payment_intent_id?: string | null; terms_accepted_at?: string; auto_decline_at?: string; created_at?: string; updated_at?: string };
-        Update: { status?: string; notes?: string | null; stripe_payment_intent_id?: string | null; updated_at?: string };
+        Row: { id: string; listing_id: string; member_id: string; creator_id: string; quantity: number; fulfillment_type: string; status: string; total_amount: number; platform_fee: number; creator_payout: number; notes: string | null; stripe_payment_intent_id: string | null; terms_accepted_at: string; auto_decline_at: string; created_at: string; updated_at: string; reminder_count: number; last_reminder_at: string | null; customer_email: string | null };
+        Insert: { id?: string; listing_id: string; member_id: string; creator_id: string; quantity?: number; fulfillment_type: string; status?: string; total_amount: number; platform_fee: number; creator_payout: number; notes?: string | null; stripe_payment_intent_id?: string | null; terms_accepted_at?: string; auto_decline_at?: string; created_at?: string; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null };
+        Update: { status?: string; notes?: string | null; stripe_payment_intent_id?: string | null; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null };
       };
       messages: {
         Row: { id: string; order_id: string | null; sender_id: string; recipient_id: string; body: string; read_at: string | null; created_at: string };

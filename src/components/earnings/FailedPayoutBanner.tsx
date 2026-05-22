@@ -82,7 +82,7 @@ function Inner({ payout }: { payout: EarningsPayout }) {
   };
 
   return (
-    <div className="rounded-2xl border border-red-400/30 bg-red-900/25 p-4">
+    <div className="glass-card rounded-glass-lg border-red-400/30 bg-red-500/15 p-4">
       <div className="flex items-start gap-3">
         <AlertCircle
           size={18}
@@ -97,9 +97,10 @@ function Inner({ payout }: { payout: EarningsPayout }) {
               type="button"
               onClick={handleDismiss}
               aria-label="Dismiss"
-              className="-mt-1 -mr-1 rounded-full p-1 text-red-300/60 hover:bg-red-900/40 hover:text-red-200"
+              // 44px tap target per Apple HIG (was h-auto + p-1 ≈ 24px)
+              className="-mt-2 -mr-2 flex h-11 w-11 items-center justify-center rounded-full text-red-300/70 hover:bg-red-500/15 hover:text-red-200 active:scale-90 transition-transform"
             >
-              <X size={14} />
+              <X size={18} />
             </button>
           </div>
           <p className="mt-1 text-xs text-white/60">

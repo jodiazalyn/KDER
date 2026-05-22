@@ -16,7 +16,7 @@ const Tile = ({
   cents: number;
   accent?: string;
 }) => (
-  <div className="flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3">
+  <div className="glass-card rounded-glass-lg flex-1 p-3">
     <p className="text-[10px] text-white/40 uppercase tracking-wider">
       {label}
     </p>
@@ -32,7 +32,7 @@ export function LifetimeStatsCard({
 }: LifetimeStatsCardProps) {
   if (errorCode) {
     return (
-      <div className="rounded-2xl border border-red-400/20 bg-red-900/10 p-3 text-xs text-red-300">
+      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-3 text-xs text-red-300">
         Stats unavailable [{errorCode}]
       </div>
     );

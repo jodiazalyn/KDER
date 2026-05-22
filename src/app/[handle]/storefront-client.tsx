@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  ActiveOrderBanner,
+  type ActiveOrderSummary,
+} from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
-import { LiveUserTicker } from "@/components/landing/LiveUserTicker";
 import { PlateTile } from "@/components/storefront/PlateTile";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import {
   Sheet,
   SheetContent,
@@ -60,6 +65,11 @@ interface StorefrontClientProps {
   /** Resolved server-side from the Supabase session — saves a client-side
    *  round-trip to determine whether to gate Message/Checkout into signup. */
   initialUserId: string | null;
+  /** Visitor's most-recent in-flight order with this creator (or null).
+   *  When set, an ActiveOrderBanner renders above the storefront header
+   *  so the customer can hop back to /order-confirmation without using
+   *  browser back. */
+  initialActiveOrder: ActiveOrderSummary | null;
 }
 
 export function StorefrontClient({
@@ -67,6 +77,7 @@ export function StorefrontClient({
   initialCreator,
   initialListings,
   initialUserId,
+  initialActiveOrder,
 }: StorefrontClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -87,8 +98,25 @@ export function StorefrontClient({
   // onAuthStateChange in case the customer signs in mid-session.
   const [currentUserId, setCurrentUserId] = useState<string | null>(initialUserId);
   const [sending, setSending] = useState(false);
+  // Anon-auth gate state — same shape as CheckoutSheet's guest fields.
+  // Used only when a non-authed visitor opens the message sheet.
+  const [gateName, setGateName] = useState("");
+  const [gatePhoneRaw, setGatePhoneRaw] = useState("");
+  const gatePhoneDigits = gatePhoneRaw.replace(/\D/g, "");
+  const gateValid =
+    gateName.trim().length > 0 && gatePhoneDigits.length === 10;
+  const [gateSubmitting, setGateSubmitting] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  // Unique per-mount suffix for the Realtime channel name. Without this,
+  // Strict Mode's double-invoke + supabase's by-name channel registry can
+  // leave a stale subscribed channel that the next mount picks up,
+  // causing `.on()`-after-`.subscribe()` crashes.
+  const instanceId = useId();
+
+  // Coachmark anchor for the first plate tile — first-time visitors
+  // get a tip explaining that tapping a tile opens details.
+  const firstTileRef = useRef<HTMLDivElement>(null);
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -202,13 +230,15 @@ export function StorefrontClient({
 
     let cancelled = false;
     (async () => {
+      // Load the unified conversation between this member and creator
+      // regardless of order_id. Same thread renders here AND on the order
+      // page so a message sent from either surface appears in both.
       const { data } = await supabase
         .from("messages")
         .select("*")
         .or(
           `and(sender_id.eq.${currentUserId},recipient_id.eq.${partnerId}),and(sender_id.eq.${partnerId},recipient_id.eq.${currentUserId})`
         )
-        .is("order_id", null)
         .order("created_at", { ascending: true });
       if (cancelled) return;
       setChatMessages((data as Message[]) ?? []);
@@ -219,7 +249,9 @@ export function StorefrontClient({
     })();
 
     const channel = supabase
-      .channel(`storefront-chat-${currentUserId}-${partnerId}`)
+      .channel(
+        `storefront-chat-${currentUserId}-${partnerId}-${instanceId}`
+      )
       .on(
         "postgres_changes",
         {
@@ -232,7 +264,7 @@ export function StorefrontClient({
           const involvesMe =
             (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
             (m.sender_id === partnerId && m.recipient_id === currentUserId);
-          if (!involvesMe || m.order_id) return;
+          if (!involvesMe) return;
           setChatMessages((prev) => {
             // Skip if we already have this real id.
             if (prev.some((p) => p.id === m.id)) return prev;
@@ -275,7 +307,7 @@ export function StorefrontClient({
           const involvesMe =
             (m.sender_id === currentUserId && m.recipient_id === partnerId) ||
             (m.sender_id === partnerId && m.recipient_id === currentUserId);
-          if (!involvesMe || m.order_id) return;
+          if (!involvesMe) return;
           // Merge server-updated fields (typically read_at) into the matching
           // message so the sender's UI flips from "Pending" to "✓ Read".
           setChatMessages((prev) =>
@@ -289,17 +321,59 @@ export function StorefrontClient({
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [messageOpen, currentUserId, creator?.member_id, supabase]);
+  }, [messageOpen, currentUserId, creator?.member_id, supabase, instanceId]);
 
+  // Always opens the sheet. When the visitor has no auth session, the
+  // sheet renders an inline name+phone gate (same anon-auth bridge as
+  // CheckoutSheet — see /api/v1/auth/anon-customer) instead of bouncing
+  // to the full /signup flow. Once anon-auth succeeds, currentUserId
+  // updates and the sheet swaps to the chat thread.
   const handleMessageClick = useCallback(() => {
-    if (!currentUserId) {
-      router.push(
-        `/signup?mode=customer&next=${encodeURIComponent("/@" + handle)}&action=message`
-      );
-      return;
-    }
     setMessageOpen(true);
-  }, [currentUserId, router, handle]);
+  }, []);
+
+  // Anon-auth bridge: register an anonymous Supabase session keyed to
+  // the typed name+phone so messages can write `sender_id = auth.uid()`.
+  // Mirrors CheckoutSheet's pre-checkout flow. Server cookie-sets the
+  // session; we also setCurrentUserId from the response so the sheet
+  // flips to chat without a round-trip.
+  const handleAnonAuthForMessaging = useCallback(async () => {
+    if (!gateValid || gateSubmitting) return;
+    setGateSubmitting(true);
+    try {
+      const res = await fetch("/api/v1/auth/anon-customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: gateName.trim(),
+          phone: gatePhoneDigits,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const code =
+          typeof json?.code === "string" ? ` [${json.code}]` : "";
+        toast.error(
+          `${json?.error || "Couldn't start chat. Try again."}${code}`
+        );
+        setGateSubmitting(false);
+        return;
+      }
+      const userId = json?.data?.user_id as string | undefined;
+      if (!userId) {
+        toast.error("Couldn't start chat. Try again.");
+        setGateSubmitting(false);
+        return;
+      }
+      setCurrentUserId(userId);
+      setGateName("");
+      setGatePhoneRaw("");
+    } catch {
+      toast.error("Couldn't reach the server. Check your connection.");
+    } finally {
+      setGateSubmitting(false);
+    }
+  }, [gateValid, gateSubmitting, gateName, gatePhoneDigits]);
 
   const handleSendMessage = useCallback(async () => {
     const body = messageText.trim();
@@ -374,25 +448,28 @@ export function StorefrontClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0A] pb-24">
+    <main className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-[640px]">
+        {/* Active-order CTA — only when the visitor has an in-flight order
+            with this creator. Inbound link to their order page that
+            otherwise didn't exist anywhere on the storefront. */}
+        {initialActiveOrder && (
+          <div className="mx-4 mt-4">
+            <ActiveOrderBanner order={initialActiveOrder} />
+          </div>
+        )}
+
         {/* Instagram-style profile header (avatar + stats row + CTAs) */}
         <CreatorHeader creator={creator} onMessageClick={handleMessageClick} />
 
         {/* Storefront paused banner */}
         {!creator.storefront_active && (
-          <div className="mx-4 mb-4 rounded-2xl border border-orange-400/20 bg-orange-900/20 p-3 text-center">
+          <div className="glass-card mx-4 mb-4 border-orange-400/[0.30] bg-orange-900/[0.25] p-3 text-center">
             <p className="text-sm text-orange-300">
               This storefront is currently paused.
             </p>
           </div>
         )}
-
-        {/* Live demand counter — reinforces "real people are looking" right
-            before the plate grid, driving tap-through to purchase. */}
-        <div className="flex justify-center px-4 pb-3">
-          <LiveUserTicker />
-        </div>
 
         {/* Grid-icon tab bar — visual-only for now, single content type */}
         <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
@@ -403,12 +480,16 @@ export function StorefrontClient({
         {/* 3-column square grid of plate tiles with 2px gutter */}
         {listings.length > 0 ? (
           <div className="grid grid-cols-3 gap-[2px]">
-            {listings.map((listing) => (
-              <PlateTile
+            {listings.map((listing, idx) => (
+              <div
                 key={listing.id}
-                listing={listing}
-                onClick={setSelectedPlate}
-              />
+                ref={idx === 0 ? firstTileRef : undefined}
+              >
+                <PlateTile
+                  listing={listing}
+                  onClick={setSelectedPlate}
+                />
+              </div>
             ))}
           </div>
         ) : (
@@ -453,7 +534,7 @@ export function StorefrontClient({
             setHasOpenedCart(true);
             setCartOpen(true);
           }}
-          className="fixed bottom-6 left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
         >
           <ShoppingCart size={18} />
           View Cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}
@@ -502,7 +583,7 @@ export function StorefrontClient({
       <Sheet open={messageOpen} onOpenChange={setMessageOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[80vh] flex flex-col"
+          className="rounded-t-3xl border-white/[0.22] text-white max-h-[80vh] flex flex-col"
         >
           <SheetHeader>
             <SheetTitle className="text-white">
@@ -510,6 +591,57 @@ export function StorefrontClient({
             </SheetTitle>
           </SheetHeader>
 
+          {!currentUserId ? (
+            /* Anon-auth gate — same friction as the checkout name/phone
+               step. Once submitted, the sheet swaps to the chat thread. */
+            <div className="mt-4 space-y-4 pb-6">
+              <p className="text-sm text-white/70">
+                Tell {creator.display_name} who you are. Your name + phone
+                lets them reach back if they need to confirm details about
+                your message.
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={gateName}
+                  onChange={(e) => setGateName(e.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  aria-label="Your name"
+                />
+                <input
+                  type="tel"
+                  value={gatePhoneRaw}
+                  onChange={(e) => setGatePhoneRaw(e.target.value)}
+                  placeholder="Phone number"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  aria-label="Phone number"
+                />
+                <p className="text-[11px] text-white/40">
+                  We won&apos;t text you anything you didn&apos;t ask for.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAnonAuthForMessaging}
+                disabled={!gateValid || gateSubmitting}
+                className={cn(
+                  "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold transition-all active:scale-95",
+                  gateValid && !gateSubmitting
+                    ? "bg-[#1B5E20] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                    : "glass-btn-pill text-white/30 cursor-not-allowed"
+                )}
+              >
+                {gateSubmitting
+                  ? "Starting chat…"
+                  : `Start chat with ${creator.display_name}`}
+              </button>
+            </div>
+          ) : (
+            <>
           {/* Chat history */}
           <div className="mt-3 flex-1 overflow-y-auto space-y-2 min-h-[120px] max-h-[45vh] px-1">
             {chatMessages.length === 0 ? (
@@ -528,8 +660,8 @@ export function StorefrontClient({
                       className={cn(
                         "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm",
                         isMine
-                          ? "bg-green-900/[0.40] border border-green-400/[0.25] text-white"
-                          : "bg-white/[0.06] border border-white/[0.12] text-white/90"
+                          ? "border border-green-400/[0.22] bg-green-900/[0.45] text-white backdrop-blur-[24px] backdrop-saturate-[200%] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.30)]"
+                          : "border border-white/[0.12] bg-white/[0.08] text-white/90 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
                       )}
                     >
                       <p>{msg.body}</p>
@@ -575,7 +707,7 @@ export function StorefrontClient({
               }}
               placeholder={`Message ${creator.display_name}...`}
               disabled={sending}
-              className="h-11 flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 text-sm text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none transition-colors disabled:opacity-50"
+              className="glass-input h-11 flex-1 rounded-full px-4 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors disabled:opacity-50"
             />
             <button
               type="button"
@@ -585,14 +717,28 @@ export function StorefrontClient({
                 "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
                 messageText.trim() && !sending
                   ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
-                  : "bg-white/10 text-white/30 cursor-not-allowed"
+                  : "glass-btn-pill text-white/30 cursor-not-allowed"
               )}
+              aria-label="Send message"
             >
               <Send size={18} />
             </button>
           </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
+
+      {/* First-time tip explaining that plate tiles are tappable. Only
+          renders when there's at least one plate to anchor to. */}
+      {listings.length > 0 && (
+        <Coachmark
+          id="customer-storefront-tile"
+          copy={COACHMARK_COPY["customer-storefront-tile"]}
+          targetRef={firstTileRef}
+          showDelayMs={400}
+        />
+      )}
     </main>
   );
 }
