@@ -115,6 +115,7 @@ export function BalanceHero({
             type="button"
             onClick={onInstantPayout}
             aria-label="Request instant payout, 1.5 percent fee, within 30 minutes"
+            className="flex h-12 flex-1 flex-col items-center justify-center rounded-full bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all"
             className="glass-btn flex h-12 flex-1 flex-col items-center justify-center text-white active:scale-95 transition-transform"
           >
             <span className="flex items-center gap-1 text-sm font-bold">
