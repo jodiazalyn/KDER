@@ -18,6 +18,8 @@ interface SendEmailArgs {
   html: string;
   text?: string;
   replyTo?: string;
+  /** Custom SMTP headers — used for threading via Message-ID / In-Reply-To. */
+  headers?: Record<string, string>;
 }
 
 interface SendEmailResult {
@@ -68,6 +70,9 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendEmailResult> {
           { type: "text/plain", value: text },
           { type: "text/html", value: args.html },
         ],
+        ...(args.headers && Object.keys(args.headers).length > 0
+          ? { headers: args.headers }
+          : {}),
       }),
     });
 
