@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { OrderStatus } from "@/types";
 import { isValidTransition } from "@/lib/order-state-machine";
 import { notifyDispute } from "@/lib/dispute-notifier";
@@ -10,6 +10,15 @@ import { fetchOrderForNotification } from "@/lib/notifications-fetch";
 // generated DB types haven't been regenerated since migration 001+004
 // added the payment columns. Run `supabase gen types` to regenerate
 // and these casts can be removed.
+
+// Webhook handlers have no user session — createClient() would produce an
+// anon-key client that RLS silently blocks from writing. Use the service
+// role client so webhooks can write across tables regardless of RLS.
+function getServiceClient() {
+  const client = createServiceClient();
+  if (!client) throw new Error("[webhook] SUPABASE_SERVICE_ROLE_KEY not configured");
+  return client;
+}
 
 // ── checkout.session.completed ──────────────────────────────────
 // A member paid for an order via Stripe Checkout. Capture payment
@@ -26,7 +35,7 @@ export async function handleCheckoutCompleted(
     return;
   }
 
-  const supabase = await createClient();
+  const supabase = getServiceClient();
   const customerEmail = session.customer_details?.email ?? null;
 
   // Capture payment metadata + customer email. Status stays at `pending`
@@ -72,7 +81,7 @@ export async function handleChargeRefunded(charge: Stripe.Charge) {
     return;
   }
 
-  const supabase = await createClient();
+  const supabase = getServiceClient();
   const refundAmount = charge.amount_refunded / 100;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,7 +150,7 @@ async function upsertPayout(payout: Stripe.Payout, status: string) {
     return;
   }
 
-  const supabase = await createClient();
+  const supabase = getServiceClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from("payouts")
@@ -202,7 +211,7 @@ export async function handlePayoutCanceled(payout: Stripe.Payout) {
   // Schema CHECK only allows paid/pending/failed — bucket cancel as failed
   // with a clear failure_reason so the UI can surface "Payout cancelled".
   console.log("[webhook] payout.canceled", payout.id);
-  const supabase = await createClient();
+  const supabase = getServiceClient();
   const row = {
     ...payoutRow(payout, "failed"),
     failure_reason: payout.failure_message ?? "Payout cancelled in Stripe",
@@ -232,7 +241,7 @@ export async function handleAccountUpdated(account: Stripe.Account) {
 
   const isVerified = account.charges_enabled && account.payouts_enabled;
 
-  const supabase = await createClient();
+  const supabase = getServiceClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
@@ -268,7 +277,7 @@ async function recordDispute(
   dispute: Stripe.Dispute,
   event: "created" | "updated" | "closed"
 ) {
-  const supabase = await createClient();
+  const supabase = getServiceClient();
 
   // The charge's metadata carries our order_id (set in checkout/route.ts).
   // Stripe's `dispute.charge` is either a string or an expanded object
