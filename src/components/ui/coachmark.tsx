@@ -146,9 +146,11 @@ export function Coachmark({
         }}
       />
 
-      {/* Bubble */}
+      {/* Bubble — glass-card-elevated for the iOS-y depth + glass-shine
+          for the specular highlight. The green ring + border keep
+          KDER's brand tint. */}
       <div
-        className={`absolute w-[${BUBBLE_W}px] max-w-[calc(100vw-2rem)] rounded-2xl border border-green-400/40 bg-[#0A0A0A] p-4 shadow-2xl ring-1 ring-green-400/15 ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-200"}`}
+        className={`glass-card-elevated glass-shine absolute w-[${BUBBLE_W}px] max-w-[calc(100vw-2rem)] border border-green-400/40 p-4 ring-1 ring-green-400/15 ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-200"}`}
         style={{
           top: bubbleTop,
           left: clampedLeft,

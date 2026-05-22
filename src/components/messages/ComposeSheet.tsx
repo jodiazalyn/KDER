@@ -123,22 +123,26 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] overflow-hidden rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+        className="max-h-[85vh] overflow-hidden rounded-t-3xl border-white/[0.22] text-white"
       >
         <SheetHeader>
           <SheetTitle className="text-white">New message</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 flex h-[70vh] flex-col pb-[env(safe-area-inset-bottom)]">
-          {/* Real search input — filters the list below by name or last-message preview. */}
-          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-4 focus-within:border-green-400/40">
+          {/* Real search input — pill-shaped translucent substrate
+              to match iOS search bars. We use raw backdrop-filter
+              instead of `glass-input` because that utility is built
+              for bare <input> elements (width:100% + padding) rather
+              than icon+input wrappers like this one. */}
+          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.06] px-4 backdrop-blur-[16px] backdrop-saturate-[180%] focus-within:border-green-400/40">
             <Search size={16} className="text-white/40" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Your customers & conversations"
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/30 focus:outline-none"
+              className="flex-1 bg-transparent text-base text-white placeholder:text-white/30 focus:outline-none"
               aria-label="Filter conversations"
             />
           </div>
@@ -173,7 +177,7 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
                     type="button"
                     onClick={() => openThread(r.id)}
                     aria-label={`Message ${r.name}`}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-3 py-3 text-left transition-colors hover:bg-white/[0.06] active:scale-[0.99]"
+                    className="glass-card flex w-full items-center gap-3 px-3 py-3 text-left transition-all hover:bg-white/[0.10] active:scale-[0.99]"
                   >
                     <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-900/50 to-green-700/30 text-white/80 ring-1 ring-white/10 overflow-hidden">
                       {r.photoUrl ? (

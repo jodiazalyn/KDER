@@ -32,7 +32,7 @@ export function ActiveOrderBanner({ order }: { order: ActiveOrderSummary }) {
   return (
     <Link
       href={orderUrl}
-      className="flex items-center gap-3 rounded-2xl border border-green-400/[0.30] bg-green-900/[0.25] px-4 py-3 backdrop-blur-[20px] active:scale-[0.99] transition-transform"
+      className="glass-card flex items-center gap-3 border-green-400/[0.30] bg-green-900/[0.25] px-4 py-3 active:scale-[0.99] transition-transform"
     >
       <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-green-400/[0.15]">
         <Receipt size={16} className="text-green-300" />

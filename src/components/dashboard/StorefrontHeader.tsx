@@ -62,9 +62,11 @@ export function StorefrontHeader({ profile, heroImage, onPhotoChange }: Storefro
       {/* Dark overlay for text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
 
-      {/* Glass overlay content */}
+      {/* Glass overlay content — glass-card-elevated for depth +
+          glass-shine for the specular highlight (the hero card on
+          the dashboard's most-viewed surface). */}
       <div className="absolute inset-x-0 bottom-0 p-4">
-        <div className="rounded-3xl border border-white/[0.22] bg-white/[0.14] px-5 py-4 backdrop-blur-[24px] shadow-[inset_0_1px_0_rgba(255,255,255,0.15),inset_0_-1px_0_rgba(0,0,0,0.20),0_12px_40px_rgba(0,0,0,0.45)]">
+        <div className="glass-card-elevated glass-shine rounded-glass-xl px-5 py-4">
           <div className="flex items-start gap-4">
             {/* Avatar — tappable to upload */}
             <button
@@ -119,13 +121,14 @@ export function StorefrontHeader({ profile, heroImage, onPhotoChange }: Storefro
               )}
             </div>
 
-            {/* Edit profile */}
+            {/* Edit profile — pill button with proper tap target
+                (h-11 w-11 = 44px, Apple HIG minimum). */}
             <Link
               href="/settings"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-white/[0.15] bg-white/[0.06] text-white/70 hover:bg-white/[0.12] hover:text-white active:scale-90 transition-all"
+              className="glass-btn-pill flex h-11 w-11 flex-shrink-0 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
               aria-label="Edit profile"
             >
-              <Settings size={16} />
+              <Settings size={18} />
             </Link>
           </div>
 
@@ -137,7 +140,10 @@ export function StorefrontHeader({ profile, heroImage, onPhotoChange }: Storefro
                 profile.neighborhoods.map((n) => (
                   <span
                     key={n.zip}
-                    className="flex-shrink-0 inline-flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-2.5 py-1 text-[11px] text-white/70 backdrop-blur-[8px]"
+                    // Read-only neighborhood pill — uses glass-surface-sm
+                    // for the lightest blur tier (these stack horizontally
+                    // and shouldn't compete visually with the hero card).
+                    className="glass-surface-sm flex-shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] text-white/70"
                   >
                     <MapPin size={10} className="text-green-400" />
                     {n.name}

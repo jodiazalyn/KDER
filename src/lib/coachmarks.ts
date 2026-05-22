@@ -16,15 +16,25 @@
  */
 
 export const COACHMARK_COPY = {
-  // ── Creator-side ──────────────────────────────────────────────
-  "creator-plate-title":
-    "A specific name sells better. \"Smoked brisket plate w/ slaw\" beats \"BBQ plate.\"",
+  // ── Creator-side: signup → first plate → payouts → share → fulfill ──
+  "creator-signup-phone":
+    "Enter your US mobile — we'll text you a 6-digit code to confirm. KDER never shares your number.",
+  "creator-signup-otp":
+    "Type the 6-digit code we just texted you. It expires in 10 minutes — tap Resend if it doesn't arrive.",
   "creator-plate-photos":
     "Customers buy with their eyes. Bright, top-down shots convert about 3× more than dim or angled ones.",
+  "creator-plate-title":
+    "A specific name sells better. \"Smoked brisket plate w/ slaw\" beats \"BBQ plate.\"",
+  "creator-plate-price":
+    "Most plates run $10–$25. KDER keeps 10% — at $20 you take home $18, paid out by Stripe.",
+  "creator-stripe-verify":
+    "Stripe verifies you so payouts land in your bank. Takes ~3 minutes — ID, bank info, done.",
+  "creator-share-link":
+    "This is your storefront link. Drop it in your IG bio, group chats, flyers — every tap is a potential order.",
+  "creator-orders-pending":
+    "Accept fast — we'll keep emailing you reminders until you do, but the customer is waiting.",
   "creator-earn-balance":
     "This is what you've earned but Stripe hasn't sent yet. Tap Instant for a payout in ~30 minutes.",
-  "creator-orders-pending":
-    "Accept within 15 minutes or the order auto-declines and clears from this list.",
 
   // ── Customer-side ─────────────────────────────────────────────
   "customer-storefront-tile":

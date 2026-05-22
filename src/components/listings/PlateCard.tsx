@@ -21,7 +21,7 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
   const badge = STATUS_BADGES[listing.status] || STATUS_BADGES.draft;
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)]">
+    <div className="glass-card-elevated rounded-glass-xl overflow-hidden">
       {/* Photo — top 60% */}
       <div className="relative aspect-[4/3]">
         {listing.photos.length > 0 ? (
@@ -54,10 +54,13 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
             e.stopPropagation();
             onMenuClick(listing);
           }}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 active:scale-90"
+          // 44px tap target per Apple HIG (was h-8 = 32px). Sits over
+          // the photo so we use a darker scrim background instead of
+          // glass-btn-pill for contrast.
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 active:scale-90"
           aria-label={`Menu for ${listing.name}`}
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={18} />
         </button>
       </div>
 

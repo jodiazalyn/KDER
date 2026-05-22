@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MessageCircle, Mail, PenSquare } from "lucide-react";
 import { ConversationRow } from "@/components/messages/ConversationRow";
 import { ComposeSheet } from "@/components/messages/ComposeSheet";
-import type { Conversation } from "@/lib/messages-store";
+import type { Conversation } from "@/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -53,15 +53,15 @@ export default function MessagesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-black text-white">Messages</h1>
 
-        {/* Inbox toggle */}
+        {/* Inbox toggle — glass-btn-pill substrate with green tint when on */}
         <button
           type="button"
           onClick={() => setInboxActive(!inboxActive)}
           className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
+            "glass-btn-pill px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
             inboxActive
-              ? "bg-green-900/30 border border-green-400/20 text-green-300"
-              : "bg-white/10 border border-white/15 text-white/50"
+              ? "bg-green-900/30 border border-green-400/25 text-green-300 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+              : "text-white/50"
           )}
         >
           Inbox {inboxActive ? "On" : "Off"}
@@ -75,8 +75,8 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="mt-4 flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-1">
+      {/* Tabs — glass-segment + glass-segment-item substrate */}
+      <div className="glass-segment mt-4 flex w-full gap-1 p-1">
         {TABS.map((tab) => {
           const unread =
             tab.key === "general" ? generalUnread : ordersUnread;
@@ -85,7 +85,7 @@ export default function MessagesPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "flex-1 rounded-xl py-2 text-xs font-medium transition-all",
+                "glass-segment-item flex-1 py-2 text-xs font-medium transition-all",
                 activeTab === tab.key
                   ? "bg-white/[0.12] text-white"
                   : "text-white/40 hover:text-white/60"

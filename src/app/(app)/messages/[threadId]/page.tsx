@@ -59,12 +59,14 @@ export default function MessageThreadPage({
 
   return (
     <main className="fixed inset-0 z-[60] flex flex-col bg-[#0A0A0A]">
-      {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.08] bg-[#0A0A0A]/90 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm">
+      {/* Header — translucent sticky chrome via raw backdrop-filter
+          (the plugin's `glass-nav` forces `position: fixed; top: 0`
+          which would detach this from its scroll container). */}
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />

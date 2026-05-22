@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { OtpInput } from "@/components/auth/OtpInput";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { toast } from "sonner";
 
 const RESEND_COOLDOWN = 45;
@@ -19,6 +21,7 @@ export default function VerifyPage() {
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const [resendCount, setResendCount] = useState(0);
   const [locked, setLocked] = useState(false);
+  const otpCoachRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const storedPhone = sessionStorage.getItem("kder_signup_phone");
@@ -91,30 +94,43 @@ export default function VerifyPage() {
           return;
         }
 
-        // Read mode BEFORE the cleanup below — it's only used for the
-        // new-user branch but sessionStorage is cleared first, so the
-        // read order matters.
+        // Read all routing-relevant sessionStorage values BEFORE the
+        // cleanup below — removing items first would null these out.
         const mode = sessionStorage.getItem("kder_signup_mode");
+        const next = sessionStorage.getItem("kder_signup_next");
 
-        // Successful verify → user is now authenticated. Clear ALL
-        // signup-flow sessionStorage so a future signup attempt on
-        // this device starts clean (no stale handle/mode/phone leaking
-        // between accounts on a shared browser).
+        // Auth-flow keys we own end-to-end and are safe to clear here.
+        // Note: kder_signup_next and kder_signup_action are
+        // intentionally NOT cleared — the destination page (storefront
+        // / customer onboarding) consumes them to resume the
+        // customer's flow (auto-open checkout sheet, etc.). See
+        // src/app/onboarding/customer/page.tsx:43-44 for the
+        // matching convention.
         sessionStorage.removeItem("kder_signup_phone");
         sessionStorage.removeItem("kder_signup_mode");
         sessionStorage.removeItem("kder_onboarding_handle");
 
-        // Returning user → they already have a public.members row, so
-        // they've completed at least basic onboarding. Send them
-        // straight to /dashboard — same destination the landing page
-        // uses for any user with an active session
-        // (src/app/page.tsx:159). router.replace (not push) so Back
-        // doesn't return to a stale OTP screen.
-        // Strict === false: any other shape (missing field, parse
-        // hiccup) falls through to the existing new-user flow rather
-        // than risk dropping a real new user onto an empty dashboard.
+        // Returning user → they already have a public.members row.
+        // Split by role so customers always land on the storefront
+        // they came from (per product requirement: customers don't
+        // have a personal home, only the creator's storefront link),
+        // and creators land on their dashboard.
+        // Strict === false / === true checks: any unexpected shape
+        // (missing field, parse hiccup) falls through to the existing
+        // new-user flow, and within the returning branch defaults to
+        // the customer path — safer than dropping a non-creator onto
+        // /dashboard.
         if (json?.data?.isNewUser === false) {
-          router.replace("/dashboard");
+          if (json?.data?.isCreator === true) {
+            router.replace("/dashboard");
+          } else {
+            // Customer → back to the storefront link they clicked
+            // from the creator. In normal flow `next` is always set
+            // (see src/app/(auth)/signup/page.tsx:30 — `?next=` is
+            // stamped into sessionStorage on every customer entry).
+            // The `|| "/"` fallback is purely defensive.
+            router.replace(next || "/");
+          }
           return;
         }
 
@@ -148,18 +164,18 @@ export default function VerifyPage() {
 
   return (
     <main className="relative flex min-h-screen flex-col items-center px-6 py-12 bg-[#0A0A0A]">
-      {/* Back button */}
+      {/* Back button — glass-btn-pill at Apple HIG 44px tap target */}
       <button
         onClick={() => router.back()}
-        className="absolute left-4 top-4 flex h-12 w-12 items-center justify-center rounded-full text-white/60 hover:text-white active:scale-95"
+        className="glass-btn-pill absolute left-4 top-4 flex h-12 w-12 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
         aria-label="Go back"
       >
         <ArrowLeft size={24} />
       </button>
 
-      {/* Loading overlay */}
+      {/* Loading overlay — translucent glass scrim */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0A0A0A]/90 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%]">
           <Loader2 className="h-10 w-10 animate-spin text-green-400" />
           <p className="mt-4 text-lg text-white/80">Verifying...</p>
         </div>
@@ -174,12 +190,14 @@ export default function VerifyPage() {
           </p>
         </div>
 
-        <OtpInput
-          onComplete={handleComplete}
-          error={error}
-          errorKey={errorKey}
-          disabled={loading}
-        />
+        <div ref={otpCoachRef} className="w-full flex justify-center">
+          <OtpInput
+            onComplete={handleComplete}
+            error={error}
+            errorKey={errorKey}
+            disabled={loading}
+          />
+        </div>
 
         {error && (
           <p className="text-sm text-red-400" role="alert">
@@ -223,6 +241,15 @@ export default function VerifyPage() {
           </Link>
         </div>
       </div>
+
+      {/* First-visit tip explaining the OTP code mechanics. Fires once
+          per device. */}
+      <Coachmark
+        id="creator-signup-otp"
+        copy={COACHMARK_COPY["creator-signup-otp"]}
+        targetRef={otpCoachRef}
+        showDelayMs={400}
+      />
     </main>
   );
 }

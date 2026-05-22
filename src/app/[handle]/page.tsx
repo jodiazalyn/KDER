@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { StorefrontClient } from "./storefront-client";
 import { createClient } from "@/lib/supabase/server";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/env";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import type { CreatorProfile } from "@/lib/creator-store";
 import type { Listing } from "@/types";
@@ -23,8 +24,8 @@ const STOREFRONT_CACHE_TTL_SECONDS = 60;
  *  rows (active listings, public member fields), so anon access is enough. */
 function createPublicSupabaseClient() {
   return createSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     { auth: { persistSession: false } }
   );
 }
@@ -118,6 +119,9 @@ async function loadStorefrontUncached(handle: string): Promise<{
     handle: member.handle,
     creator_id: creatorRow.id,
     member_id: member.id,
+    // Storefront viewers don't need (and shouldn't see) the creator's
+    // email — only used for backend notifications. Keep null here.
+    email: null,
     neighborhoods: resolveZips(creatorRow.service_zip_codes ?? []),
     storefront_active: creatorRow.storefront_active ?? true,
     vibe_score:
@@ -144,6 +148,60 @@ function loadStorefront(handle: string) {
       tags: [`storefront-${handle}`],
     }
   )();
+}
+
+/**
+ * Per-creator metadata so social shares of `/@handle` URLs render
+ * with the creator's name + bio, not the generic root site copy.
+ *
+ * The OG image itself comes from the dynamic route handler at
+ * `src/app/[handle]/opengraph-image.tsx` — Next.js auto-wires it to
+ * this metadata via the `opengraph-image` file convention. Twitter
+ * card mirrors via `twitter-image.tsx`.
+ *
+ * Re-uses the same edge-cached `loadStorefront` so we don't pay an
+ * extra Supabase round-trip for the metadata lookup — the same data
+ * powers the page render too.
+ */
+export async function generateMetadata({
+  params,
+}: StorefrontPageProps): Promise<import("next").Metadata> {
+  const { handle } = await params;
+  const cleanHandle = decodeURIComponent(handle).replace(/^@/, "").toLowerCase();
+  const { creator } = await loadStorefront(cleanHandle);
+
+  if (!creator) {
+    return {
+      title: "Creator not found — KDER",
+      description: "This KDER storefront doesn't exist.",
+    };
+  }
+
+  const title = `${creator.display_name} on KDER`;
+  const description =
+    creator.bio?.trim() ||
+    `Order plates from ${creator.display_name} in Houston. ${creator.total_plates} plate${
+      creator.total_plates === 1 ? "" : "s"
+    } available now on KDER.`;
+  const url = `https://kder.club/@${cleanHandle}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      siteName: "KDER",
+      url,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function StorefrontPage({ params }: StorefrontPageProps) {

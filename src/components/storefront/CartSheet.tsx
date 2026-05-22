@@ -33,7 +33,7 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[80vh]"
+        className="rounded-t-3xl border-white/[0.22] text-white max-h-[80vh]"
       >
         <SheetHeader>
           <SheetTitle className="text-white">
@@ -45,7 +45,7 @@ export function CartSheet({
           {items.map((item) => (
             <div
               key={item.listing.id}
-              className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3"
+              className="glass-card flex items-center gap-3 p-3"
             >
               <img
                 src={item.listing.photos[0] || "/icons/kder-logo.png"}
@@ -68,11 +68,12 @@ export function CartSheet({
                   onClick={() =>
                     onUpdateQty(item.listing.id, item.quantity - 1)
                   }
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/50"
+                  className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/60 active:scale-90 transition-transform"
+                  aria-label="Decrease quantity"
                 >
-                  <Minus size={12} />
+                  <Minus size={14} />
                 </button>
-                <span className="w-6 text-center text-sm font-medium">
+                <span className="w-7 text-center text-sm font-medium">
                   {item.quantity}
                 </span>
                 <button
@@ -80,18 +81,20 @@ export function CartSheet({
                   onClick={() =>
                     onUpdateQty(item.listing.id, item.quantity + 1)
                   }
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/50"
+                  className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/60 active:scale-90 transition-transform"
+                  aria-label="Increase quantity"
                 >
-                  <Plus size={12} />
+                  <Plus size={14} />
                 </button>
               </div>
 
               <button
                 type="button"
                 onClick={() => onRemove(item.listing.id)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-red-400/60 hover:text-red-400"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-red-400/60 hover:bg-red-500/10 hover:text-red-400 active:scale-90 transition-all"
+                aria-label={`Remove ${item.listing.name}`}
               >
-                <Trash2 size={14} />
+                <Trash2 size={16} />
               </button>
             </div>
           ))}

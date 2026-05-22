@@ -48,7 +48,11 @@ export function FloatingActionBar({
     <div
       className={cn(
         "fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 px-4 py-3",
-        styled && "border-t border-white/[0.08] bg-[#0A0A0A]/95 backdrop-blur-md",
+        // Translucent floating chrome via raw backdrop-filter
+        // (`glass-nav` forces top-of-viewport positioning, which
+        // breaks this bar — it sits above the BottomNav, not the top).
+        styled &&
+          "border-t border-white/[0.10] bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%]",
         className
       )}
     >

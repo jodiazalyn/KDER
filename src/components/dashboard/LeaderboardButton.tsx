@@ -5,9 +5,9 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Crown } from "lucide-react";
 import { getStreak } from "@/lib/streak-store";
-import { getOrders } from "@/lib/orders-store";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { getLeaderboard } from "@/lib/leaderboard-store";
+import type { Order } from "@/types";
 
 // Defer the panel itself — only loads when the crown is tapped.
 const LeaderboardPanel = dynamic(
@@ -41,18 +41,23 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
 
     let cancelled = false;
     async function load() {
-      const profile = await getCreatorProfileAsync();
+      const [profile, ordersRes] = await Promise.all([
+        getCreatorProfileAsync(),
+        fetch("/api/v1/orders?status=completed")
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+      ]);
       if (cancelled) return;
 
-      const streak = getStreak();
-      const completedOrders = getOrders().filter((o) => o.status === "completed").length;
+      const completedOrders: Order[] = ordersRes?.data?.orders ?? [];
+      const streak = getStreak(completedOrders);
 
       const user = {
         displayName: profile.display_name,
         handle: profile.handle,
         photoUrl: profile.photo_url,
         vibeScore: profile.vibe_score || 0,
-        totalOrders: completedOrders,
+        totalOrders: completedOrders.length,
         currentStreak: streak.currentStreak,
       };
       setUserData(user);
@@ -80,7 +85,11 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
           setHasOpened(true);
         }}
         aria-label="Open leaderboard"
-        className="fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center rounded-2xl border border-yellow-400/20 bg-[#0A0A0A]/80 backdrop-blur-[40px] shadow-[0_0_16px_rgba(234,179,8,0.15)] transition-all hover:border-yellow-400/40 active:scale-90"
+        // glass-btn-pill = circular Liquid Glass affordance. Yellow
+        // tint kept as accent (combine glass utilities with Tailwind
+        // color/opacity utilities per design-system.md). 44px tap
+        // target preserved (h-11 w-11) per Apple HIG.
+        className="glass-btn-pill fixed top-4 right-4 z-50 flex h-11 w-11 items-center justify-center border-yellow-400/30 bg-yellow-500/10 shadow-[0_0_16px_rgba(234,179,8,0.15)] hover:border-yellow-400/50 active:scale-90"
       >
         <Crown size={18} className="text-yellow-400" />
         {bestRank !== null && bestRank <= 10 && (

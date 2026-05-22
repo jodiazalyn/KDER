@@ -182,7 +182,7 @@ export function CheckoutSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white"
+          className="rounded-t-3xl border-white/[0.22] text-white"
         >
           <div className="flex flex-col items-center justify-center gap-4 py-12">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-900/40">
@@ -212,7 +212,7 @@ export function CheckoutSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[85vh]"
+        className="rounded-t-3xl border-white/[0.22] text-white max-h-[85vh]"
       >
         <SheetHeader>
           <SheetTitle className="text-white">Order from {creatorName}</SheetTitle>
@@ -225,7 +225,7 @@ export function CheckoutSheet({
                 These pass to /api/v1/auth/anon-customer on submit and become
                 the order's member_name/member_phone. */}
           {currentUser ? (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+            <div className="glass-card px-4 py-3">
               <p className="text-xs text-white/50">Ordering as</p>
               <p className="mt-0.5 text-sm font-medium text-white">
                 {currentUser.display_name}
@@ -250,7 +250,7 @@ export function CheckoutSheet({
                 placeholder="Your name"
                 autoFocus
                 autoComplete="name"
-                className="h-12 w-full rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.10] focus:outline-none"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
               />
               <input
                 type="tel"
@@ -261,7 +261,7 @@ export function CheckoutSheet({
                 }
                 placeholder="(323) 555-0123"
                 autoComplete="tel"
-                className="h-12 w-full rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:bg-white/[0.10] focus:outline-none"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
               />
               <p className="text-xs text-white/35">
                 The creator will text you order updates here.
@@ -274,17 +274,17 @@ export function CheckoutSheet({
             <label className="mb-1.5 block text-xs font-medium text-white/50">
               How do you want it?
             </label>
-            <div className="flex gap-2">
+            <div className="glass-segment flex gap-1 p-1">
               {FULFILLMENT_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setFulfillment(opt.value)}
                   className={cn(
-                    "flex-1 rounded-xl py-2.5 text-sm font-medium transition-all",
+                    "glass-segment-item flex-1 py-2.5 text-sm font-medium transition-all active:scale-95",
                     fulfillment === opt.value
-                      ? "bg-green-900/50 text-green-300 border border-green-400/30"
-                      : "bg-white/[0.06] text-white/50 border border-white/[0.08]"
+                      ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                      : "text-white/50"
                   )}
                 >
                   {opt.label}
@@ -305,7 +305,7 @@ export function CheckoutSheet({
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder="123 Main St, Houston, TX 77001"
-                className="w-full rounded-xl border border-white/[0.15] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/50 focus:outline-none transition-colors"
+                className="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
               />
               <button
                 type="button"
@@ -339,7 +339,7 @@ export function CheckoutSheet({
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-3">
+            <div className="glass-card p-3">
               <p className="text-xs text-white/50">
                 The creator&apos;s pickup address will be sent to your phone via SMS after they confirm your order.
               </p>
@@ -355,12 +355,12 @@ export function CheckoutSheet({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Extra sauce, no onions, etc."
               rows={2}
-              className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-green-400/60 focus:outline-none resize-none"
+              className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 resize-none"
             />
           </div>
 
           {/* Order summary */}
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 space-y-2">
+          <div className="glass-card p-3 space-y-2">
             {items.map((item) => (
               <div key={item.listing.id} className="flex justify-between text-xs">
                 <span className="text-white/60">
@@ -394,7 +394,7 @@ export function CheckoutSheet({
               "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
               canPlace && !placing
                 ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                : "bg-white/10 cursor-not-allowed opacity-50"
+                : "glass-btn-pill cursor-not-allowed opacity-50"
             )}
           >
             {placing ? (

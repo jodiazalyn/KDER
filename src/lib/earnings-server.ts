@@ -106,7 +106,16 @@ export async function loadEarningsData(): Promise<EarningsData> {
   // ── Parallel fan-out ──────────────────────────────────────────
   const [balanceResult, payoutsResult, accountResult, dbResult] =
     await Promise.allSettled([
-      stripe.balance.retrieve({}, { stripeAccount: stripeAccountId }),
+      // expand `instant_available.net_available` so we know what the
+      // creator will actually receive after Stripe's 1.5% instant
+      // payout fee (which is now applied via our platform pricing
+      // scheme — see Stripe Dashboard → Connect → Platform pricing →
+      // Instant payouts). Without this, `instant_available.amount` is
+      // the gross balance debit, which would over-promise on the UI.
+      stripe.balance.retrieve(
+        { expand: ["instant_available.net_available"] },
+        { stripeAccount: stripeAccountId }
+      ),
       stripe.payouts.list(
         { limit: PAYOUT_HISTORY_LIMIT },
         { stripeAccount: stripeAccountId }
@@ -174,6 +183,20 @@ function shapeBalance(balance: Stripe.Balance): EarningsBalance {
     (b) => b.currency === "usd"
   );
 
+  // Prefer `net_available` (post-fee) over `amount` (gross). With our
+  // platform pricing scheme on instant payouts, `net_available[0].amount`
+  // is what the creator actually receives in their bank/card after the
+  // 1.5% Stripe fee is taken. Falls back to gross when net_available
+  // isn't populated (older accounts, currencies without a configured
+  // pricing scheme).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const usdInstantNet = (usdInstant as any)?.net_available?.find(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (n: any) => n.destination === "card" || n.destination === "bank_account"
+  );
+  const instantAvailableCents =
+    usdInstantNet?.amount ?? usdInstant?.amount ?? 0;
+
   const nonUsd = [
     ...balance.available.filter((b) => b.currency !== "usd"),
     ...balance.pending.filter((b) => b.currency !== "usd"),
@@ -188,7 +211,7 @@ function shapeBalance(balance: Stripe.Balance): EarningsBalance {
   return {
     availableCents: usdAvail?.amount ?? 0,
     pendingCents: usdPending?.amount ?? 0,
-    instantAvailableCents: usdInstant?.amount ?? 0,
+    instantAvailableCents,
     currency: "usd",
   };
 }

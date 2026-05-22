@@ -221,7 +221,7 @@ export function ShareSheet({
             onChange={(e) => setAiCaption(e.target.value.slice(0, 280))}
             placeholder="Leave blank to use the default share text, or draft a social caption with AI."
             rows={2}
-            className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-white/30 backdrop-blur-[8px] focus:border-green-400/60 focus:outline-none resize-none"
+            className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-base text-white placeholder:text-white/30 backdrop-blur-[8px] focus:border-green-400/60 focus:outline-none resize-none"
           />
         </div>
 

@@ -74,13 +74,13 @@ export function PlateDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex h-[90vh] max-h-[90vh] flex-col rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] p-0 text-white"
+        className="flex h-[90vh] max-h-[90vh] flex-col rounded-t-3xl border-white/[0.22] p-0 text-white"
       >
         {/* Scrollable background — the full plate details */}
         <div className="flex-1 overflow-y-auto px-4 pt-4">
           <article
             className={cn(
-              "overflow-hidden rounded-3xl border border-white/[0.12] bg-white/[0.06] backdrop-blur-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] transition-opacity",
+              "glass-card-elevated overflow-hidden rounded-3xl transition-opacity",
               soldOut && "opacity-60"
             )}
           >
@@ -154,7 +154,7 @@ export function PlateDetailSheet({
               {/* Inline qty + Add to Cart (secondary action for multi-plate orders) */}
               {!soldOut && (
                 <div className="mt-4 flex items-center gap-2">
-                  <div className="flex items-center gap-1 rounded-full border border-white/[0.12] bg-white/[0.04]">
+                  <div className="glass-btn-pill flex items-center gap-1 !p-0">
                     <button
                       type="button"
                       onClick={() => setQty(Math.max(1, qty - 1))}
@@ -227,7 +227,7 @@ export function PlateDetailSheet({
             Primary revenue-capture CTA: one tap adds to cart + opens the
             checkout form, skipping the view-cart step. */}
         {!soldOut && (
-          <div className="flex-shrink-0 border-t border-white/[0.08] bg-[#0A0A0A]/95 px-4 pb-5 pt-3 backdrop-blur-[24px]">
+          <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-4 pb-5 pt-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
             <button
               type="button"
               onClick={() => onBuyNow(listing, qty)}

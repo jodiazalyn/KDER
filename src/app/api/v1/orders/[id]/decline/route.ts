@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { isValidTransition } from "@/lib/order-state-machine";
+import { notifyOrderDeclined } from "@/lib/notifications";
+import { fetchOrderForNotification } from "@/lib/notifications-fetch";
 import type { OrderStatus } from "@/types";
 
 export async function PUT(
@@ -54,6 +56,11 @@ export async function PUT(
       .eq("id", id);
 
     if (error) return apiError("Failed to decline order", 500);
+
+    const ctx = await fetchOrderForNotification(supabase, id);
+    if (ctx) {
+      await notifyOrderDeclined(ctx.order, ctx.creator, ctx.member);
+    }
 
     return apiSuccess({ order_id: id, status: "declined" });
   } catch {

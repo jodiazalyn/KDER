@@ -50,6 +50,15 @@ const config: Config = {
             glow: "rgba(46, 125, 50, 0.6)",
           },
           dark: "#0A0A0A",
+          // Light-theme tokens — used on the public marketing landing
+          // page (kder.club/) which is intentionally cream/paper to
+          // contrast the dark in-app experience. Inspired by Stooty.
+          cream: "#FAF7F2",
+          paper: "#FFFFFF",
+          ink: "#0E0F0C",
+          "ink-muted": "#5B5F58",
+          line: "#E7E3DA",
+          mint: "#E8F1E5",
         },
       },
       borderRadius: {
@@ -58,7 +67,12 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
+        // Geist (loaded via next/font/google in src/app/layout.tsx) is
+        // the new display/body face for the marketing landing. Falls
+        // back to the system stack for any surface that doesn't load
+        // the variable (e.g. emergency error boundaries).
         sans: [
+          "var(--font-geist)",
           "-apple-system",
           "BlinkMacSystemFont",
           "SF Pro Display",
@@ -78,10 +92,18 @@ const config: Config = {
           "25%": { transform: "translateX(-8px)" },
           "75%": { transform: "translateX(8px)" },
         },
+        // Continuous horizontal scroll for the landing TrustStrip
+        // marquee. -50% because the content is duplicated 2x inside
+        // the wrapper so the loop is seamless.
+        "marquee": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
       },
       animation: {
         "pulse-green": "pulse-green 600ms ease-out",
         "shake": "shake 400ms ease-in-out",
+        "marquee": "marquee 40s linear infinite",
       },
     },
   },

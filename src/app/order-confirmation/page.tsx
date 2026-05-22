@@ -180,7 +180,7 @@ function OrderConfirmationInner() {
         </p>
         <Link
           href="/"
-          className="mt-6 flex h-11 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-bold text-white hover:bg-white/[0.06] active:scale-95 transition-all"
+          className="glass-btn-pill mt-6 flex h-11 items-center justify-center px-6 text-sm font-bold text-white active:scale-95 transition-all"
         >
           Back to KDER
         </Link>
@@ -193,7 +193,7 @@ function OrderConfirmationInner() {
       <div className="mx-auto max-w-lg space-y-5">
         {/* One-time success banner */}
         {showBanner && (
-          <div className="flex items-start gap-3 rounded-2xl border border-green-400/30 bg-green-900/20 p-4">
+          <div className="glass-card flex items-start gap-3 border-green-400/[0.30] bg-green-900/[0.20] p-4">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-green-900/60">
               <CheckCircle2 size={22} className="text-green-400" />
             </div>
@@ -247,7 +247,7 @@ function OrderConfirmationInner() {
         </div>
 
         {/* Order summary card */}
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+        <div className="glass-card p-4">
           <p className="mb-3 text-xs font-medium uppercase tracking-wide text-white/40">
             Order summary
           </p>
@@ -333,7 +333,7 @@ function OrderConfirmationInner() {
               recipientId={order.creator_member_id}
             />
           ) : (
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6 text-center text-xs text-white/40">
+            <div className="glass-card p-6 text-center text-xs text-white/40">
               Loading messages…
             </div>
           )}
@@ -343,7 +343,7 @@ function OrderConfirmationInner() {
         <div className="pt-2">
           <Link
             href={handle ? `/@${handle}` : "/"}
-            className="flex h-11 w-full items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white hover:bg-white/[0.06] active:scale-95 transition-all"
+            className="glass-btn-pill flex h-11 w-full items-center justify-center text-sm font-bold text-white active:scale-95 transition-all"
           >
             {handle ? `Back to @${handle}` : "Back to KDER"}
           </Link>

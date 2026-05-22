@@ -4,60 +4,61 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface CountdownTimerProps {
-  autoDeclineAt: string;
+  /** When the order was created. We render the elapsed time since then. */
+  createdAt: string;
   className?: string;
 }
 
-export function CountdownTimer({
-  autoDeclineAt,
-  className,
-}: CountdownTimerProps) {
-  const [secondsLeft, setSecondsLeft] = useState(() =>
-    Math.max(
-      0,
-      Math.floor(
-        (new Date(autoDeclineAt).getTime() - Date.now()) / 1000
-      )
-    )
+/**
+ * Elapsed-time pill for pending orders. Replaces the previous
+ * countdown-to-auto-decline behavior — orders no longer auto-decline,
+ * so the urgency signal is now "how long has the customer been waiting"
+ * rather than "how long until this expires."
+ */
+export function CountdownTimer({ createdAt, className }: CountdownTimerProps) {
+  const [secondsElapsed, setSecondsElapsed] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000))
   );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      const remaining = Math.max(
-        0,
-        Math.floor(
-          (new Date(autoDeclineAt).getTime() - Date.now()) / 1000
+      setSecondsElapsed(
+        Math.max(
+          0,
+          Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000)
         )
       );
-      setSecondsLeft(remaining);
-      if (remaining <= 0) clearInterval(interval);
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [autoDeclineAt]);
+  }, [createdAt]);
 
-  if (secondsLeft <= 0) {
-    return (
-      <span className={cn("text-xs font-medium text-red-400", className)}>
-        Expired
-      </span>
-    );
+  const minutes = Math.floor(secondsElapsed / 60);
+  const hours = Math.floor(minutes / 60);
+
+  // Visual urgency thresholds:
+  //   <15 min  → orange (fresh)
+  //   ≥15 min  → red    (escalation reminders are firing now)
+  const isUrgent = minutes >= 15;
+
+  // Compact label: "3m", "47m", "2h", "2h 15m"
+  let label: string;
+  if (hours >= 1) {
+    const remMin = minutes % 60;
+    label = remMin > 0 ? `${hours}h ${remMin}m` : `${hours}h`;
+  } else {
+    label = `${minutes}m`;
   }
-
-  const minutes = Math.floor(secondsLeft / 60);
-  const seconds = secondsLeft % 60;
-  const isUrgent = secondsLeft < 300; // < 5 minutes
 
   return (
     <span
       className={cn(
         "text-xs font-bold tabular-nums",
-        isUrgent ? "text-red-400 animate-pulse" : "text-orange-300",
+        isUrgent ? "text-red-400" : "text-orange-300",
         className
       )}
-      aria-label={`Auto-decline in ${minutes} minutes ${seconds} seconds`}
+      aria-label={`Waiting ${label}`}
     >
-      {minutes}:{seconds.toString().padStart(2, "0")}
+      Waiting {label}
     </span>
   );
 }
