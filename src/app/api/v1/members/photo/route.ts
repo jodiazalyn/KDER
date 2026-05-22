@@ -18,7 +18,8 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) return apiError("Unauthorized.", 401);
 
-    const { error } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
       .from("members")
       .update({ photo_url })
       .eq("id", user.id);
