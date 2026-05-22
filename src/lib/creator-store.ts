@@ -27,6 +27,9 @@ export interface CreatorProfile {
   total_orders: number;
   total_plates: number;
   pickup_address: string | null;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  website_url: string | null;
 }
 
 /**
@@ -46,7 +49,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("members")
-          .select("display_name, handle, photo_url, bio, email")
+          .select("display_name, handle, photo_url, bio, email, instagram_handle, tiktok_handle, website_url")
           .eq("id", user.id)
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +81,9 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           total_orders: 0,
           total_plates: 0,
           pickup_address: creator?.pickup_address || null,
+          instagram_handle: member.instagram_handle || null,
+          tiktok_handle: member.tiktok_handle || null,
+          website_url: member.website_url || null,
         };
       }
     }
@@ -118,6 +124,9 @@ export function getCreatorProfile(): CreatorProfile {
     total_orders: 0,
     total_plates: 0,
     pickup_address: profile.pickup_address || null,
+    instagram_handle: profile.instagram_handle || null,
+    tiktok_handle: profile.tiktok_handle || null,
+    website_url: profile.website_url || null,
   };
 }
 
@@ -153,5 +162,8 @@ function defaultProfile(): CreatorProfile {
     total_orders: 0,
     total_plates: 0,
     pickup_address: null,
+    instagram_handle: null,
+    tiktok_handle: null,
+    website_url: null,
   };
 }
