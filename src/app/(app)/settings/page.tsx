@@ -34,6 +34,8 @@ interface ProfileFormState {
   instagram_handle: string;
   tiktok_handle: string;
   website_url: string;
+  facebook_handle: string;
+  whatsapp_number: string;
 }
 
 function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): ProfileFormState {
@@ -48,6 +50,8 @@ function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): Pro
     instagram_handle: p.instagram_handle || "",
     tiktok_handle: p.tiktok_handle || "",
     website_url: p.website_url || "",
+    facebook_handle: p.facebook_handle || "",
+    whatsapp_number: p.whatsapp_number || "",
   };
 }
 
@@ -172,6 +176,8 @@ export default function SettingsPage() {
           instagram_handle: form.instagram_handle.trim() || null,
           tiktok_handle: form.tiktok_handle.trim() || null,
           website_url: form.website_url.trim() || null,
+          facebook_handle: form.facebook_handle.trim() || null,
+          whatsapp_number: form.whatsapp_number.trim() || null,
         }),
       });
       const body = await res.json();
@@ -399,6 +405,48 @@ export default function SettingsPage() {
             {form.website_url && !/^https?:\/\/.+/.test(form.website_url.trim()) && (
               <p className="mt-1 text-xs text-orange-400">Must start with https://</p>
             )}
+          </div>
+
+          {/* Facebook */}
+          <div>
+            <label htmlFor="facebook" className="mb-2 block text-sm font-medium text-white/60">
+              Facebook
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-4 flex items-center text-white/35 text-base select-none">@</span>
+              <input
+                id="facebook"
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                value={form.facebook_handle}
+                onChange={(e) =>
+                  setForm({ ...form, facebook_handle: e.target.value.replace(/^@/, "").slice(0, 50) })
+                }
+                placeholder="yourpage"
+                className="glass-input h-12 w-full pl-8 pr-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* WhatsApp */}
+          <div>
+            <label htmlFor="whatsapp" className="mb-2 block text-sm font-medium text-white/60">
+              WhatsApp
+            </label>
+            <input
+              id="whatsapp"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={form.whatsapp_number}
+              onChange={(e) =>
+                setForm({ ...form, whatsapp_number: e.target.value.replace(/[^\d+\-\s()]/g, "").slice(0, 20) })
+              }
+              placeholder="+1 713 555 0100"
+              className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+            />
+            <p className="mt-1 text-xs text-white/40">Include country code, e.g. +1 for US</p>
           </div>
         </section>
 
