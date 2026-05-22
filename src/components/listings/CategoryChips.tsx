@@ -1,6 +1,9 @@
 "use client";
 
+import { useState, useMemo } from "react";
+import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CATEGORY_GROUPS } from "@/types";
 
 interface CategoryChipsProps {
   options: readonly string[];
@@ -15,6 +18,8 @@ export function CategoryChips({
   onChange,
   label,
 }: CategoryChipsProps) {
+  const [search, setSearch] = useState("");
+
   const toggle = (item: string) => {
     if (selected.includes(item)) {
       onChange(selected.filter((s) => s !== item));
@@ -23,29 +28,105 @@ export function CategoryChips({
     }
   };
 
+  const query = search.trim().toLowerCase();
+
+  // When searching: flat filtered list. When not: grouped layout.
+  const filtered = useMemo(
+    () => options.filter((opt) => opt.toLowerCase().includes(query)),
+    [options, query]
+  );
+
+  const groups = useMemo(() => {
+    if (query) return null;
+    return Object.entries(CATEGORY_GROUPS).map(([group, tags]) => ({
+      group,
+      tags: tags.filter((t) => options.includes(t)),
+    }));
+  }, [options, query]);
+
   return (
-    <div role="group" aria-label={label}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const isSelected = selected.includes(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              className={cn(
-                "glass-btn-pill px-4 py-2 text-sm font-medium",
-                isSelected
-                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
-                  : "text-white/60 hover:text-white/80"
-              )}
-              aria-pressed={isSelected}
-            >
-              {opt}
-            </button>
-          );
-        })}
+    <div role="group" aria-label={label} className="space-y-3">
+      {/* Search input */}
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
+        />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tags…"
+          className="glass-input h-10 w-full pl-8 pr-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+        />
       </div>
+
+      {query ? (
+        /* Flat filtered results */
+        filtered.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {filtered.map((opt) => (
+              <Chip
+                key={opt}
+                label={opt}
+                active={selected.includes(opt)}
+                onToggle={() => toggle(opt)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-white/30">No tags match &ldquo;{search}&rdquo;</p>
+        )
+      ) : (
+        /* Grouped layout */
+        <div className="space-y-4">
+          {groups?.map(({ group, tags }) =>
+            tags.length === 0 ? null : (
+              <div key={group}>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-white/35">
+                  {group}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((opt) => (
+                    <Chip
+                      key={opt}
+                      label={opt}
+                      active={selected.includes(opt)}
+                      onToggle={() => toggle(opt)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+function Chip({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(
+        "glass-btn-pill px-4 py-2 text-sm font-medium transition-all active:scale-95",
+        active
+          ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+          : "text-white/60 hover:text-white/80"
+      )}
+    >
+      {label}
+    </button>
   );
 }
