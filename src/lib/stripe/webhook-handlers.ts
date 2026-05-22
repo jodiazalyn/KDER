@@ -60,6 +60,16 @@ export async function handleCheckoutCompleted(
   const ctx = await fetchOrderForNotification(supabase, orderId);
   if (ctx) {
     await notifyOrderPlaced(ctx.order, ctx.creator, ctx.member);
+
+    // Backfill members.email so message notifications and future order
+    // lookups can reach this customer — only writes if currently null.
+    if (customerEmail) {
+      await (supabase as any)
+        .from("members")
+        .update({ email: customerEmail })
+        .eq("id", ctx.order.member_id)
+        .is("email", null);
+    }
   }
 }
 

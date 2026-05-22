@@ -73,6 +73,7 @@ export function CheckoutSheet({
   const [guestName, setGuestName] = useState("");
   const [guestPhoneRaw, setGuestPhoneRaw] = useState(""); // formatted display
   const guestPhoneDigits = guestPhoneRaw.replace(/\D/g, "");
+  const [email, setEmail] = useState("");
 
   // Reset guest fields when the sheet closes so a stale entry doesn't
   // leak into the next purchase on a shared device.
@@ -80,6 +81,7 @@ export function CheckoutSheet({
     if (!open) {
       setGuestName("");
       setGuestPhoneRaw("");
+      setEmail("");
     }
   }, [open]);
 
@@ -150,6 +152,7 @@ export function CheckoutSheet({
           fulfillment_type: fulfillment,
           notes: notes.trim(),
           creator_handle: creatorHandle,
+          customer_email: email.trim() || null,
         }),
       });
 
@@ -268,6 +271,19 @@ export function CheckoutSheet({
               </p>
             </div>
           )}
+
+          {/* Email — optional, shown for all users */}
+          <div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email (for order updates)"
+              autoComplete="email"
+              inputMode="email"
+              className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            />
+          </div>
 
           {/* Fulfillment */}
           <div>
