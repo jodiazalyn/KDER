@@ -64,6 +64,7 @@ export async function handleCheckoutCompleted(
     // Backfill members.email so message notifications and future order
     // lookups can reach this customer — only writes if currently null.
     if (customerEmail) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from("members")
         .update({ email: customerEmail })
