@@ -36,6 +36,11 @@ interface MemberRow {
   bio: string | null;
   photo_url: string | null;
   handle: string;
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  website_url: string | null;
+  facebook_handle: string | null;
+  whatsapp_number: string | null;
 }
 
 interface CreatorRow {
@@ -66,7 +71,7 @@ async function loadStorefrontUncached(handle: string): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: member } = (await (supabase as any)
     .from("members")
-    .select("id, display_name, bio, photo_url, handle")
+    .select("id, display_name, bio, photo_url, handle, instagram_handle, tiktok_handle, website_url, facebook_handle, whatsapp_number")
     .eq("handle", handle)
     .single()) as { data: MemberRow | null };
 
@@ -131,6 +136,11 @@ async function loadStorefrontUncached(handle: string): Promise<{
     total_orders: completedOrdersCount ?? 0,
     total_plates: listings.length,
     pickup_address: null,
+    instagram_handle: member.instagram_handle,
+    tiktok_handle: member.tiktok_handle,
+    website_url: member.website_url,
+    facebook_handle: member.facebook_handle,
+    whatsapp_number: member.whatsapp_number,
   };
 
   return { creator, listings };
