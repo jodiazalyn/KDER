@@ -2,13 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Store, LayoutGrid, Bell, Wallet, MessageCircle } from "lucide-react";
+import {
+  Store,
+  LayoutGrid,
+  Bell,
+  Calendar,
+  Wallet,
+  MessageCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// 6 tabs is the practical max on a 375px viewport before labels wrap.
+// Calendar sits between Orders and Earn — it's effectively another
+// order-management surface (specifically for catering bookings + blackouts).
 const tabs = [
   { href: "/dashboard", icon: Store, label: "Store" },
   { href: "/listings", icon: LayoutGrid, label: "Plates" },
   { href: "/orders", icon: Bell, label: "Orders" },
+  { href: "/catering/calendar", icon: Calendar, label: "Calendar" },
   { href: "/earnings", icon: Wallet, label: "Earn" },
   { href: "/messages", icon: MessageCircle, label: "Chat" },
 ] as const;
