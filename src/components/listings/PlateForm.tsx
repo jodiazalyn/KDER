@@ -17,6 +17,9 @@ import {
   ALLERGENS,
   LISTING_STATUS,
   type Listing,
+  type ListingKind,
+  type CateringPricingMode,
+  type CateringFulfillment,
   type FulfillmentType,
   type ListingStatus,
 } from "@/types";
@@ -29,6 +32,7 @@ const DRAFT_KEY = "kder_plate_draft";
 const AUTOSAVE_DELAY = 1500; // 1.5 seconds debounce
 
 interface DraftData {
+  kind?: ListingKind; // Optional for back-compat with old drafts (defaults to 'plate').
   name: string;
   description: string;
   price: string;
@@ -39,6 +43,13 @@ interface DraftData {
   fulfillment: FulfillmentType;
   categories: string[];
   allergens: string[];
+  // Catering-only — only set when kind='catering'.
+  cateringPricingMode?: CateringPricingMode;
+  cateringMinGuests?: string;
+  cateringMaxGuests?: string;
+  cateringLeadTimeHours?: string;
+  cateringFulfillment?: CateringFulfillment[];
+  cateringInclusions?: string;
   savedAt: string;
 }
 
@@ -94,6 +105,14 @@ export function PlateForm({ listing }: PlateFormProps) {
     isCoachmarkDismissed("creator-plate-title")
   );
 
+  // Listing kind: 'plate' is on-demand checkout, 'catering' is the
+  // advance-booking + inquiry/quote/deposit flow shipped in PR 2-4.
+  // Existing listings default to 'plate' (the DB column has the same
+  // default), so this form is fully backward-compat.
+  const [kind, setKind] = useState<ListingKind>(
+    listing?.kind ?? restored?.kind ?? "plate"
+  );
+
   const [name, setName] = useState(listing?.name ?? restored?.name ?? "");
   const [description, setDescription] = useState(listing?.description ?? restored?.description ?? "");
   const [price, setPrice] = useState(listing?.price?.toString() ?? restored?.price ?? "");
@@ -109,6 +128,29 @@ export function PlateForm({ listing }: PlateFormProps) {
   );
   const [allergens, setAllergens] = useState<string[]>(
     listing?.allergens ?? restored?.allergens ?? []
+  );
+
+  // ── Catering-only state ─────────────────────────────────────────
+  // All ignored when kind='plate'. The DB-level CHECK constraint
+  // (listings_catering_required_fields) only enforces these when
+  // kind='catering', so plates can keep saving with all of these null.
+  const [cateringPricingMode, setCateringPricingMode] = useState<CateringPricingMode>(
+    listing?.catering_pricing_mode ?? restored?.cateringPricingMode ?? "per_head"
+  );
+  const [cateringMinGuests, setCateringMinGuests] = useState(
+    listing?.catering_min_guests?.toString() ?? restored?.cateringMinGuests ?? "10"
+  );
+  const [cateringMaxGuests, setCateringMaxGuests] = useState(
+    listing?.catering_max_guests?.toString() ?? restored?.cateringMaxGuests ?? ""
+  );
+  const [cateringLeadTimeHours, setCateringLeadTimeHours] = useState(
+    listing?.catering_lead_time_hours?.toString() ?? restored?.cateringLeadTimeHours ?? "48"
+  );
+  const [cateringFulfillment, setCateringFulfillment] = useState<CateringFulfillment[]>(
+    listing?.catering_fulfillment ?? restored?.cateringFulfillment ?? ["pickup", "delivery"]
+  );
+  const [cateringInclusions, setCateringInclusions] = useState(
+    listing?.catering_inclusions ?? restored?.cateringInclusions ?? ""
   );
   const [saving, setSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -169,13 +211,26 @@ export function PlateForm({ listing }: PlateFormProps) {
     if (!hasContent) return;
 
     saveDraft({
+      kind,
       name, description, price, quantity, minOrder,
       photos, video, fulfillment, categories, allergens,
+      cateringPricingMode,
+      cateringMinGuests,
+      cateringMaxGuests,
+      cateringLeadTimeHours,
+      cateringFulfillment,
+      cateringInclusions,
       savedAt: new Date().toISOString(),
     });
     setAutoSaved(true);
     setTimeout(() => setAutoSaved(false), 2000);
-  }, [name, description, price, quantity, minOrder, photos, video, fulfillment, categories, allergens, isEditing]);
+  }, [
+    kind, name, description, price, quantity, minOrder,
+    photos, video, fulfillment, categories, allergens,
+    cateringPricingMode, cateringMinGuests, cateringMaxGuests,
+    cateringLeadTimeHours, cateringFulfillment, cateringInclusions,
+    isEditing,
+  ]);
 
   useEffect(() => {
     // Skip the initial mount to avoid saving empty/restored state immediately
@@ -191,11 +246,34 @@ export function PlateForm({ listing }: PlateFormProps) {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [name, description, price, quantity, minOrder, photos, video, fulfillment, categories, allergens, isEditing, doAutoSave]);
+  }, [
+    kind, name, description, price, quantity, minOrder,
+    photos, video, fulfillment, categories, allergens,
+    cateringPricingMode, cateringMinGuests, cateringMaxGuests,
+    cateringLeadTimeHours, cateringFulfillment, cateringInclusions,
+    isEditing, doAutoSave,
+  ]);
 
   const priceNum = parseFloat(price) || 0;
-  const baseCanPublish = name.trim().length > 0 && priceNum > 0 && quantity >= 1 && photos.length >= 1;
-  // Publishing a plate requires Stripe Connect verified so money can flow.
+  const minGuestsNum = parseInt(cateringMinGuests, 10) || 0;
+  const maxGuestsNum = cateringMaxGuests ? parseInt(cateringMaxGuests, 10) : null;
+  const leadTimeNum = parseInt(cateringLeadTimeHours, 10) || 0;
+
+  // Publish validation differs by kind. Plates need price + quantity;
+  // catering needs price + min guests + lead time + at least one
+  // fulfillment option. Photos are required for both.
+  const baseCanPublish =
+    name.trim().length > 0 &&
+    priceNum > 0 &&
+    photos.length >= 1 &&
+    (kind === "plate"
+      ? quantity >= 1
+      : minGuestsNum > 0 &&
+        leadTimeNum > 0 &&
+        cateringFulfillment.length > 0 &&
+        (maxGuestsNum === null || maxGuestsNum >= minGuestsNum));
+
+  // Publishing requires Stripe Connect verified so money can flow.
   // Drafts don't require Connect; creator can build out their menu first.
   // Optimistic UX: while we're still loading status (null), let the button
   // be enabled — the server route enforces verification independently and
@@ -206,10 +284,13 @@ export function PlateForm({ listing }: PlateFormProps) {
   const canDraft = name.trim().length > 0;
 
   const buildListingData = (status: ListingStatus) => ({
+    kind,
     name: name.trim(),
     description: description.trim(),
     price: priceNum,
-    quantity,
+    // Catering listings don't have a quantity in the on-demand sense —
+    // each booking is its own event. Send 1 so the NOT NULL check holds.
+    quantity: kind === "plate" ? quantity : 1,
     min_order: minOrder ? parseFloat(minOrder) || null : null,
     photos,
     video,
@@ -219,6 +300,14 @@ export function PlateForm({ listing }: PlateFormProps) {
     allergens,
     availability_windows: listing?.availability_windows ?? [],
     discount_codes: listing?.discount_codes ?? [],
+    // Catering fields — server should ignore/null these when kind='plate'.
+    catering_pricing_mode: kind === "catering" ? cateringPricingMode : null,
+    catering_min_guests: kind === "catering" ? minGuestsNum : null,
+    catering_max_guests: kind === "catering" ? maxGuestsNum : null,
+    catering_lead_time_hours: kind === "catering" ? leadTimeNum : null,
+    catering_fulfillment: kind === "catering" ? cateringFulfillment : [],
+    catering_inclusions:
+      kind === "catering" ? cateringInclusions.trim() || null : null,
   });
 
   const handleSave = async (status: ListingStatus) => {
@@ -305,6 +394,61 @@ export function PlateForm({ listing }: PlateFormProps) {
       {/* Form body — scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4">
         <div className="mx-auto max-w-lg space-y-6">
+          {/* Listing kind toggle — first thing the creator picks because
+              it changes what fields they'll see. Segmented control over
+              a glass-card substrate, 44px tap targets. */}
+          <section aria-labelledby="kind-label">
+            <span
+              id="kind-label"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
+              Listing type
+            </span>
+            <div
+              role="radiogroup"
+              aria-labelledby="kind-label"
+              className="glass-segment flex gap-1 p-1"
+            >
+              {(
+                [
+                  { value: "plate", label: "Plate", hint: "On-demand orders" },
+                  { value: "catering", label: "Catering", hint: "Quoted events" },
+                ] as const
+              ).map((opt) => {
+                const active = kind === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => setKind(opt.value)}
+                    className={cn(
+                      "glass-segment-item flex-1 flex flex-col items-center justify-center py-2.5 transition-all active:scale-[0.98]",
+                      active
+                        ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                        : "text-white/60 hover:text-white/80"
+                    )}
+                  >
+                    <span className="text-sm font-semibold leading-none">
+                      {opt.label}
+                    </span>
+                    <span className="mt-0.5 text-[10px] leading-none text-white/40">
+                      {opt.hint}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {kind === "catering" && (
+              <p className="mt-2 text-xs text-white/50">
+                Customers send you an inquiry, you reply with a quote, they
+                pay a 30% deposit to lock in the date. Balance auto-charges
+                a few days before the event.
+              </p>
+            )}
+          </section>
+
           {/* Media */}
           <section>
             <label className="mb-2 block text-sm font-medium text-white/60">
@@ -387,48 +531,275 @@ export function PlateForm({ listing }: PlateFormProps) {
             </p>
           </section>
 
-          {/* Price */}
-          <section>
-            <label
-              htmlFor="plate-price"
-              className="mb-2 block text-sm font-medium text-white/60"
-            >
-              Price *
-            </label>
-            <div ref={priceCoachRef} className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
-                $
+          {/* Price (plate) OR Per-head/Flat pricing (catering) */}
+          {kind === "plate" ? (
+            <section>
+              <label
+                htmlFor="plate-price"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                Price *
+              </label>
+              <div ref={priceCoachRef} className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
+                  $
+                </span>
+                <input
+                  id="plate-price"
+                  type="text"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d.]/g, "");
+                    if (val.split(".").length <= 2) setPrice(val);
+                  }}
+                  placeholder="0.00"
+                  className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                />
+              </div>
+            </section>
+          ) : (
+            <section aria-labelledby="catering-pricing-label">
+              <span
+                id="catering-pricing-label"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                Pricing *
               </span>
-              <input
-                id="plate-price"
-                type="text"
-                inputMode="decimal"
-                value={price}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^\d.]/g, "");
-                  if (val.split(".").length <= 2) setPrice(val);
-                }}
-                placeholder="0.00"
-                className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+              {/* Per-head vs flat segmented control */}
+              <div
+                role="radiogroup"
+                aria-labelledby="catering-pricing-label"
+                className="glass-segment mb-2 flex gap-1 p-1"
+              >
+                {(
+                  [
+                    { value: "per_head", label: "Per head" },
+                    { value: "flat", label: "Flat package" },
+                  ] as const
+                ).map((opt) => {
+                  const active = cateringPricingMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => setCateringPricingMode(opt.value)}
+                      className={cn(
+                        "glass-segment-item flex-1 py-2.5 text-sm font-medium transition-all active:scale-[0.98]",
+                        active
+                          ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                          : "text-white/60 hover:text-white/80"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Price input — same control either way, label changes */}
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
+                  $
+                </span>
+                <input
+                  id="catering-price"
+                  type="text"
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d.]/g, "");
+                    if (val.split(".").length <= 2) setPrice(val);
+                  }}
+                  placeholder="0.00"
+                  aria-label={
+                    cateringPricingMode === "per_head"
+                      ? "Price per guest"
+                      : "Flat package price"
+                  }
+                  className="glass-input h-12 w-full pl-10 pr-24 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-white/40">
+                  {cateringPricingMode === "per_head" ? "/ guest" : "flat"}
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs text-white/40">
+                {cateringPricingMode === "per_head"
+                  ? "Customer's quote total = guest count × price. Add fees like delivery or labor on the quote itself."
+                  : "Single package price. Add fees like delivery or labor on the quote itself."}
+              </p>
+            </section>
+          )}
+
+          {/* Quantity (plate) OR Guest range (catering) */}
+          {kind === "plate" ? (
+            <section>
+              <label className="mb-2 block text-sm font-medium text-white/60">
+                Quantity available *
+              </label>
+              <QuantityStepper value={quantity} onChange={setQuantity} />
+            </section>
+          ) : (
+            <section aria-labelledby="catering-guests-label">
+              <span
+                id="catering-guests-label"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                Guest range *
+              </span>
+              <div className="flex gap-3">
+                <label className="flex-1">
+                  <span className="mb-1 block text-xs text-white/50">
+                    Min guests
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={cateringMinGuests}
+                    onChange={(e) =>
+                      setCateringMinGuests(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="10"
+                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  />
+                </label>
+                <label className="flex-1">
+                  <span className="mb-1 block text-xs text-white/50">
+                    Max guests (optional)
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={cateringMaxGuests}
+                    onChange={(e) =>
+                      setCateringMaxGuests(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="—"
+                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  />
+                </label>
+              </div>
+              <p className="mt-1.5 text-xs text-white/40">
+                Customers can&apos;t inquire for fewer than the minimum.
+                Leave max blank for no upper limit.
+              </p>
+            </section>
+          )}
+
+          {/* Catering-only: Lead time */}
+          {kind === "catering" && (
+            <section>
+              <label
+                htmlFor="catering-lead-time"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                Minimum lead time *
+              </label>
+              <div className="relative">
+                <input
+                  id="catering-lead-time"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={cateringLeadTimeHours}
+                  onChange={(e) =>
+                    setCateringLeadTimeHours(e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="48"
+                  className="glass-input h-12 w-full px-4 pr-16 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-white/40">
+                  hours
+                </span>
+              </div>
+              <p className="mt-1.5 text-xs text-white/40">
+                How far in advance customers must book this. 48h = 2 days.
+                The date picker on their inquiry form will gray out anything
+                inside this window.
+              </p>
+            </section>
+          )}
+
+          {/* Fulfillment (plate single-select) OR Fulfillment (catering multi) */}
+          {kind === "plate" ? (
+            <section>
+              <label className="mb-2 block text-sm font-medium text-white/60">
+                Fulfillment
+              </label>
+              <FulfillmentPicker value={fulfillment} onChange={setFulfillment} />
+            </section>
+          ) : (
+            <section aria-labelledby="catering-fulfillment-label">
+              <span
+                id="catering-fulfillment-label"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                Fulfillment (pick all that apply)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { value: "pickup", label: "Pickup" },
+                    { value: "delivery", label: "Delivery" },
+                    { value: "onsite", label: "On-site" },
+                  ] as const
+                ).map((opt) => {
+                  const active = cateringFulfillment.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={active}
+                      onClick={() =>
+                        setCateringFulfillment(
+                          active
+                            ? cateringFulfillment.filter((v) => v !== opt.value)
+                            : [...cateringFulfillment, opt.value]
+                        )
+                      }
+                      className={cn(
+                        "glass-card flex h-12 items-center justify-center rounded-xl border text-sm font-medium transition-all active:scale-[0.98]",
+                        active
+                          ? "border-green-400/40 bg-green-900/40 text-green-300 shadow-[0_0_10px_rgba(27,94,32,0.30)]"
+                          : "border-white/10 text-white/60 hover:text-white/80"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* Catering-only: What's included */}
+          {kind === "catering" && (
+            <section>
+              <label
+                htmlFor="catering-inclusions"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
+                What&apos;s included
+              </label>
+              <textarea
+                id="catering-inclusions"
+                value={cateringInclusions}
+                onChange={(e) =>
+                  setCateringInclusions(e.target.value.slice(0, 500))
+                }
+                placeholder="Includes: 2 proteins, queso, guacamole, pico de gallo, salsa, charro beans, sour cream, jalapeños, tortilla chips."
+                rows={3}
+                className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
               />
-            </div>
-          </section>
-
-          {/* Quantity */}
-          <section>
-            <label className="mb-2 block text-sm font-medium text-white/60">
-              Quantity available *
-            </label>
-            <QuantityStepper value={quantity} onChange={setQuantity} />
-          </section>
-
-          {/* Fulfillment */}
-          <section>
-            <label className="mb-2 block text-sm font-medium text-white/60">
-              Fulfillment
-            </label>
-            <FulfillmentPicker value={fulfillment} onChange={setFulfillment} />
-          </section>
+              <p className="mt-1.5 text-right text-xs text-white/30">
+                {cateringInclusions.length}/500
+              </p>
+            </section>
+          )}
 
           {/* Collapsible: Categories */}
           <CollapsibleSection

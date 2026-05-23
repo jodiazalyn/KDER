@@ -99,6 +99,45 @@ export async function PATCH(
       allowed.status = body.status;
     }
     if (body.video !== undefined) allowed.video = body.video;
+
+    // Catering fields — only assigned if the request explicitly sends them.
+    // Note: `kind` is intentionally not editable. Switching a listing from
+    // plate ↔ catering after creation would orphan inquiries / quotes /
+    // bookings, so creators must archive and recreate instead.
+    if (
+      body.catering_pricing_mode === "per_head" ||
+      body.catering_pricing_mode === "flat" ||
+      body.catering_pricing_mode === null
+    ) {
+      allowed.catering_pricing_mode = body.catering_pricing_mode;
+    }
+    if (body.catering_min_guests !== undefined) {
+      allowed.catering_min_guests =
+        body.catering_min_guests === null ? null : Number(body.catering_min_guests);
+    }
+    if (body.catering_max_guests !== undefined) {
+      allowed.catering_max_guests =
+        body.catering_max_guests === null ? null : Number(body.catering_max_guests);
+    }
+    if (body.catering_lead_time_hours !== undefined) {
+      allowed.catering_lead_time_hours =
+        body.catering_lead_time_hours === null
+          ? null
+          : Number(body.catering_lead_time_hours);
+    }
+    if (Array.isArray(body.catering_fulfillment)) {
+      allowed.catering_fulfillment = body.catering_fulfillment.filter(
+        (v: unknown) =>
+          typeof v === "string" && ["pickup", "delivery", "onsite"].includes(v)
+      );
+    }
+    if (body.catering_inclusions !== undefined) {
+      allowed.catering_inclusions =
+        typeof body.catering_inclusions === "string"
+          ? body.catering_inclusions.trim() || null
+          : null;
+    }
+
     allowed.updated_at = new Date().toISOString();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

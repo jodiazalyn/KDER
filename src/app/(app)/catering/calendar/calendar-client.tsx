@@ -1,0 +1,375 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, X, Repeat, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { MonthCalendar } from "@/components/calendar/MonthCalendar";
+import type { CreatorBlackout } from "@/types";
+import { cn } from "@/lib/utils";
+
+/**
+ * Calendar dashboard.
+ *
+ * State model:
+ *   - `month`     — the first day of the visible month
+ *   - `blackouts` — fetched once for this creator; we filter
+ *                   client-side per month so paging doesn't refetch
+ *   - `selectedDate` — opens the right-side day drawer
+ *
+ * Recurring blackouts (weekday rules) are expanded into specific
+ * dates inside the visible month for rendering. We don't expand
+ * forever — only what's on screen.
+ */
+export default function CalendarClient() {
+  const today = useMemo(() => new Date(), []);
+  const [month, setMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+  const [blackouts, setBlackouts] = useState<CreatorBlackout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [busyDate, setBusyDate] = useState<string | null>(null);
+  const [recurringOpen, setRecurringOpen] = useState(false);
+
+  // ── Fetch blackouts ────────────────────────────────────────
+  const fetchBlackouts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/v1/catering/blackouts?mine=true");
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body?.error || "Couldn't load blackouts.");
+        return;
+      }
+      setBlackouts(body.data?.blackouts ?? []);
+    } catch {
+      toast.error("Couldn't load blackouts. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBlackouts();
+  }, [fetchBlackouts]);
+
+  // ── Derive blackout dates for the visible month ────────────
+  // Expand recurring (weekday) rules into specific dates inside
+  // the visible window so MonthCalendar gets a flat Set of ISO
+  // strings to highlight.
+  const blackoutDates = useMemo(() => {
+    const set = new Set<string>();
+    const year = month.getFullYear();
+    const monthIdx = month.getMonth();
+
+    for (const b of blackouts) {
+      if (b.kind === "one_off" && b.blackout_date) {
+        set.add(b.blackout_date);
+      } else if (b.kind === "recurring" && b.weekday !== null) {
+        // Walk every day of the visible month, flag matches.
+        for (let d = 1; d <= 31; d++) {
+          const dt = new Date(year, monthIdx, d);
+          if (dt.getMonth() !== monthIdx) break; // overflow guard
+          if (dt.getDay() === b.weekday) {
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, "0");
+            const day = String(dt.getDate()).padStart(2, "0");
+            set.add(`${y}-${m}-${day}`);
+          }
+        }
+      }
+    }
+    return set;
+  }, [blackouts, month]);
+
+  // Blackouts that apply specifically to the currently-selected
+  // date (so the drawer can show + offer to remove them).
+  const blackoutsForSelected = useMemo(() => {
+    if (!selectedDate) return [];
+    const dt = new Date(selectedDate + "T00:00:00");
+    return blackouts.filter((b) => {
+      if (b.kind === "one_off") return b.blackout_date === selectedDate;
+      return b.weekday === dt.getDay();
+    });
+  }, [blackouts, selectedDate]);
+
+  // ── Actions ────────────────────────────────────────────────
+  const addOneOff = async (iso: string) => {
+    setBusyDate(iso);
+    try {
+      const res = await fetch("/api/v1/catering/blackouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "one_off", blackout_date: iso }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body?.error || "Couldn't add blackout.");
+        return;
+      }
+      if (!body.data?.already_existed && body.data?.blackout) {
+        setBlackouts((prev) => [...prev, body.data.blackout]);
+        toast.success("Date marked unavailable.");
+      } else {
+        toast.message("That date was already marked.");
+      }
+    } finally {
+      setBusyDate(null);
+    }
+  };
+
+  const removeBlackout = async (id: string) => {
+    setBusyDate(selectedDate);
+    try {
+      const res = await fetch(`/api/v1/catering/blackouts/${id}`, {
+        method: "DELETE",
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body?.error || "Couldn't remove blackout.");
+        return;
+      }
+      setBlackouts((prev) => prev.filter((b) => b.id !== id));
+      toast.success("Blackout removed.");
+    } finally {
+      setBusyDate(null);
+    }
+  };
+
+  const addRecurring = async (weekday: number) => {
+    try {
+      const res = await fetch("/api/v1/catering/blackouts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "recurring", weekday }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        toast.error(body?.error || "Couldn't add recurring blackout.");
+        return;
+      }
+      if (!body.data?.already_existed && body.data?.blackout) {
+        setBlackouts((prev) => [...prev, body.data.blackout]);
+        toast.success("Recurring blackout added.");
+      } else {
+        toast.message("That weekday is already a blackout.");
+      }
+      setRecurringOpen(false);
+    } catch {
+      toast.error("Couldn't add recurring blackout.");
+    }
+  };
+
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      {/* Header */}
+      <div className="sticky top-0 z-30 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-white">Calendar</h1>
+            <p className="text-xs text-white/50">
+              Catering bookings &amp; blackout dates
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setRecurringOpen((o) => !o)}
+            className={cn(
+              "flex h-11 items-center gap-1.5 rounded-full border border-white/[0.10] px-3 text-xs font-medium transition-all active:scale-95",
+              recurringOpen
+                ? "bg-green-900/40 text-green-300"
+                : "text-white/70 hover:bg-white/[0.06]"
+            )}
+            aria-pressed={recurringOpen}
+            aria-label="Manage recurring blackouts"
+          >
+            <Repeat size={14} />
+            Recurring
+          </button>
+        </div>
+      </div>
+
+      {/* Recurring weekday picker — collapsible panel below header */}
+      {recurringOpen && (
+        <div className="border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <div className="mx-auto max-w-lg">
+            <p className="mb-2 text-xs font-medium text-white/60">
+              Tap a weekday to always block it (e.g. always closed Mondays).
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                (label, weekday) => {
+                  const active = blackouts.some(
+                    (b) => b.kind === "recurring" && b.weekday === weekday
+                  );
+                  const recurring = blackouts.find(
+                    (b) => b.kind === "recurring" && b.weekday === weekday
+                  );
+                  return (
+                    <button
+                      key={weekday}
+                      type="button"
+                      onClick={() =>
+                        active && recurring
+                          ? removeBlackout(recurring.id)
+                          : addRecurring(weekday)
+                      }
+                      aria-pressed={active}
+                      className={cn(
+                        "h-11 min-w-[3rem] rounded-full border px-3 text-xs font-semibold transition-all active:scale-95",
+                        active
+                          ? "border-red-400/40 bg-red-950/40 text-red-200"
+                          : "border-white/[0.10] text-white/60 hover:bg-white/[0.06]"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar grid */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4">
+        <div className="mx-auto max-w-lg">
+          {loading ? (
+            <div className="flex h-72 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+              <Loader2
+                size={24}
+                className="animate-spin text-white/40"
+                aria-label="Loading calendar"
+              />
+            </div>
+          ) : (
+            <MonthCalendar
+              month={month}
+              blackoutDates={blackoutDates}
+              selectedDate={selectedDate}
+              onDayClick={(iso) =>
+                setSelectedDate((cur) => (cur === iso ? null : iso))
+              }
+              onPrevMonth={() =>
+                setMonth(
+                  new Date(month.getFullYear(), month.getMonth() - 1, 1)
+                )
+              }
+              onNextMonth={() =>
+                setMonth(
+                  new Date(month.getFullYear(), month.getMonth() + 1, 1)
+                )
+              }
+            />
+          )}
+
+          {/* Day drawer (inline, below the calendar — feels more
+              natural on mobile than a slide-in panel) */}
+          {selectedDate && (
+            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold text-white">
+                    {new Date(selectedDate + "T00:00:00").toLocaleDateString(
+                      "en-US",
+                      {
+                        weekday: "long",
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-white/50">
+                    {blackoutsForSelected.length === 0
+                      ? "Available for bookings."
+                      : "Blacked out — customers can't book."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(null)}
+                  aria-label="Close day details"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-white/40 hover:bg-white/[0.06] hover:text-white active:scale-90"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* If there's no blackout: offer to add one */}
+              {blackoutsForSelected.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => addOneOff(selectedDate)}
+                  disabled={busyDate === selectedDate}
+                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-medium text-white/80 transition-all hover:bg-white/[0.06] active:scale-95 disabled:opacity-50"
+                >
+                  {busyDate === selectedDate ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      Mark unavailable
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* If there ARE blackouts: list each with a remove button.
+                  Recurring blackouts can't be removed from this view
+                  (since they apply across many dates) — surface a hint. */}
+              {blackoutsForSelected.length > 0 && (
+                <ul className="space-y-2">
+                  {blackoutsForSelected.map((b) => (
+                    <li
+                      key={b.id}
+                      className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">
+                          {b.kind === "one_off"
+                            ? "This date"
+                            : `Every ${
+                                ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][
+                                  b.weekday ?? 0
+                                ]
+                              }`}
+                        </p>
+                        {b.reason && (
+                          <p className="truncate text-xs text-white/40">
+                            {b.reason}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeBlackout(b.id)}
+                        disabled={busyDate === selectedDate}
+                        aria-label="Remove blackout"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/50 hover:bg-red-500/10 hover:text-red-300 active:scale-90 disabled:opacity-50"
+                      >
+                        {busyDate === selectedDate ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <X size={18} />
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {/* Empty hint for first-time users */}
+          {!loading && blackouts.length === 0 && !selectedDate && (
+            <p className="mt-4 text-center text-xs text-white/40">
+              Tap any date to mark it unavailable. Bookings will appear here
+              once customers start placing catering orders.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -59,9 +59,21 @@ export interface DiscountCode {
   expires_at: string | null;
 }
 
+/** What type of listing this is. Catering uses an inquiry → quote
+ *  → deposit flow instead of one-shot checkout, with extra setup
+ *  fields (pricing mode, lead time, min/max guests, etc.). */
+export type ListingKind = "plate" | "catering";
+
+/** How a catering listing is priced. */
+export type CateringPricingMode = "per_head" | "flat";
+
+/** Fulfillment options for catering. A listing can support any subset. */
+export type CateringFulfillment = "pickup" | "delivery" | "onsite";
+
 export interface Listing {
   id: string;
   creator_id: string;
+  kind: ListingKind;
   name: string;
   description: string;
   price: number;
@@ -78,6 +90,28 @@ export interface Listing {
   order_count: number;
   created_at: string;
   updated_at: string;
+
+  // Catering-only fields. All null for kind='plate'.
+  catering_pricing_mode: CateringPricingMode | null;
+  catering_min_guests: number | null;
+  catering_max_guests: number | null;
+  catering_lead_time_hours: number | null;
+  catering_fulfillment: CateringFulfillment[];
+  catering_inclusions: string | null;
+}
+
+/** A creator's calendar blackout. `one_off` blocks a specific date;
+ *  `recurring` blocks every {weekday} forever (e.g., always closed Mondays). */
+export interface CreatorBlackout {
+  id: string;
+  creator_id: string;
+  kind: "one_off" | "recurring";
+  /** Set only when kind='one_off'. ISO date (YYYY-MM-DD). */
+  blackout_date: string | null;
+  /** Set only when kind='recurring'. 0=Sunday, 6=Saturday. */
+  weekday: number | null;
+  reason: string | null;
+  created_at: string;
 }
 
 export const CATEGORIES = [
