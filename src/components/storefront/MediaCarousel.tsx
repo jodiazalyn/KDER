@@ -105,10 +105,12 @@ export function MediaCarousel({
                 <button
                   type="button"
                   onClick={() => setMuted((m) => !m)}
-                  className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm active:scale-90 transition-transform"
+                  // 44×44 tap target — was 36×36 with a 15px icon, easy
+                  // to miss with a thumb on a vertically scrolling feed.
+                  className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm active:scale-90 transition-transform"
                   aria-label={muted ? "Unmute video" : "Mute video"}
                 >
-                  {muted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                  {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
                 {/* Video badge */}
                 <div className="absolute top-3 left-3 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 backdrop-blur-sm">
