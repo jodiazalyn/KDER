@@ -515,10 +515,13 @@ export function ChatThread({
             <button
               type="button"
               onClick={clearMedia}
-              className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-lg active:scale-90 transition-transform"
+              // 44×44 tap target (was 28×28). Negative offsets keep it
+              // visually small relative to the 80×80 preview while still
+              // being easy to press.
+              className="absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white shadow-lg active:scale-90 transition-transform"
               aria-label="Remove photo"
             >
-              <X size={14} />
+              <X size={20} strokeWidth={2.5} />
             </button>
           </div>
         </div>

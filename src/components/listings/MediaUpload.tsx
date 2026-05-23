@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent } from "react";
-import { ImagePlus, X, Film, Loader2 } from "lucide-react";
+import { ImagePlus, X, Film, Loader2, Play } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import {
@@ -17,6 +17,45 @@ interface MediaUploadProps {
   maxPhotos?: number;
 }
 
+/**
+ * PUT a file via XMLHttpRequest with real upload progress.
+ *
+ * Why not fetch(): the Fetch API does not expose upload progress in any
+ * shipping browser (iOS Safari notably lacks the ReadableStream upload
+ * proposal). XHR has had `upload.onprogress` for ~20 years and works
+ * everywhere. We only need it for the second leg of the video upload —
+ * the small JSON request that mints the signed URL stays on fetch().
+ */
+function putWithProgress(
+  url: string,
+  file: File,
+  onProgress: (percent: number) => void
+): Promise<{ ok: boolean; status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type);
+
+    xhr.upload.onprogress = (e) => {
+      // `lengthComputable` is occasionally false on flaky cellular —
+      // in that case we just leave the bar where it was rather than
+      // bouncing back to 0.
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () =>
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        body: xhr.responseText,
+      });
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.onabort = () => reject(new Error("Upload aborted"));
+    xhr.send(file);
+  });
+}
+
 export function MediaUpload({
   photos,
   video,
@@ -28,6 +67,8 @@ export function MediaUpload({
   const videoInputRef = useRef<HTMLInputElement>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [videoUploading, setVideoUploading] = useState(false);
+  // 0-100. Drives the percentage label + thin fill bar on the upload button.
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
 
   const handlePhotoSelect = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -135,15 +176,15 @@ export function MediaUpload({
         // Step 2: PUT the raw bytes directly to Supabase Storage. This
         // bypasses Netlify entirely — no 6MB body cap, no 26s function
         // timeout. A 50MB video on LTE goes through fine.
-        const putRes = await fetch(urlBody.data.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
+        setVideoUploadProgress(0);
+        const putRes = await putWithProgress(
+          urlBody.data.uploadUrl,
+          file,
+          (p) => setVideoUploadProgress(p)
+        );
         if (!putRes.ok) {
-          const txt = await putRes.text().catch(() => "");
           toast.error(
-            `Upload failed (${putRes.status}).${txt ? ` ${txt.slice(0, 80)}` : ""}`
+            `Upload failed (${putRes.status}).${putRes.body ? ` ${putRes.body.slice(0, 80)}` : ""}`
           );
           return;
         }
@@ -157,6 +198,7 @@ export function MediaUpload({
         );
       } finally {
         setVideoUploading(false);
+        setVideoUploadProgress(0);
       }
     };
 
@@ -186,10 +228,12 @@ export function MediaUpload({
             <button
               type="button"
               onClick={() => removePhoto(i)}
-              className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
+              // 44×44 tap target (Apple HIG min). Was 36×36 with a 14px
+              // icon — fine for desktop, frustrating on phones.
+              className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-sm hover:bg-red-500/80 active:scale-90 transition-all"
               aria-label={`Remove photo ${i + 1}`}
             >
-              <X size={14} />
+              <X size={20} strokeWidth={2.5} />
             </button>
           </div>
         ))}
@@ -201,18 +245,33 @@ export function MediaUpload({
               src={video}
               className="h-full w-full object-cover"
               muted
+              playsInline
+              preload="metadata"
             />
-            <div className="absolute bottom-1 left-1 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5">
-              <Film size={10} className="text-white" />
-              <span className="text-[10px] text-white">Video</span>
+            {/* Center play-button overlay — makes the tile read as a video
+                even when paused. Sits above the video, below the X. */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 shadow-lg backdrop-blur-sm">
+                <Play
+                  size={26}
+                  className="text-white"
+                  fill="currentColor"
+                  strokeWidth={0}
+                />
+              </div>
+            </div>
+            {/* "Video" badge — kept for explicitness on top of the icon */}
+            <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 backdrop-blur-sm">
+              <Film size={11} className="text-white" />
+              <span className="text-[10px] font-medium text-white">Video</span>
             </div>
             <button
               type="button"
               onClick={() => onVideoChange(null)}
-              className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500/80 active:scale-90"
+              className="absolute right-1.5 top-1.5 flex h-11 w-11 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-sm hover:bg-red-500/80 active:scale-90 transition-all"
               aria-label="Remove video"
             >
-              <X size={14} />
+              <X size={20} strokeWidth={2.5} />
             </button>
           </div>
         )}
@@ -249,13 +308,25 @@ export function MediaUpload({
             type="button"
             onClick={() => !videoUploading && videoInputRef.current?.click()}
             disabled={videoUploading}
-            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
+            className="glass-card rounded-glass relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add video"
           >
             {videoUploading ? (
               <>
                 <Loader2 size={24} className="animate-spin" />
-                <span className="text-[10px]">Uploading…</span>
+                <span className="text-[10px] tabular-nums">
+                  {videoUploadProgress > 0
+                    ? `${videoUploadProgress}%`
+                    : "Starting…"}
+                </span>
+                {/* Bottom progress fill — width tracks the upload percentage.
+                    Short transition keeps it feeling live without lag. */}
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-white/[0.08]">
+                  <div
+                    className="h-full bg-green-400/70 transition-[width] duration-150 ease-out"
+                    style={{ width: `${videoUploadProgress}%` }}
+                  />
+                </div>
               </>
             ) : (
               <>
