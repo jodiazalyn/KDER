@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, X, Repeat, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Plus, X, Repeat, Loader2, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import type { CreatorBlackout } from "@/types";
@@ -30,28 +31,44 @@ export default function CalendarClient() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [recurringOpen, setRecurringOpen] = useState(false);
+  // Open-inquiry count for the badge on the inbox link. -1 means
+  // "still loading" so we render the link without a stale "0".
+  const [openInquiryCount, setOpenInquiryCount] = useState(-1);
 
-  // ── Fetch blackouts ────────────────────────────────────────
-  const fetchBlackouts = useCallback(async () => {
+  // ── Fetch blackouts + inquiry count in parallel ────────────
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/catering/blackouts?mine=true");
-      const body = await res.json();
-      if (!res.ok) {
-        toast.error(body?.error || "Couldn't load blackouts.");
-        return;
+      const [blackoutsRes, inquiriesRes] = await Promise.all([
+        fetch("/api/v1/catering/blackouts?mine=true"),
+        fetch("/api/v1/catering/inquiries?status=open"),
+      ]);
+      const blackoutsBody = await blackoutsRes.json();
+      if (blackoutsRes.ok) {
+        setBlackouts(blackoutsBody.data?.blackouts ?? []);
+      } else {
+        toast.error(blackoutsBody?.error || "Couldn't load blackouts.");
       }
-      setBlackouts(body.data?.blackouts ?? []);
+      if (inquiriesRes.ok) {
+        const inquiriesBody = await inquiriesRes.json();
+        setOpenInquiryCount(
+          Array.isArray(inquiriesBody.data?.inquiries)
+            ? inquiriesBody.data.inquiries.length
+            : 0
+        );
+      } else {
+        setOpenInquiryCount(0);
+      }
     } catch {
-      toast.error("Couldn't load blackouts. Try again.");
+      toast.error("Couldn't load calendar. Try again.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchBlackouts();
-  }, [fetchBlackouts]);
+    fetchAll();
+  }, [fetchAll]);
 
   // ── Derive blackout dates for the visible month ────────────
   // Expand recurring (weekday) rules into specific dates inside
@@ -164,28 +181,43 @@ export default function CalendarClient() {
     <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
-          <div>
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
+          <div className="min-w-0">
             <h1 className="text-xl font-bold text-white">Calendar</h1>
             <p className="text-xs text-white/50">
               Catering bookings &amp; blackout dates
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setRecurringOpen((o) => !o)}
-            className={cn(
-              "flex h-11 items-center gap-1.5 rounded-full border border-white/[0.10] px-3 text-xs font-medium transition-all active:scale-95",
-              recurringOpen
-                ? "bg-green-900/40 text-green-300"
-                : "text-white/70 hover:bg-white/[0.06]"
+          <div className="flex items-center gap-2">
+            {/* Inquiry inbox shortcut — only render once we know there's
+                at least one, otherwise it's empty noise. */}
+            {openInquiryCount > 0 && (
+              <Link
+                href="/catering/inquiries"
+                className="relative flex h-11 items-center gap-1.5 rounded-full bg-amber-900/30 px-3 text-xs font-semibold text-amber-200 transition-all hover:bg-amber-900/50 active:scale-95"
+                aria-label={`${openInquiryCount} open catering inquir${openInquiryCount === 1 ? "y" : "ies"}`}
+              >
+                <Inbox size={14} />
+                {openInquiryCount}{" "}
+                {openInquiryCount === 1 ? "Inquiry" : "Inquiries"}
+              </Link>
             )}
-            aria-pressed={recurringOpen}
-            aria-label="Manage recurring blackouts"
-          >
-            <Repeat size={14} />
-            Recurring
-          </button>
+            <button
+              type="button"
+              onClick={() => setRecurringOpen((o) => !o)}
+              className={cn(
+                "flex h-11 items-center gap-1.5 rounded-full border border-white/[0.10] px-3 text-xs font-medium transition-all active:scale-95",
+                recurringOpen
+                  ? "bg-green-900/40 text-green-300"
+                  : "text-white/70 hover:bg-white/[0.06]"
+              )}
+              aria-pressed={recurringOpen}
+              aria-label="Manage recurring blackouts"
+            >
+              <Repeat size={14} />
+              Recurring
+            </button>
+          </div>
         </div>
       </div>
 

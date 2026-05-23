@@ -277,3 +277,99 @@ export function newMessageRecipient(args: {
     ),
   };
 }
+
+// ── Catering ─────────────────────────────────────────────────
+
+/** First-touch template when a customer submits a catering inquiry.
+ *  Sent to the creator only. CTA points at the new inquiry detail page
+ *  so they can read the full request and click "Build Quote" in one
+ *  hop. PR 3 will add the quote-sent / deposit-paid / balance-charged
+ *  templates that share the same Message-ID thread. */
+export function cateringInquiryReceivedCreator(args: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inquiry: any; // shape: row from catering_inquiries with snake_case columns
+  creator: { display_name: string; handle: string; email: string | null };
+  customer: { display_name: string; email: string | null };
+}) {
+  const { inquiry, customer } = args;
+  // `creator` arg is reserved for personalization in a follow-up pass
+  // (e.g., "Hi {creator.display_name}, ..."). Kept in the signature so
+  // the call site doesn't need to change later.
+  void args.creator;
+  const eventDateLabel = new Date(
+    inquiry.event_date + "T00:00:00"
+  ).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const eventTimeLabel = inquiry.event_time
+    ? new Date(`2000-01-01T${inquiry.event_time}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  const rows: string[] = [
+    `<tr><td style="padding:6px 0;color:#666;width:140px">Date</td><td style="padding:6px 0;font-weight:600">${eventDateLabel}${eventTimeLabel ? ` at ${eventTimeLabel}` : ""}</td></tr>`,
+    `<tr><td style="padding:6px 0;color:#666">Guests</td><td style="padding:6px 0;font-weight:600">${inquiry.guest_count}</td></tr>`,
+  ];
+  if (inquiry.event_address) {
+    rows.push(
+      `<tr><td style="padding:6px 0;color:#666;vertical-align:top">Location</td><td style="padding:6px 0;font-weight:600">${escapeHtml(inquiry.event_address)}</td></tr>`
+    );
+  }
+  if (inquiry.event_venue_type) {
+    rows.push(
+      `<tr><td style="padding:6px 0;color:#666">Venue type</td><td style="padding:6px 0">${inquiry.event_venue_type}</td></tr>`
+    );
+  }
+  if (inquiry.needs_server || inquiry.needs_setup) {
+    const extras = [
+      inquiry.needs_server ? "server" : null,
+      inquiry.needs_setup ? "setup" : null,
+    ]
+      .filter(Boolean)
+      .join(" + ");
+    rows.push(
+      `<tr><td style="padding:6px 0;color:#666">Extras</td><td style="padding:6px 0">${extras}</td></tr>`
+    );
+  }
+  if (inquiry.allergies) {
+    rows.push(
+      `<tr><td style="padding:6px 0;color:#666;vertical-align:top">Allergies</td><td style="padding:6px 0">${escapeHtml(inquiry.allergies)}</td></tr>`
+    );
+  }
+
+  const notesBlock = inquiry.notes
+    ? `<p style="background:#f5f5f5;border-left:3px solid #2E7D32;padding:10px 14px;border-radius:0 8px 8px 0;color:#333">${escapeHtml(inquiry.notes)}</p>`
+    : "";
+
+  return {
+    subject: `New catering request from ${customer.display_name} — ${eventDateLabel}`,
+    html: shell(
+      `New catering request`,
+      `<p>${escapeHtml(customer.display_name)} is asking about catering for an event:</p>
+       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+         ${rows.join("")}
+       </table>
+       ${notesBlock}
+       <p>Open the request to send back a quote with line items and a deposit total.</p>`,
+      `${APP_URL}/catering/inquiries/${inquiry.id}`,
+      "Open & build quote"
+    ),
+  };
+}
+
+/** Minimal HTML escape — sufficient for the limited surface area of
+ *  user-typed fields (address, allergies, notes). Don't render
+ *  user content without this. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
