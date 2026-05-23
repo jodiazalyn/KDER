@@ -1,5 +1,12 @@
+import Image from "next/image";
 import { Check, MapPin } from "lucide-react";
 import { PhoneStatusBar } from "./PhoneStatusBar";
+
+// Same photo as the Smothered Pork Chop tile in StorefrontPhoneScreen
+// so the narrative ("you tapped this plate → it was accepted") is
+// visually continuous between the two phone mockups in the hero.
+const PORK_CHOP_PHOTO =
+  "https://images.unsplash.com/photo-1544025162-d76694265947?w=200&q=80&auto=format&fit=crop";
 
 /**
  * Order-confirmation preview screen — what a customer sees right
@@ -38,10 +45,15 @@ export function OrderPhoneScreen() {
       {/* Order item */}
       <div className="mx-4 mb-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
         <div className="flex items-center gap-3">
-          <div
-            className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-amber-700 via-orange-800 to-red-900"
-            aria-hidden="true"
-          />
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg">
+            <Image
+              src={PORK_CHOP_PHOTO}
+              alt="Smothered pork chop"
+              fill
+              sizes="48px"
+              className="object-cover"
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-bold text-white">
               Smothered Pork Chop

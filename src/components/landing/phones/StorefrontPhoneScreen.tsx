@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Star } from "lucide-react";
 import { PhoneStatusBar } from "./PhoneStatusBar";
 
@@ -19,30 +20,46 @@ import { PhoneStatusBar } from "./PhoneStatusBar";
 interface PlateCard {
   name: string;
   price: number;
-  /** Tailwind gradient classes for the food image placeholder. */
-  gradient: string;
+  /** Unsplash photo URL. ?w=300 is plenty — the tile renders ~80px wide
+      in the hero mockup, and Next/Image will further optimize on the
+      edge based on the device. */
+  photo: string;
+  alt: string;
 }
 
+const PHOTO = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=300&q=80&auto=format&fit=crop`;
+
+// Photo IDs are stable Unsplash assets. If a creator-facing flagship
+// is set up later, swap these for real plate photos from their account.
 const PLATES: PlateCard[] = [
   {
     name: "Smothered Pork Chop",
     price: 18,
-    gradient: "from-amber-700 via-orange-800 to-red-900",
+    photo: PHOTO("1544025162-d76694265947"),
+    alt: "Plated smothered meat dish",
   },
   {
     name: "Oxtail Sunday Plate",
     price: 22,
-    gradient: "from-yellow-700 via-amber-800 to-orange-900",
+    // Rich, glossy braised-meat ragu over wide pasta — reads as the
+    // kind of slow-cooked Sunday plate the title suggests.
+    photo: PHOTO("1611270629569-8b357cb88da9"),
+    alt: "Braised oxtail ragu over pappardelle",
   },
   {
     name: "Catfish & Grits",
     price: 16,
-    gradient: "from-yellow-600 via-amber-700 to-stone-800",
+    // Fine-dining seared fish over greens. Stand-in until a real
+    // catfish-and-grits hero shot replaces it.
+    photo: PHOTO("1467003909585-2f8a72700288"),
+    alt: "Pan-seared fish plated over wilted greens",
   },
   {
     name: "Greens & Cornbread",
     price: 12,
-    gradient: "from-emerald-800 via-emerald-900 to-stone-900",
+    photo: PHOTO("1546069901-ba9599a7e63c"),
+    alt: "Greens and grain bowl",
   },
 ];
 
@@ -113,10 +130,15 @@ export function StorefrontPhoneScreen() {
             key={plate.name}
             className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"
           >
-            <div
-              className={`aspect-square w-full bg-gradient-to-br ${plate.gradient}`}
-              aria-hidden="true"
-            />
+            <div className="relative aspect-square w-full">
+              <Image
+                src={plate.photo}
+                alt={plate.alt}
+                fill
+                sizes="(max-width: 1024px) 100px, 130px"
+                className="object-cover"
+              />
+            </div>
             <div className="px-2 pb-2 pt-1.5">
               <p className="truncate text-[10px] font-semibold text-white">
                 {plate.name}

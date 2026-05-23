@@ -13,10 +13,9 @@
  * Once we have ≥10 vetted real listings we should swap to a Supabase
  * server fetch with `revalidate: 3600` and delete this file.
  *
- * Photo paths point to `/public/images/landing/showcase/*.jpg` —
- * those assets need to be added before merge. Until then the cards
- * fall back to a colored placeholder via the `imageSrc?` undefined
- * branch in `<ListingChip />`.
+ * Photos are hotlinked from Unsplash (allowed via images.unsplash.com
+ * in next.config.ts remotePatterns). When real creators are onboarded
+ * we'll replace these with their first plate photos.
  */
 
 export interface ShowcaseListing {
@@ -38,6 +37,11 @@ export interface ShowcaseListing {
   avatarSrc?: string;
 }
 
+// ?w=800 + auto=format keeps the network payload small while still
+// looking sharp on retina displays. Next/Image will further optimize.
+const UNSPLASH = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=800&q=85&auto=format&fit=crop`;
+
 export const SHOWCASE_LISTINGS: ShowcaseListing[] = [
   {
     creator: "Aunt Lulu's Kitchen",
@@ -46,7 +50,8 @@ export const SHOWCASE_LISTINGS: ShowcaseListing[] = [
     neighborhood: "Third Ward",
     category: "Soul Food",
     priceFrom: 14,
-    imageSrc: "/images/landing/showcase/auntlulu.jpg",
+    // Golden fried chicken — clearly soul food, beauty-shot lighting.
+    imageSrc: UNSPLASH("1626082896492-766af4eb6501"),
   },
   {
     creator: "Maya's Tamales",
@@ -55,7 +60,9 @@ export const SHOWCASE_LISTINGS: ShowcaseListing[] = [
     neighborhood: "Sharpstown",
     category: "Mexican",
     priceFrom: 12,
-    imageSrc: "/images/landing/showcase/mayas.jpg",
+    // Vibrant action shot — lime being squeezed over tacos. Reads
+    // unmistakably as fresh Mexican street food.
+    imageSrc: UNSPLASH("1565299585323-38d6b0865b47"),
   },
   {
     creator: "DJ's Jerk Pit",
@@ -64,6 +71,7 @@ export const SHOWCASE_LISTINGS: ShowcaseListing[] = [
     neighborhood: "Alief",
     category: "Caribbean",
     priceFrom: 16,
-    imageSrc: "/images/landing/showcase/djsjerk.jpg",
+    // Smoky grilled skewers over an open flame — peak jerk-pit vibe.
+    imageSrc: UNSPLASH("1599487488170-d11ec9c172f0"),
   },
 ];
