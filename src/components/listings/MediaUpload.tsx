@@ -118,20 +118,43 @@ export function MediaUpload({
 
       setVideoUploading(true);
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/v1/listings/video", {
+        // Step 1: ask our API for a signed upload URL. Tiny JSON request,
+        // safely under Netlify's 6MB function body limit.
+        const ext = (file.name.split(".").pop() || "mp4").toLowerCase();
+        const urlRes = await fetch("/api/v1/listings/video-upload-url", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ext, contentType: file.type }),
         });
-        const body = await res.json();
-        if (!res.ok || !body?.data?.url) {
-          toast.error(body?.error || "Video upload failed. Try again.");
+        const urlBody = await urlRes.json();
+        if (!urlRes.ok || !urlBody?.data?.uploadUrl) {
+          toast.error(urlBody?.error || "Couldn't start upload.");
           return;
         }
-        onVideoChange(body.data.url);
-      } catch {
-        toast.error("Video upload failed. Check your connection.");
+
+        // Step 2: PUT the raw bytes directly to Supabase Storage. This
+        // bypasses Netlify entirely — no 6MB body cap, no 26s function
+        // timeout. A 50MB video on LTE goes through fine.
+        const putRes = await fetch(urlBody.data.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!putRes.ok) {
+          const txt = await putRes.text().catch(() => "");
+          toast.error(
+            `Upload failed (${putRes.status}).${txt ? ` ${txt.slice(0, 80)}` : ""}`
+          );
+          return;
+        }
+
+        onVideoChange(urlBody.data.publicUrl);
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? `Upload failed: ${err.message}`
+            : "Upload failed. Check your connection."
+        );
       } finally {
         setVideoUploading(false);
       }
