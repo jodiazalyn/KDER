@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Grid3x3, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { Grid3x3, CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import {
   ActiveOrderBanner,
@@ -11,6 +11,7 @@ import {
 } from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
 import { PlateTile } from "@/components/storefront/PlateTile";
+import { CateringMenuCard } from "@/components/storefront/CateringMenuCard";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
 import {
@@ -85,6 +86,15 @@ export function StorefrontClient({
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  // Active grid tab. Defaults to plates; only meaningful when the creator
+  // has at least one catering listing (the tab strip hides otherwise).
+  const [activeTab, setActiveTab] = useState<"plates" | "catering">("plates");
+  // IDs of catering listings the customer has tapped to pre-select.
+  // These ride along to the inquiry form so the creator's quote starts
+  // pre-populated with the items the customer wants.
+  const [selectedCateringIds, setSelectedCateringIds] = useState<Set<string>>(
+    new Set()
+  );
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedPlate, setSelectedPlate] = useState<Listing | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
@@ -437,19 +447,40 @@ export function StorefrontClient({
     }
   }, [messageText, sending, currentUserId, creator?.member_id]);
 
+  // Split listings by kind. Catering uses a different flow (inquiry →
+  // quote → deposit), so the storefront renders them in separate tabs.
+  const plateListings = useMemo(
+    () => listings.filter((l) => l.kind !== "catering"),
+    [listings]
+  );
+  const cateringListings = useMemo(
+    () => listings.filter((l) => l.kind === "catering"),
+    [listings]
+  );
+
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
-    listings.forEach((l) => l.category_tags.forEach((t) => tags.add(t)));
+    // Tag filter only applies to plates; catering tab has its own layout.
+    plateListings.forEach((l) => l.category_tags.forEach((t) => tags.add(t)));
     return Array.from(tags);
-  }, [listings]);
+  }, [plateListings]);
 
   const filteredListings = useMemo(
     () =>
       selectedTag
-        ? listings.filter((l) => l.category_tags.includes(selectedTag))
-        : listings,
-    [listings, selectedTag]
+        ? plateListings.filter((l) => l.category_tags.includes(selectedTag))
+        : plateListings,
+    [plateListings, selectedTag]
   );
+
+  const toggleCateringSelection = useCallback((listingId: string) => {
+    setSelectedCateringIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(listingId)) next.delete(listingId);
+      else next.add(listingId);
+      return next;
+    });
+  }, []);
 
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
@@ -487,14 +518,55 @@ export function StorefrontClient({
           </div>
         )}
 
-        {/* Grid-icon tab bar — visual-only for now, single content type */}
-        <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
-          <Grid3x3 size={14} />
-          Plates
-        </div>
+        {/* Tab bar — Plates | Catering. Catering tab only renders if
+            the creator has ≥1 catering listing, so plate-only creators
+            see the unchanged single-tab header. */}
+        {cateringListings.length > 0 ? (
+          <div
+            role="tablist"
+            aria-label="Storefront sections"
+            className="flex items-stretch border-y border-white/[0.08]"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "plates"}
+              onClick={() => setActiveTab("plates")}
+              className={cn(
+                "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
+                activeTab === "plates"
+                  ? "border-b-2 border-green-400 text-white"
+                  : "border-b-2 border-transparent text-white/40 hover:text-white/70"
+              )}
+            >
+              <Grid3x3 size={14} />
+              Plates
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "catering"}
+              onClick={() => setActiveTab("catering")}
+              className={cn(
+                "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
+                activeTab === "catering"
+                  ? "border-b-2 border-green-400 text-white"
+                  : "border-b-2 border-transparent text-white/40 hover:text-white/70"
+              )}
+            >
+              <CalendarRange size={14} />
+              Catering
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
+            <Grid3x3 size={14} />
+            Plates
+          </div>
+        )}
 
-        {/* Two-tier category filter — group row + tag row */}
-        {availableTags.length > 0 && (
+        {/* Two-tier category filter — only on the Plates tab */}
+        {activeTab === "plates" && availableTags.length > 0 && (
           <CategoryFilter
             availableTags={availableTags}
             selected={selectedTag}
@@ -502,32 +574,57 @@ export function StorefrontClient({
           />
         )}
 
-        {/* 3-column square grid of plate tiles with 2px gutter */}
-        {filteredListings.length > 0 ? (
-          <div className="grid grid-cols-3 gap-[2px]">
-            {filteredListings.map((listing, idx) => (
-              <div
-                key={listing.id}
-                ref={idx === 0 ? firstTileRef : undefined}
-              >
-                <PlateTile
+        {/* Catering tab content — wide cards in a single column */}
+        {activeTab === "catering" && (
+          <div className="space-y-2 px-4 py-3">
+            {cateringListings.length > 0 ? (
+              cateringListings.map((listing) => (
+                <CateringMenuCard
+                  key={listing.id}
                   listing={listing}
-                  onClick={setSelectedPlate}
+                  selected={selectedCateringIds.has(listing.id)}
+                  onToggle={toggleCateringSelection}
                 />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-4 pt-16">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-              <UtensilsCrossed size={28} className="text-white/20" />
-            </div>
-            <p className="text-center text-sm text-white/50">
-              {selectedTag
-                ? `No plates tagged "${selectedTag}" right now.`
-                : "No plates available right now. Check back soon!"}
+              ))
+            ) : (
+              <p className="py-12 text-center text-sm text-white/50">
+                No catering options right now.
+              </p>
+            )}
+            <p className="pt-2 text-center text-[11px] text-white/40">
+              Tap items you&apos;re interested in, then request a quote.
             </p>
           </div>
+        )}
+
+        {/* Plates grid + empty state — only on the Plates tab */}
+        {activeTab === "plates" && (
+          filteredListings.length > 0 ? (
+            <div className="grid grid-cols-3 gap-[2px]">
+              {filteredListings.map((listing, idx) => (
+                <div
+                  key={listing.id}
+                  ref={idx === 0 ? firstTileRef : undefined}
+                >
+                  <PlateTile
+                    listing={listing}
+                    onClick={setSelectedPlate}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-4 pt-16">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
+                <UtensilsCrossed size={28} className="text-white/20" />
+              </div>
+              <p className="text-center text-sm text-white/50">
+                {selectedTag
+                  ? `No plates tagged "${selectedTag}" right now.`
+                  : "No plates available right now. Check back soon!"}
+              </p>
+            </div>
+          )
         )}
       </div>
 
@@ -553,8 +650,8 @@ export function StorefrontClient({
         />
       )}
 
-      {/* Floating cart button */}
-      {cartCount > 0 && (
+      {/* Floating cart button — only on the Plates tab */}
+      {activeTab === "plates" && cartCount > 0 && (
         <button
           type="button"
           onClick={() => {
@@ -566,6 +663,26 @@ export function StorefrontClient({
           <ShoppingCart size={18} />
           View Cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}
           ${cartTotal.toFixed(2)}
+        </button>
+      )}
+
+      {/* Floating Request Catering button — only on the Catering tab,
+          and only once the customer has selected at least one item.
+          Passes the selected ids to the inquiry form via query string. */}
+      {activeTab === "catering" && selectedCateringIds.size > 0 && (
+        <button
+          type="button"
+          onClick={() => {
+            const ids = Array.from(selectedCateringIds).join(",");
+            router.push(
+              `/${encodeURIComponent(handle)}/catering/inquire?items=${ids}`
+            );
+          }}
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
+        >
+          <CalendarRange size={18} />
+          Request Catering ({selectedCateringIds.size}{" "}
+          {selectedCateringIds.size === 1 ? "item" : "items"})
         </button>
       )}
 

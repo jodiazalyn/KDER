@@ -114,6 +114,56 @@ export interface CreatorBlackout {
   created_at: string;
 }
 
+/** Where the event is happening. */
+export type CateringVenueType = "residence" | "venue" | "other";
+
+/** Indoor / outdoor / mixed — relevant for setup logistics. */
+export type CateringIndoorOutdoor = "indoor" | "outdoor" | "mixed";
+
+/** Inquiry lifecycle:
+ *  - open      → just submitted, creator hasn't quoted yet
+ *  - quoted    → creator sent a quote (lives in catering_quotes)
+ *  - booked    → customer paid the deposit
+ *  - declined  → creator declined
+ *  - expired   → no quote within the inquiry-expiry window */
+export type CateringInquiryStatus =
+  | "open"
+  | "quoted"
+  | "booked"
+  | "declined"
+  | "expired";
+
+/** Customer-submitted request for catering. The "intent" that
+ *  becomes a quote (PR 3) and then a booking (PR 3/4). */
+export interface CateringInquiry {
+  id: string;
+  creator_id: string;
+  member_id: string;
+
+  event_date: string;            // YYYY-MM-DD
+  event_time: string | null;     // HH:MM:SS
+  event_end_time: string | null; // HH:MM:SS
+  guest_count: number;
+
+  event_address: string | null;
+  event_venue_type: CateringVenueType | null;
+  indoor_outdoor: CateringIndoorOutdoor | null;
+
+  needs_server: boolean;
+  needs_setup: boolean;
+  earliest_setup_time: string | null;
+  kitchen_available: boolean | null;
+
+  allergies: string | null;
+  notes: string | null;
+
+  pre_selected_listing_ids: string[];
+
+  status: CateringInquiryStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export const CATEGORIES = [
   // Cuisines & regional
   "Soul Food",
