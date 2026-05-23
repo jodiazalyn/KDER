@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Play } from "lucide-react";
 import type { Listing } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -61,10 +61,20 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
         </p>
       </div>
 
-      {/* Video badge */}
+      {/* Video affordance — matches the upload tile design.
+          Centered Play icon makes the tile read as a video at a glance,
+          even before hover. Pointer-events-none so taps fall through to
+          the parent button. */}
       {listing.video && (
-        <div className="absolute top-1.5 left-1.5 rounded-full bg-black/60 px-1.5 py-0.5 backdrop-blur-sm">
-          <span className="text-[10px] font-bold text-white">▶</span>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 shadow-lg backdrop-blur-sm">
+            <Play
+              size={22}
+              className="text-white translate-x-[1px]"
+              fill="currentColor"
+              strokeWidth={0}
+            />
+          </div>
         </div>
       )}
 
