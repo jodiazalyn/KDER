@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -26,6 +27,37 @@ const tabs = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  // Open-inquiry count powers the red dot on the Calendar tab. We poll
+  // on mount + every 60s so creators see new requests show up without
+  // needing a full page refresh. Fails silently — if the fetch errors
+  // or the user isn't a creator, the badge just doesn't render.
+  const [inquiryCount, setInquiryCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const res = await fetch("/api/v1/catering/inquiries?status=open", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (cancelled) return;
+        const count = Array.isArray(body?.data?.inquiries)
+          ? body.data.inquiries.length
+          : 0;
+        setInquiryCount(count);
+      } catch {
+        // Ignore — badge just won't render.
+      }
+    };
+    fetchCount();
+    const iv = setInterval(fetchCount, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, []);
 
   // Hide on fullscreen chat thread pages — matches Apple Messages / Instagram DMs pattern
   if (/^\/messages\/[^/]+/.test(pathname)) return null;
@@ -43,11 +75,18 @@ export function BottomNav() {
       <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
+          // Calendar tab gets a red-dot badge when there are open
+          // catering inquiries the creator hasn't quoted yet.
+          const showBadge = tab.label === "Calendar" && inquiryCount > 0;
           return (
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
-                aria-label={tab.label}
+                aria-label={
+                  showBadge
+                    ? `${tab.label} (${inquiryCount} new inquir${inquiryCount === 1 ? "y" : "ies"})`
+                    : tab.label
+                }
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex h-14 flex-col items-center justify-center gap-0.5 rounded-xl transition-all",
@@ -56,7 +95,17 @@ export function BottomNav() {
                     : "text-white/50 hover:text-white/80"
                 )}
               >
-                <tab.icon size={22} strokeWidth={isActive ? 2.4 : 2} />
+                <div className="relative">
+                  <tab.icon size={22} strokeWidth={isActive ? 2.4 : 2} />
+                  {showBadge && (
+                    <span
+                      className="absolute -right-1.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#0A0A0A]"
+                      aria-hidden="true"
+                    >
+                      {inquiryCount > 9 ? "9+" : inquiryCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] font-medium leading-none">
                   {tab.label}
                 </span>

@@ -9,6 +9,10 @@ const PROTECTED_PATHS = [
   "/messages",
   "/settings",
   "/onboarding",
+  // Catering creator dashboard surfaces (calendar, inquiries inbox,
+  // quote builder). Without this, an unauthenticated user clicking
+  // the email link to /catering/inquiries/[id] bypasses the auth gate.
+  "/catering",
 ];
 
 export async function updateSession(request: NextRequest) {

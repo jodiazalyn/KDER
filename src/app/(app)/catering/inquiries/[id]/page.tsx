@@ -33,7 +33,8 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // /login doesn't exist in this app — only sign-in path is /signup.
+  if (!user) redirect("/signup");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inq } = await (supabase as any)
