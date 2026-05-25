@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
+import { insertCateringThreadMessage } from "@/lib/catering/insert-thread-message";
 
 /** Deposit percentage. Hard-coded to 30 per the product spec; could be
  *  promoted to a per-creator config later. */
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: inquiry } = await (supabase as any)
       .from("catering_inquiries")
-      .select("id, creator_id, member_id, status")
+      .select("id, creator_id, member_id, status, event_date")
       .eq("id", inquiryId)
       .single();
     if (!inquiry) return apiError("Inquiry not found.", 404);
@@ -164,6 +165,22 @@ export async function POST(request: NextRequest) {
       .from("catering_inquiries")
       .update({ status: "quoted", updated_at: new Date().toISOString() })
       .eq("id", inquiryId);
+
+    // Mirror the quote into the message thread so the customer sees it
+    // in their KDER chat with the creator (not just in email). Plain
+    // text + link — chat UI auto-linkifies URLs. Best-effort.
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://kder.club";
+    const totalDollars = Math.round(totalCents / 100);
+    const depositDollars = Math.round(depositCents / 100);
+    const eventDateLabel = new Date(
+      inquiry.event_date + "T00:00:00"
+    ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    await insertCateringThreadMessage({
+      supabase,
+      senderId: user.id, // the creator's auth user id
+      recipientId: inquiry.member_id,
+      body: `📋 I sent you a catering quote — $${totalDollars} total with a $${depositDollars} deposit to lock in ${eventDateLabel}. Review & pay: ${baseUrl}/catering/quote/${quote.id}`,
+    });
 
     // Fire-and-forget notifications to both parties.
     notifyQuoteSentFireAndForget(quote.id).catch((err) => {

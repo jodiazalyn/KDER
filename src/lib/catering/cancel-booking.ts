@@ -74,5 +74,34 @@ export async function cancelAndRefundBooking(args: {
     console.error("[cancelAndRefund] notify threw:", err);
   }
 
+  // Mirror into the chat thread between customer and creator so the
+  // cancellation shows up in their chat (not just email). Pulled in
+  // a separate query because we don't have the member ids in args.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: ctx } = await (supabase as any)
+      .from("catering_bookings")
+      .select("member_id, creator:creators(member_id)")
+      .eq("id", bookingId)
+      .single();
+    const creatorMemberId = ctx?.creator?.member_id as string | null | undefined;
+    if (ctx?.member_id && creatorMemberId) {
+      const { insertCateringThreadMessage } = await import(
+        "./insert-thread-message"
+      );
+      // Sender = creator (cancellation is a creator-side or system
+      // action; customer wouldn't word it this way). Recipient is the
+      // customer.
+      await insertCateringThreadMessage({
+        supabase,
+        senderId: creatorMemberId,
+        recipientId: ctx.member_id,
+        body: `❌ Booking cancelled — your deposit has been refunded. ${reason}`,
+      });
+    }
+  } catch (err) {
+    console.error("[cancelAndRefund] thread message failed:", err);
+  }
+
   return true;
 }

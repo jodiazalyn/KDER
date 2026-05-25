@@ -37,7 +37,7 @@ export async function POST(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: booking } = await (supabase as any)
       .from("catering_bookings")
-      .select("id, creator_id, status, event_date")
+      .select("id, creator_id, member_id, status, event_date")
       .eq("id", id)
       .single();
     if (!booking) return apiError("Booking not found.", 404);
@@ -78,6 +78,28 @@ export async function POST(
     if (updateErr) {
       console.error("[bookings.accept] update failed:", updateErr.message);
       return apiError("Failed to accept booking.", 500);
+    }
+
+    // Mirror into the chat thread (creator → customer).
+    try {
+      const { insertCateringThreadMessage } = await import(
+        "@/lib/catering/insert-thread-message"
+      );
+      const eventDateLabel = new Date(
+        booking.event_date + "T00:00:00"
+      ).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+      const chargeLabel = chargeAt.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+      });
+      await insertCateringThreadMessage({
+        supabase,
+        senderId: user.id, // creator's auth id
+        recipientId: booking.member_id,
+        body: `✅ Booking confirmed for ${eventDateLabel}. Your balance will be auto-charged on ${chargeLabel}.`,
+      });
+    } catch (err) {
+      console.error("[bookings.accept] thread message failed:", err);
     }
 
     // Notify both parties (fire-and-forget).
