@@ -70,6 +70,29 @@ export type CateringPricingMode = "per_head" | "flat";
 /** Fulfillment options for catering. A listing can support any subset. */
 export type CateringFulfillment = "pickup" | "delivery" | "onsite";
 
+/** Food-category buckets the creator uses to organize what's included in a
+ *  catering listing. Fixed list — easier to render and lets the storefront
+ *  card layout reason about ordering. Edit this list to add a new category;
+ *  no DB change needed since `catering_inclusion_groups` is JSONB. */
+export const CATERING_INCLUSION_CATEGORIES = [
+  "Protein",
+  "Sides",
+  "Desserts",
+  "Add-ons",
+  "Drinks",
+  "Toppings/Sauces",
+] as const;
+
+export type CateringInclusionCategory =
+  (typeof CATERING_INCLUSION_CATEGORIES)[number];
+
+/** Map of category → items. Categories with no items are typically omitted
+ *  to keep the JSON small, but rendering code shouldn't assume every key
+ *  exists. */
+export type CateringInclusionGroups = Partial<
+  Record<CateringInclusionCategory, string[]>
+>;
+
 export interface Listing {
   id: string;
   creator_id: string;
@@ -98,6 +121,11 @@ export interface Listing {
   catering_lead_time_hours: number | null;
   catering_fulfillment: CateringFulfillment[];
   catering_inclusions: string | null;
+  /** Structured menu groups (Protein / Sides / Desserts / etc.). Empty
+   *  object for plates or for catering listings created before this
+   *  was introduced — UI falls back to `catering_inclusions` text when
+   *  this is empty. */
+  catering_inclusion_groups: CateringInclusionGroups;
 }
 
 /** A creator's calendar blackout. `one_off` blocks a specific date;

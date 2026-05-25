@@ -1,6 +1,27 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { revalidateStorefrontByCreatorId } from "@/lib/storefront-cache";
+import { CATERING_INCLUSION_CATEGORIES } from "@/types";
+
+/** Same shape as the POST route's helper — duplicated rather than
+ *  reexported to keep these route handlers self-contained. */
+function sanitizeInclusionGroups(
+  raw: unknown
+): Record<string, string[]> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const allowedKeys = new Set<string>(CATERING_INCLUSION_CATEGORIES);
+  const out: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!allowedKeys.has(key)) continue;
+    if (!Array.isArray(value)) continue;
+    const items = value
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim().slice(0, 60))
+      .filter((v) => v.length > 0);
+    if (items.length > 0) out[key] = items;
+  }
+  return out;
+}
 
 /**
  * GET /api/v1/listings/:id — fetch a single listing.
@@ -136,6 +157,11 @@ export async function PATCH(
         typeof body.catering_inclusions === "string"
           ? body.catering_inclusions.trim() || null
           : null;
+    }
+    if (body.catering_inclusion_groups !== undefined) {
+      allowed.catering_inclusion_groups = sanitizeInclusionGroups(
+        body.catering_inclusion_groups
+      );
     }
 
     allowed.updated_at = new Date().toISOString();

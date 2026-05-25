@@ -47,6 +47,17 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
           {badge.label}
         </div>
 
+        {/* Catering tag — sits just below the status badge in purple so
+            the creator can tell at a glance which listings are catering
+            vs regular plates. No badge for plates (the default kind),
+            keeping the visual noise down for creators who only sell
+            on-demand. */}
+        {listing.kind === "catering" && (
+          <div className="absolute left-2 top-9 rounded-full bg-purple-900/50 px-2.5 py-0.5 text-xs font-medium text-purple-200">
+            Catering
+          </div>
+        )}
+
         {/* Menu button */}
         <button
           type="button"
