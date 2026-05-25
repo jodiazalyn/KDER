@@ -20,9 +20,11 @@ import {
   type ListingKind,
   type CateringPricingMode,
   type CateringFulfillment,
+  type CateringInclusionGroups,
   type FulfillmentType,
   type ListingStatus,
 } from "@/types";
+import { CateringInclusionsEditor } from "./CateringInclusionsEditor";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -50,6 +52,7 @@ interface DraftData {
   cateringLeadTimeHours?: string;
   cateringFulfillment?: CateringFulfillment[];
   cateringInclusions?: string;
+  cateringInclusionGroups?: CateringInclusionGroups;
   savedAt: string;
 }
 
@@ -143,14 +146,33 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [cateringMaxGuests, setCateringMaxGuests] = useState(
     listing?.catering_max_guests?.toString() ?? restored?.cateringMaxGuests ?? ""
   );
-  const [cateringLeadTimeHours, setCateringLeadTimeHours] = useState(
-    listing?.catering_lead_time_hours?.toString() ?? restored?.cateringLeadTimeHours ?? "48"
+  // Lead time is stored as a single hours int in the DB but presented as
+  // days + leftover hours in the UI — "2 days, 0 hours" is way easier to
+  // reason about than "48 hours". The two pieces of state stay in sync
+  // through buildListingData (combines them) and the initial-value
+  // expressions below (decomposes the existing listing's stored hours).
+  const initialLeadHours =
+    listing?.catering_lead_time_hours ??
+    (restored?.cateringLeadTimeHours
+      ? parseInt(restored.cateringLeadTimeHours, 10) || 48
+      : 48);
+  const [cateringLeadDays, setCateringLeadDays] = useState(
+    Math.floor(initialLeadHours / 24).toString()
+  );
+  const [cateringLeadHoursPart, setCateringLeadHoursPart] = useState(
+    (initialLeadHours % 24).toString()
   );
   const [cateringFulfillment, setCateringFulfillment] = useState<CateringFulfillment[]>(
     listing?.catering_fulfillment ?? restored?.cateringFulfillment ?? ["pickup", "delivery"]
   );
+  // Free-text inclusions kept for back-compat with listings created
+  // before the structured editor shipped. The form prefers
+  // cateringInclusionGroups (below) when both are set.
   const [cateringInclusions, setCateringInclusions] = useState(
     listing?.catering_inclusions ?? restored?.cateringInclusions ?? ""
+  );
+  const [cateringInclusionGroups, setCateringInclusionGroups] = useState<CateringInclusionGroups>(
+    listing?.catering_inclusion_groups ?? restored?.cateringInclusionGroups ?? {}
   );
   const [saving, setSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -163,9 +185,10 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [showCategories, setShowCategories] = useState(
     (listing?.category_tags?.length ?? restored?.categories?.length ?? 0) > 0
   );
-  const [showAllergens, setShowAllergens] = useState(
-    (listing?.allergens?.length ?? restored?.allergens?.length ?? 0) > 0
-  );
+  // Allergens default-open so the pill list is immediately visible.
+  // Creators expect to see the allergen options the same way they see
+  // category tags — collapsed-by-default hid the pills and felt broken.
+  const [showAllergens, setShowAllergens] = useState(true);
   const [showMinOrder, setShowMinOrder] = useState(!!listing?.min_order || !!restored?.minOrder);
 
   // Load Connect status once on mount.
@@ -210,6 +233,11 @@ export function PlateForm({ listing }: PlateFormProps) {
     const hasContent = name.trim() || description.trim() || price || photos.length > 0;
     if (!hasContent) return;
 
+    // Draft stores the combined hours value so old drafts (pre days+hours
+    // split) still restore correctly via the decompose on read.
+    const combinedLeadHours =
+      (parseInt(cateringLeadDays, 10) || 0) * 24 +
+      (parseInt(cateringLeadHoursPart, 10) || 0);
     saveDraft({
       kind,
       name, description, price, quantity, minOrder,
@@ -217,9 +245,10 @@ export function PlateForm({ listing }: PlateFormProps) {
       cateringPricingMode,
       cateringMinGuests,
       cateringMaxGuests,
-      cateringLeadTimeHours,
+      cateringLeadTimeHours: String(combinedLeadHours),
       cateringFulfillment,
       cateringInclusions,
+      cateringInclusionGroups,
       savedAt: new Date().toISOString(),
     });
     setAutoSaved(true);
@@ -228,9 +257,12 @@ export function PlateForm({ listing }: PlateFormProps) {
     kind, name, description, price, quantity, minOrder,
     photos, video, fulfillment, categories, allergens,
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
-    cateringLeadTimeHours, cateringFulfillment, cateringInclusions,
+    cateringLeadDays, cateringLeadHoursPart,
+    cateringFulfillment, cateringInclusions, cateringInclusionGroups,
     isEditing,
   ]);
+  // The second useEffect (autosave timer) needs the same deps as
+  // doAutoSave to re-fire on any change. Update it below.
 
   useEffect(() => {
     // Skip the initial mount to avoid saving empty/restored state immediately
@@ -250,14 +282,18 @@ export function PlateForm({ listing }: PlateFormProps) {
     kind, name, description, price, quantity, minOrder,
     photos, video, fulfillment, categories, allergens,
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
-    cateringLeadTimeHours, cateringFulfillment, cateringInclusions,
+    cateringLeadDays, cateringLeadHoursPart,
+    cateringFulfillment, cateringInclusions, cateringInclusionGroups,
     isEditing, doAutoSave,
   ]);
 
   const priceNum = parseFloat(price) || 0;
   const minGuestsNum = parseInt(cateringMinGuests, 10) || 0;
   const maxGuestsNum = cateringMaxGuests ? parseInt(cateringMaxGuests, 10) : null;
-  const leadTimeNum = parseInt(cateringLeadTimeHours, 10) || 0;
+  // Combine days + hours back into the single int the DB column holds.
+  const leadTimeNum =
+    (parseInt(cateringLeadDays, 10) || 0) * 24 +
+    (parseInt(cateringLeadHoursPart, 10) || 0);
 
   // Publish validation differs by kind. Plates need price + quantity;
   // catering needs price + min guests + lead time + at least one
@@ -308,6 +344,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     catering_fulfillment: kind === "catering" ? cateringFulfillment : [],
     catering_inclusions:
       kind === "catering" ? cateringInclusions.trim() || null : null,
+    catering_inclusion_groups: kind === "catering" ? cateringInclusionGroups : {},
   });
 
   const handleSave = async (status: ListingStatus) => {
@@ -689,36 +726,50 @@ export function PlateForm({ listing }: PlateFormProps) {
             </section>
           )}
 
-          {/* Catering-only: Lead time */}
+          {/* Catering-only: Lead time (days + hours) */}
           {kind === "catering" && (
-            <section>
-              <label
-                htmlFor="catering-lead-time"
+            <section aria-labelledby="catering-lead-label">
+              <span
+                id="catering-lead-label"
                 className="mb-2 block text-sm font-medium text-white/60"
               >
                 Minimum lead time *
-              </label>
-              <div className="relative">
-                <input
-                  id="catering-lead-time"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={cateringLeadTimeHours}
-                  onChange={(e) =>
-                    setCateringLeadTimeHours(e.target.value.replace(/\D/g, ""))
-                  }
-                  placeholder="48"
-                  className="glass-input h-12 w-full px-4 pr-16 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
-                />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-white/40">
-                  hours
-                </span>
+              </span>
+              <div className="flex gap-3">
+                <label className="flex-1">
+                  <span className="mb-1 block text-xs text-white/50">Days</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={cateringLeadDays}
+                    onChange={(e) =>
+                      setCateringLeadDays(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="2"
+                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  />
+                </label>
+                <label className="flex-1">
+                  <span className="mb-1 block text-xs text-white/50">Hours</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={23}
+                    value={cateringLeadHoursPart}
+                    onChange={(e) =>
+                      setCateringLeadHoursPart(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="0"
+                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  />
+                </label>
               </div>
               <p className="mt-1.5 text-xs text-white/40">
-                How far in advance customers must book this. 48h = 2 days.
-                The date picker on their inquiry form will gray out anything
-                inside this window.
+                How far in advance customers must book this. The date picker
+                on their inquiry form will gray out anything inside this
+                window.
               </p>
             </section>
           )}
@@ -776,28 +827,39 @@ export function PlateForm({ listing }: PlateFormProps) {
             </section>
           )}
 
-          {/* Catering-only: What's included */}
+          {/* Catering-only: What's included.
+              Structured editor (Protein / Sides / Desserts / Add-ons /
+              Drinks / Toppings/Sauces). Replaces the old free-text
+              textarea; the underlying catering_inclusions column is
+              still written (empty) for back-compat. */}
           {kind === "catering" && (
             <section>
-              <label
-                htmlFor="catering-inclusions"
-                className="mb-2 block text-sm font-medium text-white/60"
-              >
+              <label className="mb-2 block text-sm font-medium text-white/60">
                 What&apos;s included
               </label>
-              <textarea
-                id="catering-inclusions"
-                value={cateringInclusions}
-                onChange={(e) =>
-                  setCateringInclusions(e.target.value.slice(0, 500))
-                }
-                placeholder="Includes: 2 proteins, queso, guacamole, pico de gallo, salsa, charro beans, sour cream, jalapeños, tortilla chips."
-                rows={3}
-                className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
+              <CateringInclusionsEditor
+                value={cateringInclusionGroups}
+                onChange={setCateringInclusionGroups}
               />
-              <p className="mt-1.5 text-right text-xs text-white/30">
-                {cateringInclusions.length}/500
-              </p>
+              {/* Quietly retain the legacy free-text input as a single-
+                  line field below the editor — most creators won't
+                  touch it. Kept so older listings still surface their
+                  copy in the edit form. */}
+              {(cateringInclusions || "").trim().length > 0 && (
+                <details className="mt-3 text-xs text-white/40">
+                  <summary className="cursor-pointer hover:text-white/60">
+                    Legacy free-text inclusions
+                  </summary>
+                  <textarea
+                    value={cateringInclusions}
+                    onChange={(e) =>
+                      setCateringInclusions(e.target.value.slice(0, 500))
+                    }
+                    rows={2}
+                    className="glass-input mt-2 w-full px-4 py-2 text-sm text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 resize-none"
+                  />
+                </details>
+              )}
             </section>
           )}
 

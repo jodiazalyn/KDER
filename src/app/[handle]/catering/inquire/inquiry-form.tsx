@@ -34,6 +34,7 @@ interface ListingRow {
   catering_lead_time_hours: number | null;
   catering_fulfillment: string[];
   catering_inclusions: string | null;
+  catering_inclusion_groups: Record<string, string[]> | null;
 }
 
 interface Props {
@@ -269,6 +270,22 @@ export function InquiryForm({
                           ${l.price.toFixed(0)}
                           {l.catering_pricing_mode === "per_head" ? "/guest" : " flat"}
                         </p>
+                        {/* Inclusion summary — first 3 groups, first
+                            item per group, joined with · — keeps the
+                            row scannable. */}
+                        {(() => {
+                          const groups = l.catering_inclusion_groups || {};
+                          const summary = Object.entries(groups)
+                            .filter(([, items]) => Array.isArray(items) && items.length > 0)
+                            .slice(0, 3)
+                            .map(([group, items]) => `${group}: ${items[0]}`)
+                            .join(" · ");
+                          return summary ? (
+                            <p className="mt-0.5 truncate text-[11px] text-white/40">
+                              {summary}
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                       <button
                         type="button"

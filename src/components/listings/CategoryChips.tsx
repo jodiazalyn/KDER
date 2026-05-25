@@ -30,7 +30,10 @@ export function CategoryChips({
 
   const query = search.trim().toLowerCase();
 
-  // When searching: flat filtered list. When not: grouped layout.
+  // When searching: flat filtered list. When not: grouped layout — OR a
+  // flat list if none of the options live in CATEGORY_GROUPS (e.g. the
+  // ALLERGENS list passes in 8 tags none of which are in CATEGORY_GROUPS,
+  // so without the fallback the grouped branch would render nothing).
   const filtered = useMemo(
     () => options.filter((opt) => opt.toLowerCase().includes(query)),
     [options, query]
@@ -43,6 +46,17 @@ export function CategoryChips({
       tags: tags.filter((t) => options.includes(t)),
     }));
   }, [options, query]);
+
+  // True only if at least one option appears in any CATEGORY_GROUPS bucket.
+  // When false, we render a flat pill list so the user actually sees their
+  // options without having to type into the search box.
+  const hasAnyGroupedOption = useMemo(
+    () =>
+      Object.values(CATEGORY_GROUPS).some((tags) =>
+        tags.some((t) => options.includes(t))
+      ),
+    [options]
+  );
 
   return (
     <div role="group" aria-label={label} className="space-y-3">
@@ -77,8 +91,8 @@ export function CategoryChips({
         ) : (
           <p className="text-sm text-white/30">No tags match &ldquo;{search}&rdquo;</p>
         )
-      ) : (
-        /* Grouped layout */
+      ) : hasAnyGroupedOption ? (
+        /* Grouped layout — categories that map into CATEGORY_GROUPS */
         <div className="space-y-4">
           {groups?.map(({ group, tags }) =>
             tags.length === 0 ? null : (
@@ -99,6 +113,18 @@ export function CategoryChips({
               </div>
             )
           )}
+        </div>
+      ) : (
+        /* Flat layout — for ungrouped option sets like ALLERGENS */
+        <div className="flex flex-wrap gap-2">
+          {options.map((opt) => (
+            <Chip
+              key={opt}
+              label={opt}
+              active={selected.includes(opt)}
+              onToggle={() => toggle(opt)}
+            />
+          ))}
         </div>
       )}
     </div>

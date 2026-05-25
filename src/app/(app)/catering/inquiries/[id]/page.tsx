@@ -51,18 +51,20 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
   if (!inq) notFound();
 
-  // Fetch pre-selected listings (if any).
+  // Fetch pre-selected listings (if any). Pulls inclusion_groups too so
+  // the row can show what's in each item the customer wanted.
   let selectedListings: Array<{
     id: string;
     name: string;
     price: number;
     catering_pricing_mode: string | null;
+    catering_inclusion_groups: Record<string, string[]> | null;
   }> = [];
   if (inq.pre_selected_listing_ids?.length > 0) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data } = await (supabase as any)
       .from("listings")
-      .select("id, name, price, catering_pricing_mode")
+      .select("id, name, price, catering_pricing_mode, catering_inclusion_groups")
       .in("id", inq.pre_selected_listing_ids);
     selectedListings = (data ?? []) as typeof selectedListings;
   }
@@ -194,19 +196,31 @@ export default async function InquiryDetailPage({ params }: PageProps) {
             <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">
               Items they&apos;re interested in
             </h2>
-            <ul className="space-y-1.5 text-sm">
-              {selectedListings.map((l) => (
-                <li
-                  key={l.id}
-                  className="flex items-center justify-between text-white/80"
-                >
-                  <span className="truncate">{l.name}</span>
-                  <span className="shrink-0 text-white/60">
-                    ${l.price.toFixed(0)}
-                    {l.catering_pricing_mode === "per_head" ? "/guest" : ""}
-                  </span>
-                </li>
-              ))}
+            <ul className="space-y-2 text-sm">
+              {selectedListings.map((l) => {
+                const groups = l.catering_inclusion_groups || {};
+                const summary = Object.entries(groups)
+                  .filter(([, items]) => Array.isArray(items) && items.length > 0)
+                  .slice(0, 3)
+                  .map(([group, items]) => `${group}: ${items[0]}`)
+                  .join(" · ");
+                return (
+                  <li key={l.id} className="text-white/80">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate">{l.name}</span>
+                      <span className="shrink-0 text-white/60">
+                        ${l.price.toFixed(0)}
+                        {l.catering_pricing_mode === "per_head" ? "/guest" : ""}
+                      </span>
+                    </div>
+                    {summary && (
+                      <p className="mt-0.5 truncate text-[11px] text-white/40">
+                        {summary}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <p className="mt-2 text-[11px] text-white/40">
               These get auto-added to the quote when you start building it.

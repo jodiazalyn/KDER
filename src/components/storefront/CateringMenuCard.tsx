@@ -99,16 +99,11 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
           </span>
         </div>
 
-        {/* Inclusions copy (or fall back to description) — line-clamped */}
-        {listing.catering_inclusions ? (
-          <p className="line-clamp-2 text-xs leading-snug text-white/60">
-            {listing.catering_inclusions}
-          </p>
-        ) : listing.description ? (
-          <p className="line-clamp-2 text-xs leading-snug text-white/60">
-            {listing.description}
-          </p>
-        ) : null}
+        {/* Inclusions summary — prefer the structured groups, fall back
+            to the legacy free-text field, then to the description. Up
+            to 3 groups, one line each ("Protein: A, B"). */}
+        <InclusionsSummary listing={listing} />
+
 
         {/* Bottom row: metadata chips */}
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
@@ -142,4 +137,43 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
       )}
     </button>
   );
+}
+
+/** Compact 3-line summary of what's included. Reads structured groups
+ *  first; falls back to the legacy text and finally the description. */
+function InclusionsSummary({ listing }: { listing: Listing }) {
+  const groups = listing.catering_inclusion_groups || {};
+  const entries = Object.entries(groups).filter(
+    ([, items]) => Array.isArray(items) && items.length > 0
+  );
+  if (entries.length > 0) {
+    return (
+      <div className="space-y-0.5">
+        {entries.slice(0, 3).map(([group, items]) => (
+          <p
+            key={group}
+            className="line-clamp-1 text-xs leading-snug text-white/60"
+          >
+            <span className="font-semibold text-white/75">{group}:</span>{" "}
+            {items?.join(", ")}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  if (listing.catering_inclusions) {
+    return (
+      <p className="line-clamp-2 text-xs leading-snug text-white/60">
+        {listing.catering_inclusions}
+      </p>
+    );
+  }
+  if (listing.description) {
+    return (
+      <p className="line-clamp-2 text-xs leading-snug text-white/60">
+        {listing.description}
+      </p>
+    );
+  }
+  return null;
 }

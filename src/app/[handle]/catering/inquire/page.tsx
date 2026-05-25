@@ -45,7 +45,8 @@ export default async function CateringInquirePage({
     .select(`
       id, name, price, photos, kind,
       catering_pricing_mode, catering_min_guests, catering_max_guests,
-      catering_lead_time_hours, catering_fulfillment, catering_inclusions
+      catering_lead_time_hours, catering_fulfillment, catering_inclusions,
+      catering_inclusion_groups
     `)
     .eq("creator_id", creator.id)
     .eq("kind", "catering")
