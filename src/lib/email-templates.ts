@@ -636,3 +636,192 @@ export function cateringBookingCancelledBoth(args: {
     html: shell(`Booking cancelled`, body, APP_URL, "Back to KDER"),
   };
 }
+
+// ── PR 4 templates: balance + reminders + quote expiry ─────────
+
+/** Sent to BOTH parties when the balance auto-charge succeeds. */
+export function cateringBalanceChargedBoth(args: {
+  forParty: "creator" | "customer";
+  otherPartyName: string;
+  balanceCents: number;
+  totalCents: number;
+  eventDate: string;
+}) {
+  const { forParty, otherPartyName, balanceCents, totalCents, eventDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  const body =
+    forParty === "customer"
+      ? `<p>The remaining <strong>${money(balanceCents)}</strong> balance for your ${eventDateLabel} catering with ${escapeHtml(otherPartyName)} just charged successfully.</p>
+         <p style="color:#666;font-size:13px">You've paid <strong>${money(totalCents)}</strong> total. See you on event day!</p>`
+      : `<p>The ${money(balanceCents)} balance from ${escapeHtml(otherPartyName)} for the ${eventDateLabel} catering booking just landed.</p>
+         <p style="color:#666;font-size:13px">${money(totalCents)} collected on this booking.</p>`;
+  return {
+    subject:
+      forParty === "customer"
+        ? `Your balance charged — ${eventDateLabel} catering with ${otherPartyName}`
+        : `Balance collected — ${otherPartyName}'s ${eventDateLabel} catering`,
+    html: shell(
+      forParty === "customer" ? "Balance charged" : "Balance collected",
+      body,
+      forParty === "customer" ? APP_URL : `${APP_URL}/catering/bookings`,
+      forParty === "customer" ? "Back to KDER" : "Open bookings"
+    ),
+  };
+}
+
+/** Sent to BOTH parties when the balance charge fails (3DS required,
+ *  card declined, etc.). Customer gets a retry CTA → standalone retry
+ *  page (PR 4: /catering/bookings/[id] customer view, deferred to a
+ *  follow-up if needed). For v1 we point them at the original quote
+ *  page; they can re-enter card details there via a re-deposit flow. */
+export function cateringBalanceFailedBoth(args: {
+  forParty: "creator" | "customer";
+  otherPartyName: string;
+  balanceCents: number;
+  reason: string;
+  bookingId: string;
+  finalAttempt: boolean;
+  eventDate: string;
+}) {
+  const { forParty, otherPartyName, balanceCents, reason, bookingId, finalAttempt, eventDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { month: "long", day: "numeric" }
+  );
+  const customerBody = finalAttempt
+    ? `<p>We tried to charge the <strong>${money(balanceCents)}</strong> balance for your ${eventDateLabel} catering and it didn't go through.</p>
+       <p style="color:#666;font-size:13px"><em>${escapeHtml(reason)}</em></p>
+       <p>We've reached our auto-retry limit. To keep your booking, contact ${escapeHtml(otherPartyName)} directly to settle the balance.</p>`
+    : `<p>We tried to charge the <strong>${money(balanceCents)}</strong> balance for your ${eventDateLabel} catering and it didn't go through.</p>
+       <p style="color:#666;font-size:13px"><em>${escapeHtml(reason)}</em></p>
+       <p>We'll automatically try again in 4 hours. If your card has expired or you've moved banks, you can update it in your dashboard.</p>`;
+  const creatorBody = `<p>The balance charge for ${escapeHtml(otherPartyName)}'s ${eventDateLabel} catering booking failed.</p>
+     <p style="color:#666;font-size:13px"><em>${escapeHtml(reason)}</em></p>
+     <p style="color:#666;font-size:13px">${finalAttempt ? "We've stopped auto-retrying. You may want to reach out to the customer directly." : "We'll try again in 4 hours. No action needed yet."}</p>`;
+  return {
+    subject:
+      forParty === "customer"
+        ? `Action needed: balance didn't charge — ${eventDateLabel} catering`
+        : `Heads up: balance charge failed for ${otherPartyName}`,
+    html: shell(
+      forParty === "customer" ? "Balance didn't charge" : "Balance charge failed",
+      forParty === "customer" ? customerBody : creatorBody,
+      `${APP_URL}/catering/bookings/${bookingId}`,
+      forParty === "customer" ? "Update card" : "Open booking"
+    ),
+  };
+}
+
+/** Pre-event reminder. Tier controls subject + body urgency:
+ *    3d         — "Heads up, in 3 days"
+ *    1d         — "Tomorrow"
+ *    morning_of — "Today is the day" */
+export function cateringEventReminderBoth(args: {
+  forParty: "creator" | "customer";
+  otherPartyName: string;
+  tier: "3d" | "1d" | "morning_of";
+  eventDate: string;
+  eventTime: string | null;
+  guestCount: number;
+  eventAddress: string | null;
+}) {
+  const { forParty, otherPartyName, tier, eventDate, eventTime, guestCount, eventAddress } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  const timeLabel = eventTime
+    ? new Date(`2000-01-01T${eventTime}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
+  const headlines: Record<typeof tier, string> = {
+    "3d": "In 3 days",
+    "1d": "Tomorrow",
+    morning_of: "Today",
+  };
+  const subjectPrefixes: Record<typeof tier, string> = {
+    "3d": "In 3 days",
+    "1d": "Tomorrow",
+    morning_of: "Today",
+  };
+
+  const body =
+    forParty === "customer"
+      ? `<p>Your catering with <strong>${escapeHtml(otherPartyName)}</strong> is ${tier === "morning_of" ? "happening today" : tier === "1d" ? "tomorrow" : "in 3 days"}.</p>
+         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+           <tr><td style="padding:6px 0;color:#666;width:120px">Date</td><td style="padding:6px 0;font-weight:600">${eventDateLabel}${timeLabel ? ` at ${timeLabel}` : ""}</td></tr>
+           <tr><td style="padding:6px 0;color:#666">Guests</td><td style="padding:6px 0;font-weight:600">${guestCount}</td></tr>
+           ${eventAddress ? `<tr><td style="padding:6px 0;color:#666;vertical-align:top">Location</td><td style="padding:6px 0;font-weight:600">${escapeHtml(eventAddress)}</td></tr>` : ""}
+         </table>
+         <p style="color:#666;font-size:13px">Reach out to ${escapeHtml(otherPartyName)} on KDER if anything's changed.</p>`
+      : `<p>Your <strong>${guestCount}-guest</strong> catering for ${escapeHtml(otherPartyName)} is ${tier === "morning_of" ? "happening today" : tier === "1d" ? "tomorrow" : "in 3 days"}.</p>
+         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+           <tr><td style="padding:6px 0;color:#666;width:120px">Date</td><td style="padding:6px 0;font-weight:600">${eventDateLabel}${timeLabel ? ` at ${timeLabel}` : ""}</td></tr>
+           ${eventAddress ? `<tr><td style="padding:6px 0;color:#666;vertical-align:top">Location</td><td style="padding:6px 0;font-weight:600">${escapeHtml(eventAddress)}</td></tr>` : ""}
+         </table>
+         ${tier === "morning_of" ? `<p style="color:#666;font-size:13px">Remember to mark the booking complete in your Calendar after the event so the customer can leave a review.</p>` : ""}`;
+
+  return {
+    subject:
+      forParty === "customer"
+        ? `${subjectPrefixes[tier]}: your catering with ${otherPartyName}`
+        : `${subjectPrefixes[tier]}: ${guestCount}-guest catering for ${otherPartyName}`,
+    html: shell(headlines[tier], body, `${APP_URL}/catering/bookings`, "Open bookings"),
+  };
+}
+
+/** Sent to the CUSTOMER when their unanswered quote expires. */
+export function cateringQuoteExpiredCustomer(args: {
+  creatorName: string;
+  eventDate: string;
+  creatorHandle: string;
+}) {
+  const { creatorName, eventDate, creatorHandle } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  return {
+    subject: `Your quote from ${creatorName} expired`,
+    html: shell(
+      `Quote expired`,
+      `<p>Your catering quote from <strong>${escapeHtml(creatorName)}</strong> for ${eventDateLabel} has expired.</p>
+       <p style="color:#666;font-size:13px">If you still want to book, you can request a fresh quote from their profile.</p>`,
+      `${APP_URL}/@${creatorHandle}`,
+      `Visit ${creatorName}'s profile`
+    ),
+  };
+}
+
+/** Sent to BOTH parties when the creator marks the event complete. */
+export function cateringBookingCompletedBoth(args: {
+  forParty: "creator" | "customer";
+  otherPartyName: string;
+  eventDate: string;
+  totalCents: number;
+}) {
+  const { forParty, otherPartyName, eventDate, totalCents } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { month: "long", day: "numeric" }
+  );
+  const body =
+    forParty === "customer"
+      ? `<p>${escapeHtml(otherPartyName)} marked your ${eventDateLabel} catering as complete. Hope it was excellent!</p>
+         <p style="color:#666;font-size:13px">Drop them a rating on KDER — it helps other customers find great creators.</p>`
+      : `<p>You marked the ${eventDateLabel} catering with ${escapeHtml(otherPartyName)} as complete. Total collected: <strong>${money(totalCents)}</strong>.</p>
+         <p style="color:#666;font-size:13px">Nice work. Your earnings will hit your payout schedule on the usual Stripe cadence.</p>`;
+  return {
+    subject:
+      forParty === "customer"
+        ? `Your catering with ${otherPartyName} is complete`
+        : `Booking with ${otherPartyName} marked complete`,
+    html: shell("Booking complete", body, APP_URL, "Back to KDER"),
+  };
+}

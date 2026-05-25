@@ -561,3 +561,350 @@ export async function notifyCateringBookingCancelled(args: {
     console.error("[notify] booking cancelled threw:", err);
   }
 }
+
+// ── PR 4 notifications: balance, reminders, expiry, completion ──
+
+/** Sent when the balance auto-charge succeeds. Both parties. */
+export async function notifyCateringBalanceCharged(args: {
+  bookingId: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, total_cents, balance_cents, event_date, inquiry_id,
+        creator:creators(member:members(display_name, email)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const customerEmail = t.cateringBalanceChargedBoth({
+      forParty: "customer",
+      otherPartyName: creator.display_name ?? "your creator",
+      balanceCents: booking.balance_cents,
+      totalCents: booking.total_cents,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      "cateringBalanceCharged→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringBalanceChargedBoth({
+      forParty: "creator",
+      otherPartyName: customer.display_name ?? "Customer",
+      balanceCents: booking.balance_cents,
+      totalCents: booking.total_cents,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      "cateringBalanceCharged→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+  } catch (err) {
+    console.error("[notify] balance charged threw:", err);
+  }
+}
+
+/** Sent when the balance auto-charge fails. Customer gets a retry CTA;
+ *  creator gets a heads-up so they're not blindsided. */
+export async function notifyCateringBalanceFailed(args: {
+  bookingId: string;
+  reason: string;
+  finalAttempt: boolean;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, balance_cents, event_date, inquiry_id,
+        creator:creators(member:members(display_name, email, phone)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email, phone)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const customerEmail = t.cateringBalanceFailedBoth({
+      forParty: "customer",
+      otherPartyName: creator.display_name ?? "your creator",
+      balanceCents: booking.balance_cents,
+      reason: args.reason,
+      bookingId: booking.id,
+      finalAttempt: args.finalAttempt,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      "cateringBalanceFailed→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringBalanceFailedBoth({
+      forParty: "creator",
+      otherPartyName: customer.display_name ?? "Customer",
+      balanceCents: booking.balance_cents,
+      reason: args.reason,
+      bookingId: booking.id,
+      finalAttempt: args.finalAttempt,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      "cateringBalanceFailed→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+
+    // SMS to customer — they have to act, urgency matters.
+    try {
+      const { sendSms, isTwilioConfigured } = await import("./twilio");
+      if (isTwilioConfigured() && customer.phone) {
+        const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://kder.club"}/catering/bookings/${booking.id}`;
+        await sendSms(
+          customer.phone,
+          `KDER: Your balance payment for ${creator.display_name ?? "your"} catering didn't go through. Update your card: ${url}`
+        );
+      }
+    } catch (err) {
+      console.error("[notify] balance failed SMS:", err);
+    }
+  } catch (err) {
+    console.error("[notify] balance failed threw:", err);
+  }
+}
+
+/** Pre-event reminder. Fires for both parties at one of three tiers. */
+export async function notifyCateringEventReminder(args: {
+  bookingId: string;
+  tier: "3d" | "1d" | "morning_of";
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, event_date, event_time, inquiry_id,
+        inquiry:catering_inquiries(guest_count, event_address),
+        creator:creators(member:members(display_name, email, phone)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email, phone)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+    const guestCount = booking.inquiry?.guest_count ?? 0;
+    const eventAddress = booking.inquiry?.event_address ?? null;
+
+    const customerEmail = t.cateringEventReminderBoth({
+      forParty: "customer",
+      otherPartyName: creator.display_name ?? "your creator",
+      tier: args.tier,
+      eventDate: booking.event_date,
+      eventTime: booking.event_time,
+      guestCount,
+      eventAddress,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      `cateringEventReminder-${args.tier}→customer`,
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringEventReminderBoth({
+      forParty: "creator",
+      otherPartyName: customer.display_name ?? "Customer",
+      tier: args.tier,
+      eventDate: booking.event_date,
+      eventTime: booking.event_time,
+      guestCount,
+      eventAddress,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      `cateringEventReminder-${args.tier}→creator`,
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+
+    // SMS for 1d and morning-of tiers to both parties — these are the
+    // ones with real "show up and be ready" urgency.
+    if (args.tier === "1d" || args.tier === "morning_of") {
+      try {
+        const { sendSms, isTwilioConfigured } = await import("./twilio");
+        if (isTwilioConfigured()) {
+          const eventDateLabel = new Date(
+            booking.event_date + "T00:00:00"
+          ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          const when =
+            args.tier === "morning_of" ? "today" : `tomorrow (${eventDateLabel})`;
+          if (creator.phone) {
+            await sendSms(
+              creator.phone,
+              `KDER reminder: ${guestCount}-guest catering for ${customer.display_name ?? "your customer"} ${when}.`
+            );
+          }
+          if (customer.phone) {
+            await sendSms(
+              customer.phone,
+              `KDER reminder: Your catering with ${creator.display_name ?? "your creator"} is ${when}.`
+            );
+          }
+        }
+      } catch (err) {
+        console.error("[notify] event reminder SMS:", err);
+      }
+    }
+  } catch (err) {
+    console.error("[notify] event reminder threw:", err);
+  }
+}
+
+/** Sent to the CUSTOMER when an unanswered quote expires. */
+export async function notifyCateringQuoteExpired(args: {
+  quoteId: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: quote } = await (supabase as any)
+      .from("catering_quotes")
+      .select(`
+        id, member_id, inquiry_id,
+        inquiry:catering_inquiries(event_date),
+        creator:creators(member:members(display_name, handle)),
+        customer:members!catering_quotes_member_id_fkey(display_name, email)
+      `)
+      .eq("id", args.quoteId)
+      .single();
+
+    if (!quote) return;
+    const customer = quote.customer;
+    const creator = quote.creator?.member;
+    if (!customer || !creator || !quote.inquiry) return;
+
+    const thread = cateringThreadIds(quote.inquiry_id);
+
+    const email = t.cateringQuoteExpiredCustomer({
+      creatorName: creator.display_name ?? "the creator",
+      eventDate: quote.inquiry.event_date,
+      creatorHandle: creator.handle ?? "",
+    });
+    await safeSendEmail(
+      customer.email,
+      email.subject,
+      email.html,
+      "cateringQuoteExpired→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+  } catch (err) {
+    console.error("[notify] quote expired threw:", err);
+  }
+}
+
+/** Sent when the creator marks a booking complete. Both parties. */
+export async function notifyCateringBookingCompleted(args: {
+  bookingId: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, total_cents, event_date, inquiry_id,
+        creator:creators(member:members(display_name, email)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const customerEmail = t.cateringBookingCompletedBoth({
+      forParty: "customer",
+      otherPartyName: creator.display_name ?? "your creator",
+      eventDate: booking.event_date,
+      totalCents: booking.total_cents,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      "cateringBookingCompleted→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringBookingCompletedBoth({
+      forParty: "creator",
+      otherPartyName: customer.display_name ?? "Customer",
+      eventDate: booking.event_date,
+      totalCents: booking.total_cents,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      "cateringBookingCompleted→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+  } catch (err) {
+    console.error("[notify] booking completed threw:", err);
+  }
+}
