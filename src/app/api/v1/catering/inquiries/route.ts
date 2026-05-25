@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
+import { insertCateringThreadMessage } from "@/lib/catering/insert-thread-message";
 
 /**
  * GET /api/v1/catering/inquiries?mine=true
@@ -96,8 +97,13 @@ export async function POST(request: NextRequest) {
     if (!user) return apiError("Sign in to submit a catering inquiry.", 401);
 
     // ── Resolve creator from handle or id ───────────────────
+    // Pull member_id so we can address them as the recipient of the
+    // chat-thread message we insert below — sender_id/recipient_id on
+    // messages are member ids, not creator ids.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const creatorQuery = (supabase as any).from("creators").select("id, members!inner(handle)");
+    const creatorQuery = (supabase as any)
+      .from("creators")
+      .select("id, member_id, members!inner(handle)");
     const { data: creator } = body.creator_id
       ? await creatorQuery.eq("id", body.creator_id).single()
       : await creatorQuery.eq("members.handle", body.creator_handle).single();
@@ -220,6 +226,21 @@ export async function POST(request: NextRequest) {
     if (insertErr || !inserted) {
       console.error("[inquiries.POST] insert failed:", insertErr?.message);
       return apiError("Couldn't submit your request. Try again.", 500);
+    }
+
+    // Mirror the inquiry into the message thread between customer and
+    // creator so the conversation starts naturally in chat too — not
+    // just in the creator's inquiry inbox. Best-effort.
+    if (creator.member_id) {
+      const eventDateLabel = new Date(
+        body.event_date + "T00:00:00"
+      ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      await insertCateringThreadMessage({
+        supabase,
+        senderId: user.id, // customer's auth id (members.id == auth.uid)
+        recipientId: creator.member_id,
+        body: `📋 I submitted a catering request for ${guestCount} guests on ${eventDateLabel}. Looking forward to your quote!`,
+      });
     }
 
     // Fire-and-forget notification. We don't block on email/SMS sends

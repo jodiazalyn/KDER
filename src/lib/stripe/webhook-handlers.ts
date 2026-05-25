@@ -492,6 +492,32 @@ export async function handleCateringDepositSucceeded(
       .eq("id", inquiryId),
   ]);
 
+  // Mirror into the chat thread (customer → creator). Need the
+  // creator's member_id since messages.recipient_id refers to members,
+  // not creators.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: creatorRow } = await (supabase as any)
+      .from("creators")
+      .select("member_id")
+      .eq("id", creatorId)
+      .single();
+    if (creatorRow?.member_id) {
+      const { insertCateringThreadMessage } = await import(
+        "@/lib/catering/insert-thread-message"
+      );
+      const depositDollars = Math.round(quote.deposit_cents / 100);
+      await insertCateringThreadMessage({
+        supabase,
+        senderId: memberId, // customer (Supabase auth.uid == members.id)
+        recipientId: creatorRow.member_id,
+        body: `💳 I paid the $${depositDollars} deposit. Looking forward to it!`,
+      });
+    }
+  } catch (err) {
+    console.error("[webhook] thread message failed:", err);
+  }
+
   // Fire creator notification — "new booking, accept within 4h".
   try {
     const { notifyCateringDepositPaid } = await import("@/lib/notifications");
