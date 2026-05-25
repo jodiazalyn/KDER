@@ -19,7 +19,10 @@ export default async function CateringInquiriesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  // /login doesn't exist in this app — the only sign-in path is /signup
+  // (handles both create-account and sign-in). Middleware also catches
+  // this for /catering/*, so this is belt-and-suspenders.
+  if (!user) redirect("/signup");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: creator } = await (supabase as any)

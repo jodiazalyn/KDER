@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
+import { CateringInquiryBanner } from "@/components/catering/CateringInquiryBanner";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
@@ -183,6 +184,12 @@ export default function OrdersPage() {
     <PullToRefresh onRefresh={refresh}>
     <main className="px-4 pb-4 pt-6">
       <h1 className="text-3xl font-black text-white">Orders</h1>
+
+      {/* Catering inquiries surface here too — they live in a separate
+          table but creators expect to see "anything that needs my
+          attention" in one place. Banner self-renders only when there
+          are open inquiries waiting for a quote. */}
+      <CateringInquiryBanner />
 
       {/* Tab bar — iOS-style segmented control via glass-segment */}
       <div className="glass-segment mt-4 flex gap-1 p-1">
