@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { createServiceClient } from "@/lib/supabase/service";
-import { cancelAndRefundBooking } from "@/app/api/v1/catering/bookings/[id]/decline/route";
+import { cancelAndRefundBooking } from "@/lib/catering/cancel-booking";
 
 /**
  * POST /api/v1/cron/catering-acceptance-deadline

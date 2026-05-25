@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { stripe } from "@/lib/stripe/client";
 import { apiSuccess, apiError } from "@/lib/api";
+import { cancelAndRefundBooking } from "@/lib/catering/cancel-booking";
 
 /**
  * POST /api/v1/catering/bookings/:id/decline
@@ -76,73 +76,3 @@ export async function POST(
   }
 }
 
-/**
- * Shared cancellation helper. Used by:
- *   - this endpoint (creator-initiated decline)
- *   - the acceptance-deadline cron (auto-decline after 4h)
- *
- * Refunds the deposit via Stripe (reversing the application fee too so
- * the platform doesn't keep money on a cancelled booking), updates the
- * booking + quote rows, and fires the cancellation email.
- */
-export async function cancelAndRefundBooking(args: {
-  bookingId: string;
-  paymentIntentId: string;
-  quoteId: string;
-  reason: string;
-}): Promise<boolean> {
-  const { bookingId, paymentIntentId, quoteId, reason } = args;
-  const { createServiceClient } = await import("@/lib/supabase/service");
-  const supabase = createServiceClient();
-  if (!supabase) {
-    console.error("[cancelAndRefund] no service client");
-    return false;
-  }
-
-  // Refund the deposit. `reverse_transfer: true` pulls the funds back
-  // from the creator's connected account; `refund_application_fee: true`
-  // reverses our platform fee so we don't profit on a cancelled booking.
-  try {
-    await stripe.refunds.create({
-      payment_intent: paymentIntentId,
-      reverse_transfer: true,
-      refund_application_fee: true,
-      metadata: { type: "catering_deposit_refund", booking_id: bookingId },
-    });
-  } catch (err) {
-    console.error("[cancelAndRefund] refund failed:", err);
-    return false;
-  }
-
-  // Flip statuses. Even if Stripe partially failed above we'd want to
-  // re-try the refund; for now, we only mark cancelled when the refund
-  // succeeded so admins can see "stuck" bookings = stuck refunds.
-  await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
-      .from("catering_bookings")
-      .update({
-        status: "cancelled",
-        cancellation_reason: reason,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", bookingId),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase as any)
-      .from("catering_quotes")
-      .update({ status: "declined", updated_at: new Date().toISOString() })
-      .eq("id", quoteId),
-  ]);
-
-  // Notify both parties.
-  try {
-    const { notifyCateringBookingCancelled } = await import(
-      "@/lib/notifications"
-    );
-    await notifyCateringBookingCancelled({ bookingId, reason });
-  } catch (err) {
-    console.error("[cancelAndRefund] notify threw:", err);
-  }
-
-  return true;
-}
