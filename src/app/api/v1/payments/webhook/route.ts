@@ -13,6 +13,7 @@ import {
   handleDisputeCreated,
   handleDisputeUpdated,
   handleDisputeClosed,
+  handleCateringDepositSucceeded,
 } from "@/lib/stripe/webhook-handlers";
 import type Stripe from "stripe";
 
@@ -115,6 +116,23 @@ export async function POST(request: NextRequest) {
       case "charge.dispute.closed":
         await handleDisputeClosed(event.data.object as Stripe.Dispute);
         break;
+
+      case "payment_intent.succeeded": {
+        // Routed by metadata.type — catering deposits go to the catering
+        // handler, anything else is logged as unhandled. Adding more
+        // PaymentIntent flows later (e.g., catering balance in PR 4)
+        // means another branch here.
+        const pi = event.data.object as Stripe.PaymentIntent;
+        if (pi.metadata?.type === "catering_deposit") {
+          await handleCateringDepositSucceeded(pi);
+        } else {
+          console.log(
+            "[webhook] Unhandled payment_intent.succeeded type:",
+            pi.metadata?.type ?? "(none)"
+          );
+        }
+        break;
+      }
 
       default:
         console.log("[webhook] Unhandled event type:", event.type);

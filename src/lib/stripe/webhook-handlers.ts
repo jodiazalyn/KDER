@@ -371,3 +371,139 @@ export async function handleDisputeUpdated(dispute: Stripe.Dispute) {
 export async function handleDisputeClosed(dispute: Stripe.Dispute) {
   return recordDispute(dispute, "closed");
 }
+
+// ── payment_intent.succeeded (catering deposits) ───────────────
+// Routed via metadata.type='catering_deposit'. Creates the
+// catering_bookings row that the rest of the flow hangs off of.
+//
+// Why not in the deposit-intent route? Two reasons:
+//   1. Race-free if the user closes the tab mid-confirm — webhook
+//      delivery is decoupled from the client's request lifecycle.
+//   2. The PaymentIntent isn't `succeeded` until Stripe confirms with
+//      the issuer; we only want a booking once money is actually moving.
+//
+// Idempotent on `deposit_payment_intent_id` — Stripe retries are
+// expected and shouldn't duplicate bookings.
+export async function handleCateringDepositSucceeded(
+  intent: Stripe.PaymentIntent
+) {
+  const md = intent.metadata ?? {};
+  const quoteId = md.quote_id;
+  const inquiryId = md.inquiry_id;
+  const creatorId = md.creator_id;
+  const memberId = md.member_id;
+
+  if (!quoteId || !inquiryId || !creatorId || !memberId) {
+    console.error("[webhook] catering deposit missing metadata", intent.id, md);
+    return;
+  }
+
+  const supabase = getServiceClient();
+
+  // Idempotency: if a booking already exists for this PaymentIntent,
+  // we already processed this event. Bail without erroring.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: existing } = await (supabase as any)
+    .from("catering_bookings")
+    .select("id, status")
+    .eq("deposit_payment_intent_id", intent.id)
+    .maybeSingle();
+  if (existing) {
+    console.log("[webhook] catering deposit already booked", existing.id);
+    return;
+  }
+
+  // Load the quote to snapshot money + event date onto the booking.
+  // We snapshot rather than reference so changing the quote later
+  // (e.g., supersede) doesn't mutate the active booking.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: quote } = await (supabase as any)
+    .from("catering_quotes")
+    .select(`
+      id, total_cents, deposit_cents, balance_cents, status,
+      inquiry:catering_inquiries(event_date, event_time)
+    `)
+    .eq("id", quoteId)
+    .single();
+  if (!quote) {
+    console.error("[webhook] catering deposit: quote not found", quoteId);
+    return;
+  }
+
+  // Save the card so the off-session balance charge in PR 4 can use it.
+  // For a PaymentIntent with setup_future_usage='off_session', Stripe
+  // attaches a payment_method to the customer automatically — we just
+  // grab the id off the intent.
+  const paymentMethodId =
+    typeof intent.payment_method === "string"
+      ? intent.payment_method
+      : intent.payment_method?.id ?? null;
+  const stripeCustomerId =
+    typeof intent.customer === "string"
+      ? intent.customer
+      : intent.customer?.id ?? null;
+
+  // Accept deadline: 4 hours from now. Per the product spec — creator
+  // needs to confirm they can take the booking before it's locked in.
+  const acceptDeadline = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: booking, error: insertErr } = await (supabase as any)
+    .from("catering_bookings")
+    .insert({
+      quote_id: quoteId,
+      inquiry_id: inquiryId,
+      creator_id: creatorId,
+      member_id: memberId,
+      event_date: quote.inquiry?.event_date,
+      event_time: quote.inquiry?.event_time,
+      status: "pending_acceptance",
+      total_cents: quote.total_cents,
+      deposit_cents: quote.deposit_cents,
+      balance_cents: quote.balance_cents,
+      stripe_customer_id: stripeCustomerId,
+      deposit_payment_intent_id: intent.id,
+      deposit_paid_at: new Date().toISOString(),
+      balance_payment_method_id: paymentMethodId,
+      accept_deadline: acceptDeadline,
+    })
+    .select()
+    .single();
+
+  if (insertErr || !booking) {
+    console.error(
+      "[webhook] catering deposit: booking insert failed",
+      insertErr?.message
+    );
+    return;
+  }
+
+  // Flip the quote to 'accepted' + the inquiry to 'booked'.
+  await Promise.all([
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("catering_quotes")
+      .update({ status: "accepted", updated_at: new Date().toISOString() })
+      .eq("id", quoteId),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("catering_inquiries")
+      .update({ status: "booked", updated_at: new Date().toISOString() })
+      .eq("id", inquiryId),
+  ]);
+
+  // Fire creator notification — "new booking, accept within 4h".
+  try {
+    const { notifyCateringDepositPaid } = await import("@/lib/notifications");
+    await notifyCateringDepositPaid({ bookingId: booking.id });
+  } catch (err) {
+    console.error("[webhook] notifyCateringDepositPaid threw:", err);
+  }
+
+  console.log(
+    "[webhook] catering booking created",
+    booking.id,
+    "accept by",
+    acceptDeadline
+  );
+}

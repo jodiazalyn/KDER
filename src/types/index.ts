@@ -161,6 +161,96 @@ export type CateringInquiryStatus =
   | "declined"
   | "expired";
 
+/** Single row in a catering quote. `listing_id` is optional — creators
+ *  can add custom line items (e.g., "Travel fee — out-of-zone delivery")
+ *  that don't tie back to a published catering listing. */
+export interface CateringQuoteLineItem {
+  name: string;
+  qty: number;
+  unit_price_cents: number;
+  total_cents: number;
+  listing_id?: string | null;
+}
+
+/** Lifecycle of a quote.
+ *  - draft → not used in v1 (reserved for save-draft pattern)
+ *  - sent → delivered to customer
+ *  - accepted → customer paid the deposit (a booking now exists)
+ *  - declined → customer explicitly rejected
+ *  - expired → past expires_at without action
+ *  - superseded → creator sent a new quote replacing this one */
+export type CateringQuoteStatus =
+  | "draft"
+  | "sent"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "superseded";
+
+/** Creator's quote in response to a catering inquiry. */
+export interface CateringQuote {
+  id: string;
+  inquiry_id: string;
+  creator_id: string;
+  member_id: string;
+
+  line_items: CateringQuoteLineItem[];
+  food_subtotal_cents: number;
+  fees_cents: number;
+  tax_cents: number;
+  total_cents: number;
+  deposit_cents: number;
+  balance_cents: number;
+
+  creator_notes: string | null;
+  expires_at: string;     // ISO
+  status: CateringQuoteStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Catering booking lifecycle. */
+export type CateringBookingStatus =
+  | "pending_acceptance" // deposit paid, creator hasn't accepted yet
+  | "confirmed"          // creator accepted, awaiting balance + event
+  | "balance_due"        // balance charge failed, needs manual retry
+  | "balance_paid"       // balance successfully charged
+  | "completed"          // event is over
+  | "cancelled";
+
+/** Real booking row once the deposit has been paid. */
+export interface CateringBooking {
+  id: string;
+  quote_id: string;
+  inquiry_id: string;
+  creator_id: string;
+  member_id: string;
+
+  event_date: string;          // YYYY-MM-DD
+  event_time: string | null;   // HH:MM:SS
+
+  status: CateringBookingStatus;
+
+  total_cents: number;
+  deposit_cents: number;
+  balance_cents: number;
+
+  stripe_customer_id: string | null;
+  deposit_payment_intent_id: string;
+  deposit_paid_at: string;     // ISO
+  balance_payment_method_id: string | null;
+  balance_payment_intent_id: string | null;
+  balance_charged_at: string | null;
+  balance_charge_scheduled_for: string | null;
+
+  accept_deadline: string | null; // ISO
+  cancellation_reason: string | null;
+  notes_for_creator: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
 /** Customer-submitted request for catering. The "intent" that
  *  becomes a quote (PR 3) and then a booking (PR 3/4). */
 export interface CateringInquiry {

@@ -283,3 +283,281 @@ export async function notifyCateringInquiry(args: {
     console.error("[notify] catering inquiry threw:", err);
   }
 }
+
+/**
+ * Fire when a creator sends a quote. Both parties get email — customer
+ * gets the full breakdown + pay link, creator gets a confirmation
+ * receipt. Both threaded to the same inquiry-thread Message-ID so the
+ * whole conversation groups in Gmail.
+ */
+export async function notifyCateringQuoteSent(args: {
+  quoteId: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) {
+      console.error("[notify] catering quote sent: no service client");
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: quote } = await (supabase as any)
+      .from("catering_quotes")
+      .select(`
+        id, inquiry_id, creator_id, member_id,
+        line_items, food_subtotal_cents, fees_cents, tax_cents,
+        total_cents, deposit_cents, balance_cents,
+        creator_notes, expires_at,
+        inquiry:catering_inquiries(event_date),
+        creator:creators(member:members(display_name, email, phone, handle)),
+        customer:members!catering_quotes_member_id_fkey(display_name, email, phone)
+      `)
+      .eq("id", args.quoteId)
+      .single();
+
+    if (!quote) {
+      console.error("[notify] catering quote not found:", args.quoteId);
+      return;
+    }
+
+    const creator = quote.creator?.member;
+    const customer = quote.customer;
+    if (!creator || !customer) {
+      console.error("[notify] catering quote missing join");
+      return;
+    }
+
+    const thread = cateringThreadIds(quote.inquiry_id);
+
+    const customerEmail = t.cateringQuoteSentCustomer({
+      quote,
+      inquiry: quote.inquiry,
+      creator: { display_name: creator.display_name ?? "Your creator" },
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      "cateringQuoteSent→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringQuoteSentCreator({
+      quote,
+      inquiry: quote.inquiry,
+      customer: { display_name: customer.display_name ?? "Customer" },
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      "cateringQuoteSent→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+
+    // SMS to customer — quick "your quote arrived" ping with the link.
+    try {
+      const { sendSms, isTwilioConfigured } = await import("./twilio");
+      if (isTwilioConfigured() && customer.phone) {
+        const totalDollars = Math.round(quote.total_cents / 100);
+        const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://kder.club"}/catering/quote/${quote.id}`;
+        await sendSms(
+          customer.phone,
+          `KDER: ${creator.display_name ?? "Your creator"} sent you a $${totalDollars} catering quote. Review & pay deposit: ${url}`
+        );
+      }
+    } catch (err) {
+      console.error("[notify] catering quote SMS failed:", err);
+    }
+  } catch (err) {
+    console.error("[notify] catering quote threw:", err);
+  }
+}
+
+/** Fire when a customer pays the deposit. Creator-only — strong urgency
+ *  because they have 4h to accept before auto-decline. */
+export async function notifyCateringDepositPaid(args: {
+  bookingId: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, total_cents, deposit_cents, accept_deadline, event_date,
+        inquiry_id, creator_id,
+        creator:creators(member:members(display_name, email, phone)),
+        customer:members!catering_bookings_member_id_fkey(display_name)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const email = t.cateringDepositPaidCreator({
+      booking,
+      customer: { display_name: customer.display_name ?? "Customer" },
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      creator.email,
+      email.subject,
+      email.html,
+      "cateringDepositPaid→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+
+    try {
+      const { sendSms, isTwilioConfigured } = await import("./twilio");
+      if (isTwilioConfigured() && creator.phone) {
+        const deadlineLabel = booking.accept_deadline
+          ? new Date(booking.accept_deadline).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            })
+          : "soon";
+        await sendSms(
+          creator.phone,
+          `KDER: ${customer.display_name ?? "A customer"} paid the deposit for your catering booking. Accept by ${deadlineLabel} or it auto-declines.`
+        );
+      }
+    } catch (err) {
+      console.error("[notify] deposit paid SMS failed:", err);
+    }
+  } catch (err) {
+    console.error("[notify] deposit paid threw:", err);
+  }
+}
+
+/** Fire when the creator accepts the booking. Both parties notified. */
+export async function notifyCateringBookingConfirmed(args: {
+  bookingId: string;
+  balanceChargeDate?: string | null;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, total_cents, balance_cents, event_date, inquiry_id,
+        creator:creators(member:members(display_name, email)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const customerEmail = t.cateringBookingConfirmedCustomer({
+      booking,
+      creator: { display_name: creator.display_name ?? "Your creator" },
+      eventDate: booking.event_date,
+      balanceChargeDate: args.balanceChargeDate,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerEmail.subject,
+      customerEmail.html,
+      "cateringBookingConfirmed→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+
+    const creatorEmail = t.cateringBookingConfirmedCreator({
+      booking,
+      customer: { display_name: customer.display_name ?? "Customer" },
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorEmail.subject,
+      creatorEmail.html,
+      "cateringBookingConfirmed→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+  } catch (err) {
+    console.error("[notify] booking confirmed threw:", err);
+  }
+}
+
+/** Fire when a booking is cancelled (creator declined, auto-declined,
+ *  or customer cancelled). Both parties get the email so neither is
+ *  surprised by the refund or the freed-up date. */
+export async function notifyCateringBookingCancelled(args: {
+  bookingId: string;
+  reason: string;
+}): Promise<void> {
+  try {
+    const { createServiceClient } = await import("./supabase/service");
+    const supabase = createServiceClient();
+    if (!supabase) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: booking } = await (supabase as any)
+      .from("catering_bookings")
+      .select(`
+        id, deposit_cents, event_date, inquiry_id,
+        creator:creators(member:members(display_name, email)),
+        customer:members!catering_bookings_member_id_fkey(display_name, email)
+      `)
+      .eq("id", args.bookingId)
+      .single();
+
+    if (!booking) return;
+    const creator = booking.creator?.member;
+    const customer = booking.customer;
+    if (!creator || !customer) return;
+
+    const thread = cateringThreadIds(booking.inquiry_id);
+
+    const creatorCopy = t.cateringBookingCancelledBoth({
+      forParty: "creator",
+      otherPartyName: customer.display_name ?? "Customer",
+      reason: args.reason,
+      refundCents: booking.deposit_cents,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      creator.email,
+      creatorCopy.subject,
+      creatorCopy.html,
+      "cateringBookingCancelled→creator",
+      { "In-Reply-To": `<${thread.creator}>`, References: `<${thread.creator}>` }
+    );
+
+    const customerCopy = t.cateringBookingCancelledBoth({
+      forParty: "customer",
+      otherPartyName: creator.display_name ?? "Your creator",
+      reason: args.reason,
+      refundCents: booking.deposit_cents,
+      eventDate: booking.event_date,
+    });
+    await safeSendEmail(
+      customer.email,
+      customerCopy.subject,
+      customerCopy.html,
+      "cateringBookingCancelled→customer",
+      { "In-Reply-To": `<${thread.customer}>`, References: `<${thread.customer}>` }
+    );
+  } catch (err) {
+    console.error("[notify] booking cancelled threw:", err);
+  }
+}
