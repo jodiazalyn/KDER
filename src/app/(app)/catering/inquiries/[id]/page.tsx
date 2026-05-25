@@ -8,9 +8,8 @@ import {
   Users,
   Building2,
   AlertTriangle,
-  MessageCircle,
-  Sparkles,
 } from "lucide-react";
+import { InquiryActions } from "./inquiry-actions";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -50,6 +49,29 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     .single();
 
   if (!inq) notFound();
+
+  // Fetch the latest non-superseded quote and the booking (if any) for
+  // this inquiry. The InquiryActions component branches on these to
+  // pick the right CTA / banner.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sb = supabase as any;
+  const [{ data: quoteRows }, { data: bookingRows }] = await Promise.all([
+    sb
+      .from("catering_quotes")
+      .select("id, status, total_cents, deposit_cents, expires_at")
+      .eq("inquiry_id", id)
+      .neq("status", "superseded")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    sb
+      .from("catering_bookings")
+      .select("id, status, accept_deadline")
+      .eq("inquiry_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const quote = quoteRows?.[0] ?? null;
+  const booking = bookingRows?.[0] ?? null;
 
   // Fetch pre-selected listings (if any). Pulls inclusion_groups too so
   // the row can show what's in each item the customer wanted.
@@ -239,29 +261,15 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         )}
       </div>
 
-      {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/80 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
-        <div className="mx-auto flex max-w-lg gap-2">
-          {/* Message customer — uses existing thread system */}
-          <Link
-            href={`/messages/${customer?.id ?? ""}`}
-            className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-95"
-          >
-            <MessageCircle size={16} />
-            Message
-          </Link>
-          {/* Build quote — PR 3 will wire this up to /catering/inquiries/[id]/quote */}
-          <button
-            type="button"
-            disabled
-            className="flex h-12 flex-1 cursor-not-allowed items-center justify-center gap-1.5 rounded-full bg-white/[0.08] text-sm font-bold text-white/40"
-            title="Quote builder ships in the next update"
-          >
-            <Sparkles size={16} />
-            Build quote
-          </button>
-        </div>
-      </div>
+      {/* Status banner + sticky action bar, both branching on quote +
+          booking state. See InquiryActions for the state matrix. */}
+      <InquiryActions
+        inquiryId={id}
+        customerMemberId={customer?.id ?? null}
+        customerName={customerName}
+        quote={quote}
+        booking={booking}
+      />
     </div>
   );
 }

@@ -373,3 +373,266 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+// ── Catering quote / booking templates (PR 3) ───────────────────
+
+interface QuoteLineItem {
+  name: string;
+  qty: number;
+  unit_price_cents: number;
+  total_cents: number;
+}
+
+/** Format an int cents value as a dollar amount. Whole-dollar amounts
+ *  drop the .00 to stay clean ("$200" not "$200.00"). */
+function money(cents: number): string {
+  if (cents % 100 === 0) return `$${(cents / 100).toFixed(0)}`;
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Quote line-items table — reused across customer + creator copies. */
+function lineItemsTable(items: QuoteLineItem[]): string {
+  const rows = items
+    .map(
+      (it) =>
+        `<tr>
+          <td style="padding:8px 0;color:#222">${escapeHtml(it.name)}${it.qty > 1 ? ` <span style="color:#666">× ${it.qty}</span>` : ""}</td>
+          <td style="padding:8px 0;text-align:right;color:#222">${money(it.total_cents)}</td>
+        </tr>`
+    )
+    .join("");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px">
+    ${rows}
+  </table>`;
+}
+
+function totalsBlock(args: {
+  foodSubtotalCents: number;
+  feesCents: number;
+  taxCents: number;
+  totalCents: number;
+  depositCents: number;
+  balanceCents: number;
+}): string {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border-top:1px solid #eee;margin-top:12px;font-size:14px">
+    <tr><td style="padding:6px 0;color:#666">Food subtotal</td><td style="padding:6px 0;text-align:right">${money(args.foodSubtotalCents)}</td></tr>
+    ${args.feesCents > 0 ? `<tr><td style="padding:6px 0;color:#666">Fees (delivery, labor)</td><td style="padding:6px 0;text-align:right">${money(args.feesCents)}</td></tr>` : ""}
+    ${args.taxCents > 0 ? `<tr><td style="padding:6px 0;color:#666">Tax</td><td style="padding:6px 0;text-align:right">${money(args.taxCents)}</td></tr>` : ""}
+    <tr><td style="padding:8px 0;border-top:1px solid #eee;font-weight:700">Total</td><td style="padding:8px 0;border-top:1px solid #eee;text-align:right;font-weight:700">${money(args.totalCents)}</td></tr>
+    <tr><td style="padding:6px 0;color:#2E7D32">Due now (deposit)</td><td style="padding:6px 0;text-align:right;color:#2E7D32;font-weight:700">${money(args.depositCents)}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Balance (charged before event)</td><td style="padding:6px 0;text-align:right;color:#666">${money(args.balanceCents)}</td></tr>
+  </table>`;
+}
+
+/** Sent to the CUSTOMER when the creator builds a quote. Full line-item
+ *  table + a "Review & Pay Deposit" CTA pointing at the standalone
+ *  quote page so the link is shareable + works from inbox. */
+export function cateringQuoteSentCustomer(args: {
+  quote: {
+    id: string;
+    line_items: QuoteLineItem[];
+    food_subtotal_cents: number;
+    fees_cents: number;
+    tax_cents: number;
+    total_cents: number;
+    deposit_cents: number;
+    balance_cents: number;
+    expires_at: string;
+    creator_notes: string | null;
+  };
+  inquiry: { event_date: string };
+  creator: { display_name: string };
+}) {
+  const { quote, inquiry, creator } = args;
+  const eventDateLabel = new Date(
+    inquiry.event_date + "T00:00:00"
+  ).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const expiresLabel = new Date(quote.expires_at).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+
+  const notesBlock = quote.creator_notes
+    ? `<p style="background:#f5f5f5;border-left:3px solid #2E7D32;padding:10px 14px;border-radius:0 8px 8px 0;color:#333;margin:12px 0">${escapeHtml(quote.creator_notes)}</p>`
+    : "";
+
+  return {
+    subject: `Your quote from ${creator.display_name} — ${money(quote.total_cents)} for ${eventDateLabel}`,
+    html: shell(
+      `Your catering quote`,
+      `<p>${escapeHtml(creator.display_name)} sent a quote for your ${eventDateLabel} event:</p>
+       ${lineItemsTable(quote.line_items)}
+       ${totalsBlock({
+         foodSubtotalCents: quote.food_subtotal_cents,
+         feesCents: quote.fees_cents,
+         taxCents: quote.tax_cents,
+         totalCents: quote.total_cents,
+         depositCents: quote.deposit_cents,
+         balanceCents: quote.balance_cents,
+       })}
+       ${notesBlock}
+       <p style="margin-top:16px;color:#666;font-size:13px">
+         Pay the ${money(quote.deposit_cents)} deposit to lock in the date.
+         The remaining ${money(quote.balance_cents)} balance is auto-charged a
+         few days before your event.
+       </p>
+       <p style="color:#666;font-size:13px">
+         This quote expires <strong>${expiresLabel}</strong>.
+       </p>`,
+      `${APP_URL}/catering/quote/${quote.id}`,
+      "Review & Pay Deposit"
+    ),
+  };
+}
+
+/** Sent to the CREATOR as a "yep, your quote went out" receipt. */
+export function cateringQuoteSentCreator(args: {
+  quote: { id: string; total_cents: number; deposit_cents: number };
+  customer: { display_name: string };
+  inquiry: { event_date: string };
+}) {
+  const { quote, customer, inquiry } = args;
+  const eventDateLabel = new Date(
+    inquiry.event_date + "T00:00:00"
+  ).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  return {
+    subject: `Quote sent to ${customer.display_name} — ${money(quote.total_cents)}`,
+    html: shell(
+      `Quote sent`,
+      `<p>Your ${money(quote.total_cents)} quote was emailed to ${escapeHtml(customer.display_name)} for the ${eventDateLabel} event.</p>
+       <p style="color:#666;font-size:13px">
+         You'll get notified the moment they pay the ${money(quote.deposit_cents)} deposit.
+       </p>`,
+      `${APP_URL}/catering/inquiries`,
+      "Open your inquiries"
+    ),
+  };
+}
+
+/** Sent to the CREATOR when the customer pays the deposit. 4-hour
+ *  acceptance window starts ticking — urgency in the subject. */
+export function cateringDepositPaidCreator(args: {
+  booking: {
+    id: string;
+    total_cents: number;
+    deposit_cents: number;
+    accept_deadline: string | null;
+  };
+  customer: { display_name: string };
+  eventDate: string;
+}) {
+  const { booking, customer, eventDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  const deadlineLabel = booking.accept_deadline
+    ? new Date(booking.accept_deadline).toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        month: "short",
+        day: "numeric",
+      })
+    : "soon";
+  return {
+    subject: `${customer.display_name} paid the deposit — accept by ${deadlineLabel}`,
+    html: shell(
+      `Deposit paid — accept within 4 hours`,
+      `<p><strong>${escapeHtml(customer.display_name)}</strong> just paid the ${money(booking.deposit_cents)} deposit for the ${eventDateLabel} catering booking.</p>
+       <p>You have <strong>until ${deadlineLabel}</strong> to accept. If you don't accept by then, the booking auto-declines and the deposit is refunded.</p>`,
+      `${APP_URL}/catering/inquiries`,
+      "Accept booking"
+    ),
+  };
+}
+
+/** Sent to the CUSTOMER when the creator accepts the booking. */
+export function cateringBookingConfirmedCustomer(args: {
+  booking: { id: string; total_cents: number; balance_cents: number };
+  creator: { display_name: string };
+  eventDate: string;
+  balanceChargeDate?: string | null;
+}) {
+  const { booking, creator, eventDate, balanceChargeDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric", year: "numeric" }
+  );
+  const balanceLabel = balanceChargeDate
+    ? new Date(balanceChargeDate).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+      })
+    : "a few days before the event";
+  return {
+    subject: `Booking confirmed with ${creator.display_name} — ${eventDateLabel}`,
+    html: shell(
+      `You're booked`,
+      `<p>${escapeHtml(creator.display_name)} accepted your catering booking for <strong>${eventDateLabel}</strong>.</p>
+       <p>The remaining <strong>${money(booking.balance_cents)}</strong> balance will be auto-charged to the same card on <strong>${balanceLabel}</strong>.</p>
+       <p style="color:#666;font-size:13px">No need to do anything until then — we'll send a reminder before each charge.</p>`,
+      `${APP_URL}`,
+      "Back to KDER"
+    ),
+  };
+}
+
+/** Sent to the CREATOR confirming their own acceptance. Lighter copy. */
+export function cateringBookingConfirmedCreator(args: {
+  booking: { id: string };
+  customer: { display_name: string };
+  eventDate: string;
+}) {
+  const { customer, eventDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  return {
+    subject: `Booking confirmed: ${customer.display_name} on ${eventDateLabel}`,
+    html: shell(
+      `Booking confirmed`,
+      `<p>You accepted ${escapeHtml(customer.display_name)}'s booking for ${eventDateLabel}. We let them know.</p>
+       <p style="color:#666;font-size:13px">It's on your Calendar tab. The balance auto-charges a few days before the event — you'll get notified when it lands.</p>`,
+      `${APP_URL}/catering/calendar`,
+      "Open Calendar"
+    ),
+  };
+}
+
+/** Sent to BOTH parties when a booking is cancelled (creator declined,
+ *  auto-declined past the 4h window, or customer cancelled). */
+export function cateringBookingCancelledBoth(args: {
+  forParty: "creator" | "customer";
+  otherPartyName: string;
+  reason: string;
+  refundCents: number;
+  eventDate: string;
+}) {
+  const { forParty, otherPartyName, reason, refundCents, eventDate } = args;
+  const eventDateLabel = new Date(eventDate + "T00:00:00").toLocaleDateString(
+    "en-US",
+    { weekday: "long", month: "long", day: "numeric" }
+  );
+  const body =
+    forParty === "creator"
+      ? `<p>The catering booking with ${escapeHtml(otherPartyName)} for ${eventDateLabel} has been cancelled.</p>
+         <p style="color:#666;font-size:13px">${escapeHtml(reason)}</p>
+         <p style="color:#666;font-size:13px">Their deposit has been refunded.</p>`
+      : `<p>Your catering booking with ${escapeHtml(otherPartyName)} for ${eventDateLabel} has been cancelled.</p>
+         <p style="color:#666;font-size:13px">${escapeHtml(reason)}</p>
+         <p>Your <strong>${money(refundCents)}</strong> deposit has been refunded — it should appear on your card in 5-10 business days.</p>`;
+  return {
+    subject: `Catering booking cancelled — ${eventDateLabel}`,
+    html: shell(`Booking cancelled`, body, APP_URL, "Back to KDER"),
+  };
+}
