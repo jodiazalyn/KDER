@@ -51,6 +51,29 @@ interface Props {
   preSelectedIds: string[];
 }
 
+/** Render a lead-time-hours value as a friendly label:
+ *    36 → "1.5 days", 48 → "2 days", 24 → "1 day", 12 → "12 hours"
+ *  Days for anything >= 24h since that's how creators think about
+ *  catering lead time. */
+function formatLeadTime(hours: number): string {
+  if (hours <= 0) return "no";
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  const days = hours / 24;
+  if (days === Math.floor(days)) {
+    return `${days} day${days === 1 ? "" : "s"}`;
+  }
+  return `${days.toFixed(1)} days`;
+}
+
+/** YYYY-MM-DD → "May 28" (short month + day, no year — current-year
+ *  is the assumed context in catering inquiry). */
+function formatDateShort(iso: string): string {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** Today's date as YYYY-MM-DD in local time. */
 function todayIso(): string {
   const d = new Date();
@@ -113,23 +136,28 @@ export function InquiryForm({
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Derived: earliest legal event date ─────────────────────
-  // Today + max lead-time across the items the customer picked. If
-  // they haven't picked any, fall back to today (any future date OK).
-  const minDate = useMemo(() => {
-    if (selectedIds.size === 0) return todayIso();
+  // ── Derived: max lead-time across picked items ─────────────
+  // Surfaced separately from minDate because the error messaging
+  // wants to say "creator needs at least N days notice", not "pick a
+  // date after X" — the former is what actually changed in the
+  // customer's head.
+  const maxLeadHours = useMemo(() => {
+    if (selectedIds.size === 0) return 0;
     const picked = listings.filter((l) => selectedIds.has(l.id));
-    const maxLeadHours = Math.max(
-      0,
-      ...picked.map((l) => l.catering_lead_time_hours ?? 0)
-    );
+    return Math.max(0, ...picked.map((l) => l.catering_lead_time_hours ?? 0));
+  }, [listings, selectedIds]);
+
+  // Earliest legal event date = today + maxLeadHours, in the local
+  // YYYY-MM-DD format that <input type="date"> expects.
+  const minDate = useMemo(() => {
+    if (maxLeadHours === 0) return todayIso();
     const ms = Date.now() + maxLeadHours * 60 * 60 * 1000;
     const d = new Date(ms);
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
-  }, [listings, selectedIds]);
+  }, [maxLeadHours]);
 
   // Set of blacked-out specific dates (one-off) for client-side
   // pre-submit validation. Recurring weekdays are checked at submit
@@ -153,20 +181,74 @@ export function InquiryForm({
     [blackouts]
   );
 
-  const dateError = useMemo(() => {
+  /** Tri-state date validation:
+   *    red    = invalid (blackout or too soon) → blocks submit
+   *    yellow = valid but tight (within 1 day of the lead-time floor)
+   *             → still submittable, just a "be proactive" nudge
+   *    green  = comfortably in the open window
+   */
+  type DateStatus =
+    | { tone: "red"; message: string }
+    | { tone: "yellow"; message: string }
+    | { tone: "green"; message: string }
+    | null;
+
+  const dateStatus = useMemo<DateStatus>(() => {
     if (!eventDate) return null;
-    if (eventDate < minDate) {
-      return "Date is inside the creator's lead-time window.";
-    }
+
+    // RED: blackouts come first — even valid lead-time dates can be
+    // blocked by a one-off mark or a "always closed Mondays" rule.
     if (oneOffBlackouts.has(eventDate)) {
-      return "Creator marked this date unavailable.";
+      return {
+        tone: "red",
+        message: "Creator marked this date unavailable. Pick another.",
+      };
     }
     const dt = new Date(eventDate + "T00:00:00");
     if (recurringBlackoutWeekdays.has(dt.getDay())) {
-      return "Creator doesn't take bookings on this day of the week.";
+      return {
+        tone: "red",
+        message: "Creator doesn't take bookings on this day of the week.",
+      };
     }
-    return null;
-  }, [eventDate, minDate, oneOffBlackouts, recurringBlackoutWeekdays]);
+
+    // RED: too soon — date sits inside the lead-time buffer.
+    if (eventDate < minDate) {
+      return {
+        tone: "red",
+        message: `Too soon — ${creatorName} needs at least ${formatLeadTime(maxLeadHours)} notice. Pick a date on or after ${formatDateShort(minDate)}.`,
+      };
+    }
+
+    // YELLOW: valid but cutting it close. Within 1 day of the
+    // earliest legal date — the creator can take it, but warn the
+    // customer to submit fast since there's no slack.
+    const eventMs = new Date(eventDate + "T00:00:00").getTime();
+    const minMs = new Date(minDate + "T00:00:00").getTime();
+    const bufferDays = Math.round((eventMs - minMs) / (24 * 60 * 60 * 1000));
+    if (maxLeadHours > 0 && bufferDays <= 1) {
+      return {
+        tone: "yellow",
+        message: `Heads up — this is close to ${creatorName}'s ${formatLeadTime(maxLeadHours)} cutoff. Submit your inquiry today so they have time to confirm.`,
+      };
+    }
+
+    // GREEN: comfortably available.
+    return {
+      tone: "green",
+      message: `Available — ${creatorName} will reply with a quote.`,
+    };
+  }, [
+    eventDate,
+    minDate,
+    maxLeadHours,
+    creatorName,
+    oneOffBlackouts,
+    recurringBlackoutWeekdays,
+  ]);
+
+  // Only RED blocks the submit button — YELLOW means valid + nudge.
+  const dateError = dateStatus?.tone === "red" ? dateStatus.message : null;
 
   // ── Guest count range from picks ───────────────────────────
   const guestRange = useMemo(() => {
@@ -464,13 +546,33 @@ export function InquiryForm({
               onChange={(e) => setEventDate(e.target.value)}
               className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             />
-            {dateError && (
-              <p className="mt-1.5 text-xs text-red-300">{dateError}</p>
+            {/* Tri-state validation feedback. Red blocks submit, yellow
+                is a "be proactive" nudge that still permits submission,
+                green confirms the date is comfortably open. */}
+            {dateStatus && (
+              <p
+                className={cn(
+                  "mt-1.5 flex items-start gap-1.5 text-xs",
+                  dateStatus.tone === "red" && "text-red-300",
+                  dateStatus.tone === "yellow" && "text-amber-300",
+                  dateStatus.tone === "green" && "text-emerald-300"
+                )}
+                role={dateStatus.tone === "red" ? "alert" : undefined}
+              >
+                <span aria-hidden="true">
+                  {dateStatus.tone === "red"
+                    ? "⚠"
+                    : dateStatus.tone === "yellow"
+                      ? "⏱"
+                      : "✓"}
+                </span>
+                <span>{dateStatus.message}</span>
+              </p>
             )}
-            {!dateError && oneOffBlackouts.size + recurringBlackoutWeekdays.size > 0 && !eventDate && (
+            {!dateStatus && oneOffBlackouts.size + recurringBlackoutWeekdays.size > 0 && !eventDate && (
               <p className="mt-1.5 text-xs text-white/40">
-                Earliest available: {minDate}. Some dates are blocked by the
-                creator.
+                Earliest available: {formatDateShort(minDate)}. Some dates
+                are blocked by the creator.
               </p>
             )}
           </section>
