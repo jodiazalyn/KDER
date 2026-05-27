@@ -228,6 +228,26 @@ export async function POST(request: NextRequest) {
       return apiError("Couldn't submit your request. Try again.", 500);
     }
 
+    // Backfill members.email if the customer provided one and we
+    // don't already have an address for them. Same pattern the
+    // checkout webhook uses for plate orders — keeps catering and
+    // plate flows consistent so future order notifications can reach
+    // this customer by email without us prompting again.
+    if (typeof body.customer_email === "string") {
+      const sanitizedEmail = body.customer_email
+        .trim()
+        .toLowerCase()
+        .slice(0, 254);
+      if (sanitizedEmail) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from("members")
+          .update({ email: sanitizedEmail })
+          .eq("id", user.id)
+          .is("email", null);
+      }
+    }
+
     // Mirror the inquiry into the message thread between customer and
     // creator so the conversation starts naturally in chat too — not
     // just in the creator's inquiry inbox. Best-effort.
