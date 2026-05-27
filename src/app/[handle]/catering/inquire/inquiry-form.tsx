@@ -7,6 +7,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { TimePicker12h } from "@/components/ui/time-picker-12h";
 
 /**
  * Customer-facing catering inquiry form.
@@ -469,28 +470,33 @@ export function InquiryForm({
 
           {/* Event time */}
           <section>
-            <label className="mb-2 block text-sm font-medium text-white/60">
+            <span
+              id="event-time-label"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
               Event time (optional)
-            </label>
+            </span>
             <div className="flex gap-3">
-              <label className="flex-1">
-                <span className="mb-1 block text-xs text-white/50">Start</span>
-                <input
-                  type="time"
+              <div className="flex-1">
+                <span id="event-time-start-label" className="mb-1 block text-xs text-white/50">
+                  Start
+                </span>
+                <TimePicker12h
                   value={eventTime}
-                  onChange={(e) => setEventTime(e.target.value)}
-                  className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  onChange={setEventTime}
+                  ariaLabelledBy="event-time-start-label"
                 />
-              </label>
-              <label className="flex-1">
-                <span className="mb-1 block text-xs text-white/50">End</span>
-                <input
-                  type="time"
+              </div>
+              <div className="flex-1">
+                <span id="event-time-end-label" className="mb-1 block text-xs text-white/50">
+                  End
+                </span>
+                <TimePicker12h
                   value={eventEndTime}
-                  onChange={(e) => setEventEndTime(e.target.value)}
-                  className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  onChange={setEventEndTime}
+                  ariaLabelledBy="event-time-end-label"
                 />
-              </label>
+              </div>
             </div>
           </section>
 
@@ -648,15 +654,17 @@ export function InquiryForm({
 
           {/* Setup time (only when needs_setup) */}
           {needsSetup && (
-            <section>
-              <label className="mb-2 block text-sm font-medium text-white/60">
+            <section aria-labelledby="setup-time-label">
+              <span
+                id="setup-time-label"
+                className="mb-2 block text-sm font-medium text-white/60"
+              >
                 Earliest setup time
-              </label>
-              <input
-                type="time"
+              </span>
+              <TimePicker12h
                 value={earliestSetup}
-                onChange={(e) => setEarliestSetup(e.target.value)}
-                className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                onChange={setEarliestSetup}
+                ariaLabelledBy="setup-time-label"
               />
             </section>
           )}
