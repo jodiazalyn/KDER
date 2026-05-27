@@ -41,6 +41,38 @@ export const COACHMARK_COPY = {
     "Tap a plate to see ingredients, allergens, and pickup or delivery options before you buy.",
   "customer-order-status":
     "You'll get an SMS at every step. Message the creator below for any questions about your order.",
+
+  // ── Creator-side: catering setup ──────────────────────────────
+  "creator-catering-kind-toggle":
+    "Plate = on-demand orders, takeout-style. Catering = larger events with a deposit, balance, and lead time. Pick once per listing.",
+  "creator-catering-pricing-mode":
+    "Per-head = price × guest count (great for buffets). Flat = single package price regardless of count (great for fixed platters).",
+  "creator-catering-lead-time":
+    "How far in advance customers must book. Customers can't pick a date sooner than this — the form grays out anything inside the window.",
+  "creator-catering-inclusions":
+    "Group what's included by category. Customers see this as a summary on your storefront card and on every quote.",
+  "creator-catering-fulfillment":
+    "Pick every option you'll offer. Customers see these as chips on your catering tile and can ask for any of them in their inquiry.",
+  "creator-catering-calendar":
+    "Tap a date to mark it unavailable, or open Recurring to block weekdays you don't take orders (e.g., always closed Mondays).",
+  "creator-catering-inquiry-build":
+    "Build Quote opens the line-item editor. Customer's pre-selected items come pre-filled so you can adjust and send in seconds.",
+  "creator-catering-quote-fees":
+    "Fees (delivery, labor, server) don't count toward the 30% deposit — only the food subtotal does. Customer's deposit feels smaller, your fees still ride along on the balance.",
+  "creator-catering-quote-expiration":
+    "The customer has this many days to pay the deposit before the quote auto-expires. Shorter expirations push faster decisions.",
+  "creator-catering-booking-balance-due":
+    "The balance charge failed. We'll auto-retry every 4 hours up to 3 times — or you can hit Retry now if the customer told you they fixed their card.",
+  "creator-catering-booking-complete":
+    "Mark the booking complete after the event. The customer gets a review prompt and your balance settles into your usual payout schedule.",
+
+  // ── Customer-side: catering ───────────────────────────────────
+  "customer-catering-tab":
+    "Catering is for advance bookings — large parties, work events, milestones. Tap items to add them to a request, then send your details.",
+  "customer-catering-inquiry":
+    "You're not buying yet — just asking. The creator reviews your event details and sends back a quote with a deposit.",
+  "customer-catering-quote-deposit":
+    "Pay 30% now to lock in the date. The remaining 70% auto-charges the same card a few days before your event — no second checkout to remember.",
 } as const satisfies Record<string, string>;
 
 export type CoachmarkId = keyof typeof COACHMARK_COPY;

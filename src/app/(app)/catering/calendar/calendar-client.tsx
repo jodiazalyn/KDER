@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, X, Repeat, Loader2, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { MonthCalendar } from "@/components/calendar/MonthCalendar";
 import type { CreatorBlackout } from "@/types";
 import { cn } from "@/lib/utils";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 /**
  * Calendar dashboard.
@@ -31,6 +33,9 @@ export default function CalendarClient() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [recurringOpen, setRecurringOpen] = useState(false);
+  // Coachmark anchor — wraps the rendered MonthCalendar so the
+  // first-time tip points at the actual grid.
+  const calendarCoachRef = useRef<HTMLDivElement>(null);
   // Open-inquiry count for the badge on the inbox link. -1 means
   // "still loading" so we render the link without a stale "0".
   const [openInquiryCount, setOpenInquiryCount] = useState(-1);
@@ -276,24 +281,26 @@ export default function CalendarClient() {
               />
             </div>
           ) : (
-            <MonthCalendar
-              month={month}
-              blackoutDates={blackoutDates}
-              selectedDate={selectedDate}
-              onDayClick={(iso) =>
-                setSelectedDate((cur) => (cur === iso ? null : iso))
-              }
-              onPrevMonth={() =>
-                setMonth(
-                  new Date(month.getFullYear(), month.getMonth() - 1, 1)
-                )
-              }
-              onNextMonth={() =>
-                setMonth(
-                  new Date(month.getFullYear(), month.getMonth() + 1, 1)
-                )
-              }
-            />
+            <div ref={calendarCoachRef}>
+              <MonthCalendar
+                month={month}
+                blackoutDates={blackoutDates}
+                selectedDate={selectedDate}
+                onDayClick={(iso) =>
+                  setSelectedDate((cur) => (cur === iso ? null : iso))
+                }
+                onPrevMonth={() =>
+                  setMonth(
+                    new Date(month.getFullYear(), month.getMonth() - 1, 1)
+                  )
+                }
+                onNextMonth={() =>
+                  setMonth(
+                    new Date(month.getFullYear(), month.getMonth() + 1, 1)
+                  )
+                }
+              />
+            </div>
           )}
 
           {/* Day drawer (inline, below the calendar — feels more
@@ -402,6 +409,18 @@ export default function CalendarClient() {
           )}
         </div>
       </div>
+
+      {/* First-time tip on the calendar grid — explains tap-to-block
+          and the Recurring weekday rules. Only fires after blackouts
+          have loaded so the spotlight doesn't land on the spinner. */}
+      {!loading && (
+        <Coachmark
+          id="creator-catering-calendar"
+          copy={COACHMARK_COPY["creator-catering-calendar"]}
+          targetRef={calendarCoachRef}
+          showDelayMs={400}
+        />
+      )}
     </div>
   );
 }

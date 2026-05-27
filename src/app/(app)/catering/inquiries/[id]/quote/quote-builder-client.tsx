@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { InfoTip } from "@/components/ui/info-tip";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 /**
  * Creator's quote builder. Three columns of state:
@@ -380,12 +382,17 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
 
           {/* Fees */}
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-white/70">
-              Fees{" "}
-              <span className="text-xs font-normal text-white/40">
-                (not in deposit)
-              </span>
-            </h2>
+            <div className="mb-2 flex items-center">
+              <h2 className="text-sm font-semibold text-white/70">
+                Fees{" "}
+                <span className="text-xs font-normal text-white/40">
+                  (not in deposit)
+                </span>
+              </h2>
+              <InfoTip label="Why aren't fees in the deposit?">
+                {COACHMARK_COPY["creator-catering-quote-fees"]}
+              </InfoTip>
+            </div>
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">
@@ -467,9 +474,14 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
 
           {/* Expiration */}
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-white/70">
-              Quote expires in
-            </h2>
+            <div className="mb-2 flex items-center">
+              <h2 className="text-sm font-semibold text-white/70">
+                Quote expires in
+              </h2>
+              <InfoTip label="Which to pick?">
+                {COACHMARK_COPY["creator-catering-quote-expiration"]}
+              </InfoTip>
+            </div>
             <div className="flex gap-2">
               {[3, 7, 14].map((d) => (
                 <button
