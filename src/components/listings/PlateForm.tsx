@@ -10,6 +10,7 @@ import { FulfillmentPicker } from "./FulfillmentPicker";
 import { CategoryChips } from "./CategoryChips";
 import { AiDraftButton } from "@/components/shared/AiDraftButton";
 import { Coachmark } from "@/components/ui/coachmark";
+import { InfoTip } from "@/components/ui/info-tip";
 import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { COACHMARK_COPY, isCoachmarkDismissed } from "@/lib/coachmarks";
 import {
@@ -98,6 +99,8 @@ export function PlateForm({ listing }: PlateFormProps) {
   const nameCoachRef = useRef<HTMLInputElement>(null);
   const photosCoachRef = useRef<HTMLDivElement>(null);
   const priceCoachRef = useRef<HTMLDivElement>(null);
+  // Coachmark anchor for the catering kind toggle — first-time-only.
+  const cateringKindCoachRef = useRef<HTMLDivElement>(null);
   // Sequence: photos tip first, then name, then price. Each tip only
   // renders once the previous has been dismissed (this session OR
   // persistent). Prevents simultaneous coachmark spotlights.
@@ -435,13 +438,19 @@ export function PlateForm({ listing }: PlateFormProps) {
               it changes what fields they'll see. Segmented control over
               a glass-card substrate, 44px tap targets. */}
           <section aria-labelledby="kind-label">
-            <span
-              id="kind-label"
-              className="mb-2 block text-sm font-medium text-white/60"
-            >
-              Listing type
-            </span>
+            <div className="mb-2 flex items-center">
+              <span
+                id="kind-label"
+                className="text-sm font-medium text-white/60"
+              >
+                Listing type
+              </span>
+              <InfoTip label="What's the difference?">
+                {COACHMARK_COPY["creator-catering-kind-toggle"]}
+              </InfoTip>
+            </div>
             <div
+              ref={cateringKindCoachRef}
               role="radiogroup"
               aria-labelledby="kind-label"
               className="glass-segment flex gap-1 p-1"
@@ -597,12 +606,17 @@ export function PlateForm({ listing }: PlateFormProps) {
             </section>
           ) : (
             <section aria-labelledby="catering-pricing-label">
-              <span
-                id="catering-pricing-label"
-                className="mb-2 block text-sm font-medium text-white/60"
-              >
-                Pricing *
-              </span>
+              <div className="mb-2 flex items-center">
+                <span
+                  id="catering-pricing-label"
+                  className="text-sm font-medium text-white/60"
+                >
+                  Pricing *
+                </span>
+                <InfoTip label="Per-head vs flat?">
+                  {COACHMARK_COPY["creator-catering-pricing-mode"]}
+                </InfoTip>
+              </div>
               {/* Per-head vs flat segmented control */}
               <div
                 role="radiogroup"
@@ -729,12 +743,17 @@ export function PlateForm({ listing }: PlateFormProps) {
           {/* Catering-only: Lead time (days + hours) */}
           {kind === "catering" && (
             <section aria-labelledby="catering-lead-label">
-              <span
-                id="catering-lead-label"
-                className="mb-2 block text-sm font-medium text-white/60"
-              >
-                Minimum lead time *
-              </span>
+              <div className="mb-2 flex items-center">
+                <span
+                  id="catering-lead-label"
+                  className="text-sm font-medium text-white/60"
+                >
+                  Minimum lead time *
+                </span>
+                <InfoTip label="What does lead time do?">
+                  {COACHMARK_COPY["creator-catering-lead-time"]}
+                </InfoTip>
+              </div>
               <div className="flex gap-3">
                 <label className="flex-1">
                   <span className="mb-1 block text-xs text-white/50">Days</span>
@@ -784,12 +803,17 @@ export function PlateForm({ listing }: PlateFormProps) {
             </section>
           ) : (
             <section aria-labelledby="catering-fulfillment-label">
-              <span
-                id="catering-fulfillment-label"
-                className="mb-2 block text-sm font-medium text-white/60"
-              >
-                Fulfillment (pick all that apply)
-              </span>
+              <div className="mb-2 flex items-center">
+                <span
+                  id="catering-fulfillment-label"
+                  className="text-sm font-medium text-white/60"
+                >
+                  Fulfillment (pick all that apply)
+                </span>
+                <InfoTip label="Which to pick?">
+                  {COACHMARK_COPY["creator-catering-fulfillment"]}
+                </InfoTip>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
@@ -834,9 +858,14 @@ export function PlateForm({ listing }: PlateFormProps) {
               still written (empty) for back-compat. */}
           {kind === "catering" && (
             <section>
-              <label className="mb-2 block text-sm font-medium text-white/60">
-                What&apos;s included
-              </label>
+              <div className="mb-2 flex items-center">
+                <label className="text-sm font-medium text-white/60">
+                  What&apos;s included
+                </label>
+                <InfoTip label="How does this work?">
+                  {COACHMARK_COPY["creator-catering-inclusions"]}
+                </InfoTip>
+              </div>
               <CateringInclusionsEditor
                 value={cateringInclusionGroups}
                 onChange={setCateringInclusionGroups}
@@ -998,6 +1027,15 @@ export function PlateForm({ listing }: PlateFormProps) {
           showDelayMs={250}
         />
       )}
+      {/* Catering kind-toggle tip — fires for ALL creators (not just
+          new-plate creation) the first time they see the catering
+          option, since this is a behaviorally distinct flow. */}
+      <Coachmark
+        id="creator-catering-kind-toggle"
+        copy={COACHMARK_COPY["creator-catering-kind-toggle"]}
+        targetRef={cateringKindCoachRef}
+        showDelayMs={500}
+      />
     </div>
   );
 }

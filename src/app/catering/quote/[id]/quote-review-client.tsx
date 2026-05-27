@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Coachmark } from "@/components/ui/coachmark";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 interface QuoteData {
   id: string;
@@ -81,6 +83,10 @@ function useCountdown(targetIso: string): string {
 
 export function QuoteReviewClient({ quote, paidParam, viewerRole }: Props) {
   const [paying, setPaying] = useState(false);
+  // First-time tip explaining the 30% deposit + 70% balance flow.
+  // Fires once for any customer who lands on a quote — saves them
+  // from being confused about why we're only charging a fraction.
+  const payButtonRef = useRef<HTMLButtonElement>(null);
   // `paidParam` is the Stripe success-redirect signal. Even if the
   // webhook hasn't fired yet to flip the quote status, the customer
   // sees a confirmation card immediately so the success URL feels
@@ -286,6 +292,7 @@ export function QuoteReviewClient({ quote, paidParam, viewerRole }: Props) {
         <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
           <div className="mx-auto max-w-lg">
             <button
+              ref={payButtonRef}
               type="button"
               onClick={handlePay}
               disabled={paying}
@@ -328,6 +335,19 @@ export function QuoteReviewClient({ quote, paidParam, viewerRole }: Props) {
             </Link>
           </div>
         </div>
+      )}
+
+      {/* First-time tip on Pay Deposit explaining the 30/70 split +
+          card-saved-for-balance flow. Only mounts when the customer
+          actually has a payable quote (not the creator-preview or
+          success states). */}
+      {canPay && (
+        <Coachmark
+          id="customer-catering-quote-deposit"
+          copy={COACHMARK_COPY["customer-catering-quote-deposit"]}
+          targetRef={payButtonRef}
+          showDelayMs={500}
+        />
       )}
     </div>
   );

@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { TimePicker12h } from "@/components/ui/time-picker-12h";
+import { InfoTip } from "@/components/ui/info-tip";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 /**
  * Customer-facing catering inquiry form.
@@ -295,9 +297,14 @@ export function InquiryForm({
           <ArrowLeft size={20} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-white">
-            Catering inquiry
-          </h1>
+          <div className="flex items-center">
+            <h1 className="truncate text-lg font-bold text-white">
+              Catering inquiry
+            </h1>
+            <InfoTip label="How does this work?">
+              {COACHMARK_COPY["customer-catering-inquiry"]}
+            </InfoTip>
+          </div>
           <p className="truncate text-xs text-white/50">
             to {creatorName}
           </p>

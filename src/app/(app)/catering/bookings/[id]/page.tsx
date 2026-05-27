@@ -10,6 +10,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { BookingActions } from "./booking-actions";
+import { InfoTip } from "@/components/ui/info-tip";
+import { COACHMARK_COPY } from "@/lib/coachmarks";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -111,9 +113,17 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 className="mt-0.5 shrink-0 text-red-300"
               />
               <div>
-                <p className="text-sm font-bold text-red-100">
-                  Balance charge failed
-                </p>
+                <div className="flex items-center">
+                  <p className="text-sm font-bold text-red-100">
+                    Balance charge failed
+                  </p>
+                  <InfoTip
+                    label="What happens next?"
+                    triggerClassName="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-red-200/70 hover:text-red-100 active:scale-90 transition-all"
+                  >
+                    {COACHMARK_COPY["creator-catering-booking-balance-due"]}
+                  </InfoTip>
+                </div>
                 {booking.balance_failure_message && (
                   <p className="mt-1 text-xs text-red-200/80">
                     {booking.balance_failure_message}

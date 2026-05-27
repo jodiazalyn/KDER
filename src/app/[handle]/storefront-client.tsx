@@ -129,6 +129,9 @@ export function StorefrontClient({
   // Coachmark anchor for the first plate tile — first-time visitors
   // get a tip explaining that tapping a tile opens details.
   const firstTileRef = useRef<HTMLDivElement>(null);
+  // Coachmark anchor for the CATERING tab — fires once the first time
+  // a visitor lands on a creator that has catering listings.
+  const cateringTabRef = useRef<HTMLButtonElement>(null);
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -543,6 +546,7 @@ export function StorefrontClient({
               Plates
             </button>
             <button
+              ref={cateringTabRef}
               type="button"
               role="tab"
               aria-selected={activeTab === "catering"}
@@ -881,6 +885,18 @@ export function StorefrontClient({
           copy={COACHMARK_COPY["customer-storefront-tile"]}
           targetRef={firstTileRef}
           showDelayMs={400}
+        />
+      )}
+
+      {/* First-time tip on the CATERING tab — explains the flow is
+          different (request → quote → deposit) before the customer
+          taps in expecting plate-style instant-buy. */}
+      {cateringListings.length > 0 && (
+        <Coachmark
+          id="customer-catering-tab"
+          copy={COACHMARK_COPY["customer-catering-tab"]}
+          targetRef={cateringTabRef}
+          showDelayMs={600}
         />
       )}
     </main>
