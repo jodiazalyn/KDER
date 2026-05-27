@@ -6,6 +6,7 @@ import { ArrowLeft, Loader2, Send, X, Check } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 /**
  * Customer-facing catering inquiry form.
@@ -56,6 +57,16 @@ function todayIso(): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Format raw digits as the user types: "3235550123" → "(323) 555-0123".
+ *  Mirrors CheckoutSheet's pattern so the two forms feel consistent. */
+function formatPhoneInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export function InquiryForm({
   handle,
   creatorId,
@@ -66,6 +77,20 @@ export function InquiryForm({
   preSelectedIds,
 }: Props) {
   const router = useRouter();
+  const currentUser = useCurrentUser();
+
+  // Guest fields — only used when there's no currentUser. Matches the
+  // CheckoutSheet pattern so unauthenticated customers can submit an
+  // inquiry without going through a separate signup. On submit we POST
+  // to /api/v1/auth/anon-customer first to register a real Supabase
+  // anon session, then submit the inquiry.
+  const [guestName, setGuestName] = useState("");
+  const [guestPhoneRaw, setGuestPhoneRaw] = useState("");
+  const guestPhoneDigits = guestPhoneRaw.replace(/\D/g, "");
+  // Email is collected for everyone (logged-in users may not have one
+  // on file yet — checkout does the same backfill). Optional but
+  // strongly encouraged.
+  const [email, setEmail] = useState("");
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     new Set(preSelectedIds)
@@ -169,11 +194,18 @@ export function InquiryForm({
   }, [guestCount, guestNum, guestRange]);
 
   // ── Canonical "can submit" ─────────────────────────────────
+  // Guests need name + valid 10-digit phone before they can submit
+  // (mirrors CheckoutSheet's guest-checkout gate). Logged-in users
+  // skip that check.
+  const guestFieldsValid =
+    !!currentUser ||
+    (guestName.trim().length > 0 && guestPhoneDigits.length === 10);
   const canSubmit =
     !!eventDate &&
     !dateError &&
     !!guestCount &&
     !guestError &&
+    guestFieldsValid &&
     !submitting;
 
   // ── Submit ─────────────────────────────────────────────────
@@ -181,6 +213,33 @@ export function InquiryForm({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
+      // Anon-customer gate: when the visitor isn't signed in, register
+      // a Supabase anon session FIRST so the inquiry route's
+      // auth.getUser() resolves with a real user.id. Same pattern as
+      // CheckoutSheet's guest checkout — no OTP friction, just name +
+      // phone.
+      if (!currentUser) {
+        const anonRes = await fetch("/api/v1/auth/anon-customer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: guestName.trim(),
+            phone: guestPhoneDigits,
+          }),
+        });
+        const anonJson = await anonRes.json();
+        if (!anonRes.ok) {
+          const code =
+            typeof anonJson?.code === "string" ? ` [${anonJson.code}]` : "";
+          toast.error(
+            `${anonJson?.error || "Couldn't start your inquiry. Try again."}${code}`
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const trimmedEmail = email.trim();
       const res = await fetch("/api/v1/catering/inquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -205,6 +264,7 @@ export function InquiryForm({
           allergies: allergies.trim() || null,
           notes: notes.trim() || null,
           pre_selected_listing_ids: Array.from(selectedIds),
+          customer_email: trimmedEmail || null,
         }),
       });
       const body = await res.json();
@@ -250,6 +310,70 @@ export function InquiryForm({
 
       <div className="flex-1 overflow-y-auto px-4 pt-4">
         <div className="mx-auto max-w-lg space-y-6">
+          {/* Contact info — first thing the customer sees. Authed users
+              skip the name/phone inputs (we already have those on file)
+              but email is collected for everyone since we backfill
+              members.email on submit. Mirrors the CheckoutSheet pattern. */}
+          <section aria-labelledby="contact-label">
+            <span
+              id="contact-label"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
+              {currentUser ? "Your contact info" : "Your contact info"}
+            </span>
+            {currentUser ? (
+              <div className="glass-card px-4 py-3">
+                <p className="text-xs text-white/50">Inquiring as</p>
+                <p className="mt-0.5 text-sm font-medium text-white">
+                  {currentUser.display_name}
+                </p>
+                {currentUser.phone && (
+                  <p className="text-xs text-white/40">
+                    {currentUser.phone}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) =>
+                    setGuestName(e.target.value.slice(0, 40))
+                  }
+                  placeholder="Your name *"
+                  autoComplete="name"
+                  className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={guestPhoneRaw}
+                  onChange={(e) =>
+                    setGuestPhoneRaw(formatPhoneInput(e.target.value))
+                  }
+                  placeholder="Phone — (323) 555-0123 *"
+                  autoComplete="tel"
+                  className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                />
+                <p className="text-xs text-white/35">
+                  The creator will text you here with their quote.
+                </p>
+              </div>
+            )}
+            {/* Email — collected for all users so we can route order
+                updates + the quote PDF via email regardless of auth. */}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email (recommended — for quote + receipts)"
+              autoComplete="email"
+              inputMode="email"
+              className="glass-input mt-2 h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            />
+          </section>
+
           {/* Selected items panel */}
           {selectedIds.size > 0 && (
             <section>
