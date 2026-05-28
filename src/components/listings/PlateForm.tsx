@@ -26,6 +26,7 @@ import {
   type ListingStatus,
 } from "@/types";
 import { CateringInclusionsEditor } from "./CateringInclusionsEditor";
+import { AskCoachInline } from "@/components/coach/AskCoachInline";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -80,6 +81,48 @@ function saveDraft(data: DraftData) {
 function clearDraft() {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(DRAFT_KEY);
+}
+
+/** Build a contextual seed prompt for the Pricing Coach based on what
+ *  the creator has typed so far. Used by the inline "Ask the coach"
+ *  triggers in the price section. Short and natural — the user can
+ *  edit before sending. */
+function buildPriceCoachSeed({
+  kind,
+  name,
+  description,
+  cateringPricingMode,
+}: {
+  kind: "plate" | "catering";
+  name: string;
+  description: string;
+  cateringPricingMode?: "per_head" | "flat";
+}): string {
+  const trimmedName = name.trim();
+  const trimmedDesc = description.trim().slice(0, 200);
+
+  if (kind === "plate") {
+    if (trimmedName && trimmedDesc) {
+      return `What should I charge per plate for "${trimmedName}"? It's ${trimmedDesc}`;
+    }
+    if (trimmedName) {
+      return `What should I charge per plate for "${trimmedName}"?`;
+    }
+    return "Help me figure out a fair price per plate for what I'm making. I'll tell you the dish.";
+  }
+
+  // catering
+  const modeHint =
+    cateringPricingMode === "flat"
+      ? "as a flat package price"
+      : "per head (per guest)";
+  if (trimmedName && trimmedDesc) {
+    return `Help me price "${trimmedName}" ${modeHint}. It's ${trimmedDesc}`;
+  }
+  if (trimmedName) {
+    return `Help me price "${trimmedName}" ${modeHint}.`;
+  }
+  return `Help me figure out a fair catering price ${modeHint}. I'll tell you what I'm making.`;
 }
 
 interface PlateFormProps {
@@ -603,6 +646,20 @@ export function PlateForm({ listing }: PlateFormProps) {
                   className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
                 />
               </div>
+              {/* Inline trigger — opens Mia pre-filled with the
+                  plate's name/description so the user doesn't have
+                  to retype context. */}
+              <div className="mt-2">
+                <AskCoachInline
+                  seedPrompt={buildPriceCoachSeed({
+                    kind: "plate",
+                    name,
+                    description,
+                  })}
+                  label="Not sure what to charge?"
+                  hint="Ask Mia for a Houston-aware price"
+                />
+              </div>
             </section>
           ) : (
             <section aria-labelledby="catering-pricing-label">
@@ -680,6 +737,21 @@ export function PlateForm({ listing }: PlateFormProps) {
                   ? "Customer's quote total = guest count × price. Add fees like delivery or labor on the quote itself."
                   : "Single package price. Add fees like delivery or labor on the quote itself."}
               </p>
+              {/* Catering-specific inline Mia trigger. Seed prompt
+                  bakes in the per-head/flat mode so she leads with
+                  the right math. */}
+              <div className="mt-2">
+                <AskCoachInline
+                  seedPrompt={buildPriceCoachSeed({
+                    kind: "catering",
+                    name,
+                    description,
+                    cateringPricingMode,
+                  })}
+                  label="Pricing a catering package?"
+                  hint="Mia factors guest count, food cost + KDER's fee"
+                />
+              </div>
             </section>
           )}
 

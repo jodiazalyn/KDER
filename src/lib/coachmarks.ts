@@ -74,9 +74,9 @@ export const COACHMARK_COPY = {
   "customer-catering-quote-deposit":
     "Pay 30% now to lock in the date. The remaining 70% auto-charges the same card a few days before your event — no second checkout to remember.",
 
-  // ── Pricing agent ─────────────────────────────────────────────
+  // ── Mia (KDER concierge) ──────────────────────────────────────
   "pricing-agent-welcome":
-    "Tell me what's in your fridge or what you're thinking about cooking. I'll work out costs and a fair sell price with you.",
+    "Hey, I'm Mia. I help home cooks in Houston get set up on KDER, polish their listings, work out prices, and land their first orders. Ask me anything.",
 } as const satisfies Record<string, string>;
 
 export type CoachmarkId = keyof typeof COACHMARK_COPY;
