@@ -63,7 +63,56 @@ export async function POST(request: NextRequest) {
       return apiError("All line items were invalid.", 400);
     }
 
-    const feesCents = Math.max(0, Math.floor(Number(body.fees_cents) || 0));
+    // Structured fee items (new in migration 016). When present we
+    // derive fees_cents from the sum so the two are guaranteed in
+    // sync. When absent (old client), fall back to the bare
+    // fees_cents number — keeps the legacy flow working.
+    const ALLOWED_FEE_TAGS = ["server", "delivery", "setup", "warming", "custom"] as const;
+    type AllowedTag = typeof ALLOWED_FEE_TAGS[number];
+    const rawFeeItems = Array.isArray(body.fee_items) ? body.fee_items : [];
+    const feeItems = rawFeeItems
+      .map((raw: unknown) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = (raw ?? {}) as any;
+        const tag = ALLOWED_FEE_TAGS.includes(r.tag) ? (r.tag as AllowedTag) : null;
+        if (!tag) return null;
+        const amount = Math.max(0, Math.floor(Number(r.amount_cents) || 0));
+        const label =
+          typeof r.label === "string" && r.label.trim()
+            ? r.label.trim().slice(0, 60)
+            : tag.charAt(0).toUpperCase() + tag.slice(1);
+        // shift_end_time only meaningful for server rows. Accept
+        // "HH:MM" 24-hour; reject everything else.
+        let shiftEnd: string | null = null;
+        if (tag === "server" && typeof r.shift_end_time === "string") {
+          const m = /^(\d{1,2}):(\d{2})$/.exec(r.shift_end_time);
+          if (m) {
+            const h = parseInt(m[1], 10);
+            const min = parseInt(m[2], 10);
+            if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
+              shiftEnd = `${String(h).padStart(2, "0")}:${m[2]}`;
+            }
+          }
+        }
+        return {
+          tag,
+          label,
+          amount_cents: amount,
+          shift_end_time: shiftEnd,
+        };
+      })
+      .filter(Boolean) as Array<{
+        tag: AllowedTag;
+        label: string;
+        amount_cents: number;
+        shift_end_time: string | null;
+      }>;
+
+    // Prefer the sum of structured items when supplied; otherwise
+    // honor the bare fees_cents number from older clients.
+    const feesCents = feeItems.length > 0
+      ? feeItems.reduce((acc, f) => acc + f.amount_cents, 0)
+      : Math.max(0, Math.floor(Number(body.fees_cents) || 0));
     const taxCents = Math.max(0, Math.floor(Number(body.tax_cents) || 0));
     const creatorNotes =
       typeof body.creator_notes === "string"
@@ -143,6 +192,7 @@ export async function POST(request: NextRequest) {
         line_items: lineItems,
         food_subtotal_cents: foodSubtotalCents,
         fees_cents: feesCents,
+        fee_items: feeItems,
         tax_cents: taxCents,
         total_cents: totalCents,
         deposit_cents: depositCents,

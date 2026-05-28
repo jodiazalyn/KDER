@@ -35,7 +35,8 @@ export default async function QuoteBuilderPage({ params }: PageProps) {
     .from("catering_inquiries")
     .select(`
       id, creator_id, event_date, event_time, guest_count, event_address,
-      needs_server, needs_setup, pre_selected_listing_ids, notes, status,
+      service_style, needs_server, needs_setup,
+      pre_selected_listing_ids, notes, status,
       member:members(display_name, email)
     `)
     .eq("id", id)
