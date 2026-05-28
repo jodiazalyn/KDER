@@ -15,6 +15,7 @@ import { MarketingNav } from "@/components/landing/MarketingNav";
 import { MissionAnchor } from "@/components/landing/MissionAnchor";
 import { PaymentMethods } from "@/components/landing/PaymentMethods";
 import { PayoutShowcase } from "@/components/landing/PayoutShowcase";
+import { PricingAgentCTA } from "@/components/landing/PricingAgentCTA";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { TrustStrip } from "@/components/landing/TrustStrip";
 
@@ -106,6 +107,7 @@ export default function LandingPage() {
       <MarketingNav />
       <main>
         <Hero />
+        <PricingAgentCTA />
         <MissionAnchor />
         <TrustStrip />
         <HowItWorks />

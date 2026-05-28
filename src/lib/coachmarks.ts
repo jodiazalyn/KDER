@@ -73,6 +73,10 @@ export const COACHMARK_COPY = {
     "You're not buying yet — just asking. The creator reviews your event details and sends back a quote with a deposit.",
   "customer-catering-quote-deposit":
     "Pay 30% now to lock in the date. The remaining 70% auto-charges the same card a few days before your event — no second checkout to remember.",
+
+  // ── Pricing agent ─────────────────────────────────────────────
+  "pricing-agent-welcome":
+    "Tell me what's in your fridge or what you're thinking about cooking. I'll work out costs and a fair sell price with you.",
 } as const satisfies Record<string, string>;
 
 export type CoachmarkId = keyof typeof COACHMARK_COPY;
