@@ -82,7 +82,12 @@ export function BookingActions({ bookingId, status }: Props) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
+    // Sit above the BottomNav (5rem + safe-area) so the action bar
+    // isn't covered by it. Matches the InquiryActions fix — both used
+    // to render behind the z-50 nav and were effectively invisible on
+    // mobile. The nav owns its own safe-area padding, so we use a
+    // flat py-3 here.
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
       <div className="mx-auto flex max-w-lg gap-2">
         {status === "balance_due" && (
           <button

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowDown,
   Calendar,
   Clock,
   MapPin,
+  MessageCircle,
   Users,
   Building2,
   AlertTriangle,
@@ -73,6 +75,33 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const quote = quoteRows?.[0] ?? null;
   const booking = bookingRows?.[0] ?? null;
 
+  // Pull the most recent messages between this creator and the
+  // customer (in either direction). Shown inline so the creator
+  // doesn't have to bounce to /messages to remember what's been said.
+  // The catering routes auto-mirror inquiry/quote/booking events into
+  // this same thread (see lib/catering/insert-thread-message.ts), so
+  // this surface effectively shows "everything connected to the
+  // order" — system events + back-and-forth chat — in one place.
+  let recentMessages: Array<{
+    id: string;
+    sender_id: string;
+    recipient_id: string;
+    body: string;
+    created_at: string;
+  }> = [];
+  if (inq.member?.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: msgs } = await (supabase as any)
+      .from("messages")
+      .select("id, sender_id, recipient_id, body, created_at")
+      .or(
+        `and(sender_id.eq.${user.id},recipient_id.eq.${inq.member.id}),and(sender_id.eq.${inq.member.id},recipient_id.eq.${user.id})`
+      )
+      .order("created_at", { ascending: false })
+      .limit(4);
+    recentMessages = ((msgs ?? []) as typeof recentMessages).reverse();
+  }
+
   // Fetch pre-selected listings (if any). Pulls inclusion_groups too so
   // the row can show what's in each item the customer wanted.
   let selectedListings: Array<{
@@ -109,8 +138,16 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   const customer = inq.member;
   const customerName = customer?.display_name ?? "Customer";
 
+  // True when the creator hasn't yet acted on this lead — drives the
+  // "what to do next" callout. We only nudge when there's a clear next
+  // step the creator hasn't taken yet.
+  const needsCreatorResponse =
+    inq.status === "open" && !quote && !booking;
+
   return (
-    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    // pb-[10rem+safe] reserves room for the stacked footer:
+    // BottomNav (5rem) + InquiryActions bar (~5rem) + breathing room.
+    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(10rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <Link
@@ -143,6 +180,90 @@ export default async function InquiryDetailPage({ params }: PageProps) {
       </div>
 
       <div className="mx-auto max-w-lg space-y-4 px-4 pt-4">
+        {/* "What to do next" callout — only when the creator hasn't
+            responded yet. Tells them exactly which button to tap and
+            why. Removes itself the moment they act (open status flips
+            to quoted/booked). Belt-and-suspenders for the bottom
+            action bar — even if it's clipped on an odd device, this
+            in-content prompt makes the next step obvious. */}
+        {needsCreatorResponse && (
+          <section className="rounded-2xl border border-amber-400/[0.30] bg-amber-900/[0.20] p-4">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+              <Clock size={12} />
+              {customerName} is waiting on you
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-amber-50">
+              Send a quick message to introduce yourself, or build them
+              a quote. Use the{" "}
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.10] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                <MessageCircle size={11} /> Message
+              </span>{" "}
+              or{" "}
+              <span className="inline-flex items-center gap-1 rounded-md bg-[#1B5E20] px-1.5 py-0.5 text-[11px] font-bold text-white">
+                ✨ Build quote
+              </span>{" "}
+              buttons at the bottom of this page.
+            </p>
+            <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-amber-200/80">
+              <ArrowDown size={11} className="animate-bounce" />
+              Scroll down if you don&apos;t see them yet
+            </p>
+          </section>
+        )}
+
+        {/* Recent messages — last few back-and-forth (and any auto-
+            mirrored system events from the catering routes) so the
+            creator can see what's already been said before they reply.
+            Hidden when there's nothing in the thread. */}
+        {recentMessages.length > 0 && customer?.id && (
+          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40">
+                Recent messages
+              </h2>
+              <Link
+                href={`/messages/${customer.id}`}
+                className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
+              >
+                Open chat
+                <MessageCircle size={11} />
+              </Link>
+            </div>
+            <ul className="space-y-2.5">
+              {recentMessages.map((m) => {
+                const fromCreator = m.sender_id === user.id;
+                return (
+                  <li
+                    key={m.id}
+                    className={`flex flex-col gap-0.5 ${
+                      fromCreator ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">
+                      {fromCreator ? "You" : customerName} ·{" "}
+                      {new Date(m.created_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <span
+                      className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                        fromCreator
+                          ? "rounded-br-md bg-[#1B5E20] text-white"
+                          : "rounded-bl-md bg-white/[0.06] text-white/90"
+                      }`}
+                    >
+                      {m.body}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
         {/* Event facts grid */}
         <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
           <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">

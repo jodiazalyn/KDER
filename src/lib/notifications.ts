@@ -271,9 +271,14 @@ export async function notifyCateringInquiry(args: {
         const eventDateLabel = new Date(
           data.event_date + "T00:00:00"
         ).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        // SMS copy mirrors the in-app buttons on the inquiry detail
+        // page (Message + Build quote) so creators aren't hunting for
+        // an action the UI doesn't surface. Earlier copy said only
+        // "reply with a quote," which led a tester to expect a single
+        // primary CTA and overlook the Message option.
         await sendSms(
           creatorMember.phone,
-          `KDER: New catering request from ${customer.display_name ?? "a customer"} for ${data.guest_count} guests on ${eventDateLabel}. Reply with a quote in your dashboard.`
+          `KDER: New catering request from ${customer.display_name ?? "a customer"} for ${data.guest_count} guests on ${eventDateLabel}. Open the inquiry to message them or build a quote.`
         );
       }
     } catch (err) {
