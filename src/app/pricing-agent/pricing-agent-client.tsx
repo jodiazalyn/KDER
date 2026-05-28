@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Send, Loader2, Search, History, X } from "lucide-react";
+import { Send, Loader2, Search, History, X, Save } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PRICING_AGENT_QUICK_STARTS } from "@/lib/anthropic/pricing-agent-prompt";
@@ -46,12 +46,33 @@ interface PastChat {
 }
 
 const ANON_SOFT_GATE_TURNS = 5;
+// Where we stash an anonymous transcript between visits so closing
+// the tab doesn't nuke it. Auto-imported into pricing_chats when
+// the user signs up (see useEffect in PricingAgentClient).
+const ANON_CHAT_STORAGE_KEY = "kder_pricing_chat_anon";
 
 interface Props {
   isAuthed: boolean;
+  /** When true, the client is being rendered inside a host Sheet/
+   *  Dialog at the app-shell level. Skips the route-page slide-up
+   *  animation + dialog ARIA wrapper (the host already provides one),
+   *  and the X close button calls `onClose` instead of router.back. */
+  embedded?: boolean;
+  /** Called when the user taps X. In embedded mode the host closes
+   *  its sheet; in page mode (default) we fall back to router.back. */
+  onClose?: () => void;
+  /** Optional one-shot seed for the input box — used by inline
+   *  triggers ("Help me price my brisket plates") so the user can
+   *  send-as-is or edit before sending. Consumed on first apply. */
+  seedInput?: string;
 }
 
-export function PricingAgentClient({ isAuthed }: Props) {
+export function PricingAgentClient({
+  isAuthed,
+  embedded = false,
+  onClose,
+  seedInput,
+}: Props) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -80,6 +101,109 @@ export function PricingAgentClient({ isAuthed }: Props) {
     });
     return () => cancelAnimationFrame(id);
   }, [messages, toolStatus]);
+
+  // ── Anon transcript persistence ──────────────────────────────
+  // Closing the tab used to lose everything. Now we mirror the
+  // transcript to localStorage on every change while anon, and
+  // restore on mount if it's still there.
+  //
+  // The restore-on-mount runs once and is guarded by isAuthed because
+  // a signed-in user has DB-backed chats; we don't want to mix the
+  // two stores.
+  useEffect(() => {
+    if (isAuthed) return;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(ANON_CHAT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return;
+      // Same shape filter as the API — defends against schema drift.
+      const restored: ChatMessage[] = parsed.filter(
+        (m: unknown): m is ChatMessage =>
+          !!m &&
+          typeof m === "object" &&
+          (((m as ChatMessage).role === "user") ||
+            (m as ChatMessage).role === "assistant") &&
+          typeof (m as ChatMessage).content === "string"
+      );
+      if (restored.length > 0) setMessages(restored);
+    } catch {
+      // Corrupted blob — clear it so we don't keep failing.
+      window.localStorage.removeItem(ANON_CHAT_STORAGE_KEY);
+    }
+    // Intentional: run once on mount only. Re-running on isAuthed flip
+    // is handled by the import effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Write-through on every transcript change while anon.
+  useEffect(() => {
+    if (isAuthed) return;
+    if (typeof window === "undefined") return;
+    if (messages.length === 0) return;
+    try {
+      window.localStorage.setItem(
+        ANON_CHAT_STORAGE_KEY,
+        JSON.stringify(messages)
+      );
+    } catch {
+      // Quota exceeded — silently give up. Worst case we lose the
+      // chat on tab close, which is the status quo.
+    }
+  }, [messages, isAuthed]);
+
+  // ── Auto-import on signup ────────────────────────────────────
+  // When a previously-anon visitor finishes signup and lands back
+  // here, isAuthed flips to true. If we still have a localStorage
+  // chat AND no conversationId, persist it to a new pricing_chats
+  // row and clear the local copy.
+  useEffect(() => {
+    if (!isAuthed) return;
+    if (conversationId) return;
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(ANON_CHAT_STORAGE_KEY);
+    if (!raw) return;
+
+    let parsed: ChatMessage[] = [];
+    try {
+      parsed = JSON.parse(raw) ?? [];
+    } catch {
+      window.localStorage.removeItem(ANON_CHAT_STORAGE_KEY);
+      return;
+    }
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      window.localStorage.removeItem(ANON_CHAT_STORAGE_KEY);
+      return;
+    }
+
+    // Fire and forget — if it fails the user can re-send their next
+    // message and persistence kicks in via the streaming endpoint.
+    (async () => {
+      try {
+        const res = await fetch("/api/v1/ai/pricing-agent/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: parsed }),
+        });
+        if (!res.ok) return;
+        const body = await res.json();
+        const chat = body?.data?.chat;
+        if (chat?.id) {
+          setConversationId(chat.id);
+          setMessages(parsed);
+          // Re-load the past-chats list next time the drawer opens so
+          // the newly-imported chat shows up.
+          setPastChats(null);
+          toast.success("Saved your chat to your account.");
+        }
+        window.localStorage.removeItem(ANON_CHAT_STORAGE_KEY);
+      } catch {
+        // Network blip — leave the localStorage copy in place so we
+        // can retry on next mount.
+      }
+    })();
+  }, [isAuthed, conversationId]);
 
   // ── Send a message ────────────────────────────────────────
   const sendMessage = useCallback(
@@ -245,26 +369,49 @@ export function PricingAgentClient({ isAuthed }: Props) {
   const showGate =
     !isAuthed && !gateDismissed && userMessageCount >= ANON_SOFT_GATE_TURNS;
 
-  // Close action — pops back if there's browser history, otherwise
-  // routes to the landing page. Mobile users typically open the
-  // agent from the landing CTA, so `router.back()` usually feels
-  // right; the fallback covers direct visits.
+  // Close action — when embedded in a host sheet, defer to that host
+  // (it knows how to animate the sheet out). In standalone /pricing-
+  // agent mode, pop back if there's browser history, otherwise route
+  // to the landing page.
   const handleClose = useCallback(() => {
+    if (embedded && onClose) {
+      onClose();
+      return;
+    }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push("/");
     }
-  }, [router]);
+  }, [embedded, onClose, router]);
 
-  // Escape-to-close — matches the sheet convention.
+  // Escape-to-close — only attach in standalone mode. The host Sheet
+  // primitive already handles Escape when embedded, and attaching here
+  // too would close + double-fire.
   useEffect(() => {
+    if (embedded) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handleClose]);
+  }, [embedded, handleClose]);
+
+  // Seed-input pre-fill. Inline triggers ("Ask the coach about
+  // pricing") pass a contextual prompt; we drop it into the input so
+  // the user can send-as-is or tweak. Only applies when the chat is
+  // fresh + the input is empty — never clobber what the user typed.
+  const lastSeedRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!seedInput) return;
+    if (seedInput === lastSeedRef.current) return;
+    lastSeedRef.current = seedInput;
+    setInput((prev) => (prev.trim() ? prev : seedInput));
+    // Focus the input so the user can send immediately. Defer one
+    // frame so the textarea has mounted (esp. inside a sheet that's
+    // mid-open-animation).
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, [seedInput]);
 
   // ── Render ────────────────────────────────────────────────
   // The page is styled like a full-screen sheet — slides up on
@@ -276,50 +423,70 @@ export function PricingAgentClient({ isAuthed }: Props) {
     <div
       className={cn(
         "flex h-[100dvh] flex-col bg-[#0A0A0A]",
-        // Slide-up entrance. Uses the same tailwindcss-animate utility
-        // suite that the Sheet/Dialog primitives use, so the timing
-        // and easing match the rest of the app's bottom sheets.
-        "animate-in slide-in-from-bottom duration-[380ms] ease-out"
+        // Slide-up animation only when standalone — the host Sheet
+        // primitive already animates when embedded.
+        !embedded &&
+          "animate-in slide-in-from-bottom duration-[380ms] ease-out"
       )}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Pricing coach"
+      // Skip dialog/modal ARIA when embedded — the host already
+      // provides them and nesting two breaks the screen-reader tree.
+      role={embedded ? undefined : "dialog"}
+      aria-modal={embedded ? undefined : "true"}
+      aria-label={embedded ? undefined : "Pricing coach"}
     >
-      {/* Sheet header — agent identity on the left, close X on the
-          right (sheet convention). No back arrow — close goes back
-          or to home, whichever's appropriate. */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      {/* Sheet header — Mia's identity on the left, the secondary
+          action (Past chats for authed / Save chat for anon) in the
+          middle, X close on the right (sheet convention).
+          The X is rendered locally in BOTH standalone + embedded
+          modes — the host Sheet's built-in close has low contrast on
+          this dark surface, so PricingCoachProvider hides it via the
+          `[&>button.absolute]:hidden` selector on SheetContent.
+          `shrink-0` on every fixed-width child guarantees the title
+          is the only thing that truncates on narrow viewports. */}
+      <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-3 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <KderMark size={28} />
+          <KderMark size={32} />
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-white">
-              Pricing coach
+              Mia
             </h1>
-            <p className="truncate text-[11px] text-white/40">
-              Free · powered by KDER
+            <p className="truncate text-[11px] text-white/45">
+              Your KDER concierge
             </p>
           </div>
         </div>
-        {isAuthed && (
+        {isAuthed ? (
           <button
             type="button"
             onClick={() => setPastChatsOpen(true)}
-            aria-label="Past chats"
-            className="glass-btn-pill flex h-11 items-center gap-1.5 px-3 text-xs font-medium text-white/70 hover:text-white active:scale-95"
+            aria-label="Past chats with Mia"
+            className="glass-btn-pill flex h-10 shrink-0 items-center gap-1.5 px-3 text-xs font-medium text-white/70 hover:text-white active:scale-95"
           >
             <History size={14} />
             Past
           </button>
+        ) : (
+          // Anon visitors — always-visible "Save chat" entry point.
+          // Lands them on signup, then returns here, where the auto-
+          // import effect persists their localStorage transcript.
+          <Link
+            href="/signup?returnTo=%2Fpricing-agent"
+            aria-label="Save chat — sign up"
+            className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[#1B5E20] px-3 text-xs font-bold text-white shadow-[0_0_12px_rgba(27,94,32,0.4)] transition-transform active:scale-95"
+          >
+            <Save size={14} />
+            Save
+          </Link>
         )}
         <button
           type="button"
           onClick={handleClose}
-          aria-label="Close pricing coach"
-          // 44×44 tap target, sheet-X in top-right corner. Slightly
-          // brighter affordance than the Past button so the exit
-          // surface is obvious — matches the existing close button in
-          // src/components/ui/sheet.tsx.
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white/80 backdrop-blur-sm transition-all hover:bg-white/20 hover:text-white active:scale-90"
+          aria-label="Close Mia"
+          // 40×40 tap target. High-contrast chip — explicit ring + a
+          // brighter background than the radix default so the X reads
+          // clearly against the dark substrate at any viewport width.
+          // Shrink-0 guarantees it's never squeezed out by the chip.
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.18)_inset] backdrop-blur-sm transition-all hover:bg-white/30 active:scale-90"
         >
           <X size={20} strokeWidth={2.5} />
         </button>
@@ -505,12 +672,12 @@ function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
       <KderMark size={48} />
       <div className="max-w-md">
         <h2 className="text-lg font-bold text-white">
-          Hey, I&apos;m your KDER pricing coach.
+          Hey, I&apos;m Mia.
         </h2>
         <p className="mt-1.5 text-sm text-white/60">
-          Tell me what&apos;s in your fridge or what you&apos;re thinking
-          about cooking. I&apos;ll work out what it costs and a fair sell
-          price with you.
+          I help home cooks in Houston get set up on KDER, sharpen
+          their plate listings, price their food, and land their first
+          orders. Tell me what you&apos;re working on.
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2 pt-2">

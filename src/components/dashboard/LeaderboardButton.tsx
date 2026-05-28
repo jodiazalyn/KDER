@@ -72,9 +72,15 @@ export function LeaderboardButton({ anonymous = false }: LeaderboardButtonProps)
     return () => { cancelled = true; };
   }, [anonymous]);
 
-  // Hide on messages and plates (listings) surfaces — crown overlaps their top-right UI
-  if (/^\/messages(\/|$)/.test(pathname)) return null;
-  if (/^\/listings(\/|$)/.test(pathname)) return null;
+  // Only render on the Store (dashboard) surface. The crown used to
+  // float on every authed page, but it was eating tap-targets on
+  // forms (new plate, catering quotes), blocking the toaster on
+  // /orders, and just adding visual noise on surfaces where ranking
+  // isn't the user's mental model. Constrain it to where ranking
+  // actually belongs — the creator's store homepage.
+  const isDashboard =
+    pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  if (!isDashboard) return null;
 
   return (
     <>

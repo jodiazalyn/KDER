@@ -22,13 +22,13 @@ export function PricingAgentCTA() {
     >
       <div className="mx-auto max-w-3xl">
         <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
-          For anyone who cooks
+          Meet Mia · your KDER concierge
         </p>
 
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-          {/* Brand mark — anchors the "this is KDER's coach, not random
-              AI" read. 64px on mobile, 80px on sm+ so it doesn't feel
-              token. */}
+          {/* Brand mark — anchors the "this is KDER's concierge, not
+              random AI" read. 64px on mobile, 80px on sm+ so it
+              doesn't feel token. */}
           <div className="shrink-0">
             <Image
               src="/brand/mark-green.png"
@@ -45,21 +45,22 @@ export function PricingAgentCTA() {
               id="pricing-agent-cta-heading"
               className="text-3xl font-black leading-tight text-black sm:text-4xl"
             >
-              Got groceries.
+              Thinking about
               <br />
-              Not sure what to make?
+              selling your food?
             </h2>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-neutral-700">
-              Our AI pricing coach figures out what to cook, what it
-              actually costs you, and what you could sell it for. Free,
-              no account needed to try.
+              Mia helps Houston home cooks get set up on KDER — pick
+              what to make, work out what to charge, and write a
+              listing that lands the first orders. Free to try. No
+              account needed.
             </p>
 
             <Link
               href="/pricing-agent"
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#1B5E20] px-6 py-3 text-sm font-bold text-white shadow-[0_6px_24px_rgba(27,94,32,0.35)] transition-all hover:shadow-[0_8px_32px_rgba(27,94,32,0.45)] active:scale-95"
             >
-              Ask the coach
+              Chat with Mia
               <ArrowRight size={16} />
             </Link>
           </div>
