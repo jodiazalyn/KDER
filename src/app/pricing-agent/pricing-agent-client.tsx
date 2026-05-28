@@ -549,16 +549,273 @@ function MessageBubble({
       </div>
     );
   }
+  // Assistant: parse the content into Canva-style card modules.
+  // Sections (## ✨ ...), shopping-list lines (- 🍗 name — $X), totals,
+  // hero prices, and free-text paragraphs each render as styled blocks
+  // designed to look screenshot-able for Gen Z / female creators.
   return (
     <div className="flex items-start gap-2">
       <KderMark size={32} />
-      <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm text-white/90">
-        <p className="whitespace-pre-wrap break-words leading-relaxed">
-          {content || <span className="text-white/30">…</span>}
-        </p>
+      <div className="min-w-0 max-w-[88%] flex-1 space-y-3">
+        {content ? (
+          <AssistantResponse content={content} />
+        ) : (
+          <span className="text-white/30">…</span>
+        )}
       </div>
     </div>
   );
+}
+
+// ── Assistant response renderer ──────────────────────────────────
+// Parses our agreed markdown shape into card modules. Format the
+// agent emits is documented in src/lib/anthropic/pricing-agent-prompt.ts.
+//
+// We're not using react-markdown intentionally — the format we emit
+// is narrow and predictable, and a custom renderer lets us style
+// each pattern as a real designed component (shopping-list row with
+// price pill, hero price card, etc.) instead of a generic <ul>/<table>.
+
+interface Block {
+  kind: "section" | "paragraph";
+  heading?: string; // section only — full "## ✨ What you'll need"
+  lines: string[];  // paragraph: each line; section: child content lines
+}
+
+/** Walk the streamed text into blocks. Top-level grouping: each `## `
+ *  starts a new section; everything between sections (or at the top)
+ *  is a paragraph block. */
+function parseBlocks(text: string): Block[] {
+  const blocks: Block[] = [];
+  let current: Block | null = null;
+
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trimEnd();
+    if (line.startsWith("## ")) {
+      // Push previous block if it had content
+      if (current && (current.heading || current.lines.length > 0)) {
+        blocks.push(current);
+      }
+      current = { kind: "section", heading: line.slice(3).trim(), lines: [] };
+      continue;
+    }
+    if (!current) {
+      current = { kind: "paragraph", lines: [] };
+    }
+    if (current.kind === "paragraph" && line.trim() === "") {
+      // Blank line within paragraph block — flush and start a new one
+      if (current.lines.length > 0) {
+        blocks.push(current);
+        current = null;
+      }
+      continue;
+    }
+    current.lines.push(line);
+  }
+  if (current && (current.heading || current.lines.length > 0)) {
+    blocks.push(current);
+  }
+  return blocks;
+}
+
+function AssistantResponse({ content }: { content: string }) {
+  const blocks = parseBlocks(content);
+  return (
+    <>
+      {blocks.map((block, idx) =>
+        block.kind === "section" ? (
+          <SectionCard key={idx} heading={block.heading ?? ""} lines={block.lines} />
+        ) : (
+          <ProseBlock key={idx} lines={block.lines} />
+        )
+      )}
+    </>
+  );
+}
+
+/** Styled wrapper for a `## ✨ ...` section. The heading emoji + text
+ *  sit in a soft pill at the top; the body is parsed line-by-line
+ *  into shopping-list rows, total rows, hero prices, or prose. */
+function SectionCard({ heading, lines }: { heading: string; lines: string[] }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.10] bg-gradient-to-b from-amber-50/[0.04] to-white/[0.02] p-4 shadow-[0_2px_18px_rgba(0,0,0,0.25)]">
+      {heading && (
+        <h3 className="mb-3 text-[15px] font-bold tracking-tight text-white">
+          {heading}
+        </h3>
+      )}
+      <div className="space-y-1.5">
+        {lines.map((line, i) => (
+          <LineRenderer key={i} line={line} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Free-text paragraph block — between or before sections. Bold spans
+ *  rendered in kder-green for warmth. */
+function ProseBlock({ lines }: { lines: string[] }) {
+  const text = lines.join("\n").trim();
+  if (!text) return null;
+  // Strip leading "---" separators the model sometimes emits.
+  if (/^-{3,}$/.test(text)) return null;
+  return (
+    <p className="whitespace-pre-wrap text-[14.5px] leading-relaxed text-white/85">
+      {renderInline(text)}
+    </p>
+  );
+}
+
+/** One line inside a section. Detects the patterns we agreed in the
+ *  prompt and dispatches to the right styled component. */
+function LineRenderer({ line }: { line: string }) {
+  const trimmed = line.trim();
+  if (trimmed === "") return null;
+
+  // Hero price: **$14 per plate** alone on a line → big display.
+  const heroMatch = trimmed.match(/^\*\*\$(\d+(?:\.\d+)?)\s+(.+?)\*\*$/);
+  if (heroMatch) {
+    return <HeroPrice amount={heroMatch[1]} unit={heroMatch[2]} />;
+  }
+
+  // Total row: **Total: $X** or **Total cost: $X**
+  const totalMatch = trimmed.match(/^\*\*(Total[^:]*):\s*\$(\d+(?:\.\d+)?)\*\*$/i);
+  if (totalMatch) {
+    return <TotalRow label={totalMatch[1]} amount={totalMatch[2]} />;
+  }
+
+  // Shopping-list line: - 🍗 Chicken thighs — $12.50
+  // The em-dash is what the agent uses; tolerate -- and - too.
+  const listMatch = trimmed.match(
+    /^-\s+(.+?)\s+(?:—|--|-)\s*\$(\d+(?:\.\d+)?)\s*$/
+  );
+  if (listMatch) {
+    return <ShoppingListRow body={listMatch[1]} price={listMatch[2]} />;
+  }
+
+  // Plain list line without a price → simple bullet
+  const plainListMatch = trimmed.match(/^-\s+(.+)$/);
+  if (plainListMatch) {
+    return (
+      <div className="flex items-start gap-2 text-[14px] text-white/80">
+        <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/40" />
+        <span>{renderInline(plainListMatch[1])}</span>
+      </div>
+    );
+  }
+
+  // Fall-through: render as inline prose inside the section.
+  return (
+    <p className="text-[14px] leading-relaxed text-white/75">
+      {renderInline(trimmed)}
+    </p>
+  );
+}
+
+/** A single shopping-list row — leading emoji + name on the left,
+ *  price pill on the right. Auto-detects the emoji from the line's
+ *  first grapheme. */
+function ShoppingListRow({ body, price }: { body: string; price: string }) {
+  // Split the leading emoji (if any) off the body for visual treatment.
+  // Emoji can be multi-codepoint; this is "first grapheme that isn't
+  // ASCII letter/digit." Good enough for the formats the prompt asks
+  // the agent to emit.
+  let emoji = "";
+  let name = body;
+  // Match a leading non-ASCII char (and any combining marks / VS-16).
+  const emojiMatch = body.match(/^([^\w\s][‍️⃣]*[\p{Extended_Pictographic}]*[‍️⃣]*)\s+/u);
+  if (emojiMatch) {
+    emoji = emojiMatch[1];
+    name = body.slice(emojiMatch[0].length);
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
+      {emoji && (
+        <span className="text-xl leading-none" aria-hidden="true">
+          {emoji}
+        </span>
+      )}
+      <span className="min-w-0 flex-1 truncate text-[14px] text-white/90">
+        {name}
+      </span>
+      <span className="shrink-0 rounded-full bg-green-500/15 px-2.5 py-1 text-[12px] font-bold tabular-nums text-green-300 ring-1 ring-inset ring-green-400/30">
+        ${price}
+      </span>
+    </div>
+  );
+}
+
+/** Totals row inside a section — emphasized version of ShoppingListRow.
+ *  Sits below the regular items with a subtle separator above. */
+function TotalRow({ label, amount }: { label: string; amount: string }) {
+  return (
+    <div className="mt-2 flex items-center gap-3 border-t border-white/[0.08] pt-3">
+      <span className="flex-1 text-[14px] font-bold text-white">{label}</span>
+      <span className="rounded-full bg-green-500/25 px-3 py-1 text-[13px] font-black tabular-nums text-green-200 ring-1 ring-inset ring-green-400/40">
+        ${amount}
+      </span>
+    </div>
+  );
+}
+
+/** Hero price — the "what to charge" payoff. Big, bold, designed to
+ *  feel like the screenshottable money line. */
+function HeroPrice({ amount, unit }: { amount: string; unit: string }) {
+  return (
+    <div className="my-2 rounded-2xl bg-gradient-to-br from-green-500/25 via-green-500/15 to-emerald-500/10 px-4 py-5 text-center ring-1 ring-inset ring-green-400/40">
+      <div className="flex items-baseline justify-center gap-1.5">
+        <span className="text-2xl font-bold text-green-200/90">$</span>
+        <span className="text-5xl font-black leading-none tracking-tight text-green-200 tabular-nums">
+          {amount}
+        </span>
+      </div>
+      <p className="mt-1.5 text-[12px] font-semibold uppercase tracking-[0.18em] text-green-200/70">
+        {unit}
+      </p>
+    </div>
+  );
+}
+
+/** Inline rendering for **bold** spans + inline $X.XX prices. Keeps
+ *  paragraphs lively without turning into a full markdown parser. */
+function renderInline(text: string): React.ReactNode {
+  // Pattern matches **bold** OR a dollar amount ($12 / $12.50). Whatever
+  // doesn't match passes through as plain text.
+  const pattern = /(\*\*[^*]+\*\*)|(\$\d+(?:\.\d{1,2})?)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1]) {
+      // Bold span
+      parts.push(
+        <strong key={key++} className="font-bold text-green-200">
+          {match[1].slice(2, -2)}
+        </strong>
+      );
+    } else if (match[2]) {
+      // Inline price → soft pill
+      parts.push(
+        <span
+          key={key++}
+          className="mx-0.5 rounded-full bg-green-500/12 px-1.5 py-0.5 text-[12.5px] font-bold tabular-nums text-green-300 ring-1 ring-inset ring-green-400/20"
+        >
+          {match[2]}
+        </span>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : text;
 }
 
 /** KDER brand mark with a graceful fallback if the image fails to
