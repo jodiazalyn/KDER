@@ -200,6 +200,16 @@ export async function POST(request: NextRequest) {
         kind === "catering"
           ? sanitizeInclusionGroups(body.catering_inclusion_groups)
           : {},
+      // Plate-only pre-order date (migration 017). Only accept a
+      // YYYY-MM-DD string; anything else lands as NULL = instant.
+      // Catering listings always get NULL (they use the inquiry's
+      // event_date instead).
+      pre_order_available_date:
+        kind === "plate" &&
+        typeof body.pre_order_available_date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(body.pre_order_available_date)
+          ? body.pre_order_available_date
+          : null,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

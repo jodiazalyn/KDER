@@ -114,6 +114,13 @@ export interface Listing {
   created_at: string;
   updated_at: string;
 
+  // Plate-only: pre-order date. When set, this plate is marked as
+  // pre-order (food ready on that date) instead of instant. NULL =
+  // instant (the historical default). ISO date string "YYYY-MM-DD"
+  // — matches Postgres DATE format the same way other date columns
+  // in this codebase do (catering inquiry event_date, etc.).
+  pre_order_available_date: string | null;
+
   // Catering-only fields. All null for kind='plate'.
   catering_pricing_mode: CateringPricingMode | null;
   catering_min_guests: number | null;

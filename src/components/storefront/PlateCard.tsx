@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
-import { Plus, Minus, ShoppingCart } from "lucide-react";
+import { Plus, Minus, ShoppingCart, Calendar } from "lucide-react";
 import type { Listing } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,25 @@ export function PlateCard({
   const photo = listing.photos[0] || "/icons/kder-logo.png";
   const soldOut = listing.quantity <= 0;
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Pre-order context. The pill on the photo gets a compact short
+  // date ("MAR 14"), the description-area banner gets a friendlier
+  // weekday-included label ("Thu, Mar 14") so customers know what
+  // day of the week to plan around.
+  const preOrderDateShort = listing.pre_order_available_date
+    ? new Date(
+        listing.pre_order_available_date + "T00:00:00"
+      ).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
+  const preOrderDateLong = listing.pre_order_available_date
+    ? new Date(
+        listing.pre_order_available_date + "T00:00:00"
+      ).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
 
   // Autoplay video when card scrolls into view, pause when it leaves.
   useEffect(() => {
@@ -91,10 +110,30 @@ export function PlateCard({
             </span>
           </div>
         )}
+        {/* Pre-order pill — top-right corner of the hero. Hidden
+            when sold-out so the two badges don't fight. */}
+        {preOrderDateShort && !soldOut && (
+          <span className="absolute right-2 top-2 rounded-full border border-green-400/30 bg-green-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-200 backdrop-blur-[16px] backdrop-saturate-[180%]">
+            Pre-order · {preOrderDateShort}
+          </span>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-4">
+        {/* Pre-order banner — sits just under the photo/video,
+            above the name, so the customer sees the availability
+            date as soon as they read past the hero. Uses a calendar
+            icon and the longer "Thu, Mar 14" label for clarity. */}
+        {preOrderDateLong && (
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-green-400/[0.25] bg-green-900/[0.20] px-3 py-2">
+            <Calendar size={14} className="text-green-300" />
+            <span className="text-xs font-semibold text-green-100">
+              Pre-order · available {preOrderDateLong}
+            </span>
+          </div>
+        )}
+
         {/* Name */}
         <h3 className="text-lg font-bold text-white">{listing.name}</h3>
 
