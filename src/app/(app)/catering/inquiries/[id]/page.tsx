@@ -42,7 +42,8 @@ export default async function InquiryDetailPage({ params }: PageProps) {
     .from("catering_inquiries")
     .select(`
       id, event_date, event_time, event_end_time, guest_count, event_address,
-      event_venue_type, indoor_outdoor, needs_server, needs_setup,
+      event_venue_type, indoor_outdoor, service_style,
+      needs_server, needs_setup,
       earliest_setup_time, kitchen_available, allergies, notes,
       pre_selected_listing_ids, status, created_at,
       member:members(id, display_name, phone, photo_url, email)
@@ -222,7 +223,12 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 Recent messages
               </h2>
               <Link
-                href={`/messages/${customer.id}`}
+                // /messages/[threadId] expects the slug "general_{id}"
+                // for a non-order conversation. Passing the bare member
+                // id slices "general_".length off the front and lands
+                // on an empty thread — this was the "blank chat page"
+                // bug the user hit.
+                href={`/messages/general_${customer.id}`}
                 className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
               >
                 Open chat
@@ -291,6 +297,17 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 icon={Building2}
                 label="Venue"
                 value={`${inq.event_venue_type}${inq.indoor_outdoor ? ` · ${inq.indoor_outdoor}` : ""}`}
+              />
+            )}
+            {inq.service_style && (
+              <FactRow
+                icon={Users}
+                label="Service"
+                value={
+                  inq.service_style === "full_service"
+                    ? "Full service · server + delivery + setup"
+                    : "Drop-off · no staff on site (warming fee may apply)"
+                }
               />
             )}
           </ul>

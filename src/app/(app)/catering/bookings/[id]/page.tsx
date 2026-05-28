@@ -256,7 +256,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 Recent messages
               </h2>
               <Link
-                href={`/messages/${booking.customer.id}`}
+                // /messages/[threadId] expects the slug
+                // "general_{partnerId}" — passing a bare UUID lands on
+                // an empty thread (the route slices the first 8 chars
+                // off thinking they're the literal "general_" prefix).
+                href={`/messages/general_${booking.customer.id}`}
                 className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
               >
                 Open chat
@@ -298,7 +302,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
           </section>
         ) : (
           <Link
-            href={`/messages/${booking.customer?.id ?? ""}`}
+            href={
+              booking.customer?.id
+                ? `/messages/general_${booking.customer.id}`
+                : "/messages"
+            }
             className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-[0.99]"
           >
             <MessageCircle size={16} />

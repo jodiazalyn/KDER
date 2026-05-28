@@ -224,7 +224,11 @@ export function InquiryActions({
             /* Confirmed: only message + calendar */
             <>
               <Link
-                href={`/messages/${customerMemberId ?? ""}`}
+                href={
+                  customerMemberId
+                    ? `/messages/general_${customerMemberId}`
+                    : "/messages"
+                }
                 className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-95"
               >
                 <MessageCircle size={16} />
@@ -241,7 +245,11 @@ export function InquiryActions({
             /* No booking yet: message + build (or edit/resend) quote */
             <>
               <Link
-                href={`/messages/${customerMemberId ?? ""}`}
+                href={
+                  customerMemberId
+                    ? `/messages/general_${customerMemberId}`
+                    : "/messages"
+                }
                 className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-95"
               >
                 <MessageCircle size={16} />

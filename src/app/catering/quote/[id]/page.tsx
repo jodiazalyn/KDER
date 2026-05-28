@@ -39,7 +39,7 @@ export default async function CateringQuotePage({ params, searchParams }: PagePr
     .from("catering_quotes")
     .select(`
       id, inquiry_id, creator_id, member_id, status,
-      line_items, food_subtotal_cents, fees_cents, tax_cents,
+      line_items, food_subtotal_cents, fees_cents, fee_items, tax_cents,
       total_cents, deposit_cents, balance_cents,
       creator_notes, expires_at, created_at,
       inquiry:catering_inquiries(event_date, event_time, guest_count, event_address),

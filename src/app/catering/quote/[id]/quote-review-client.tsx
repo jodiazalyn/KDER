@@ -31,6 +31,15 @@ interface QuoteData {
   }>;
   food_subtotal_cents: number;
   fees_cents: number;
+  /** Structured fee breakdown (migration 016). Older quotes have
+   *  this as an empty array; we fall back to the single fees_cents
+   *  line. */
+  fee_items?: Array<{
+    tag: "server" | "delivery" | "setup" | "warming" | "custom";
+    label: string;
+    amount_cents: number;
+    shift_end_time: string | null;
+  }>;
   tax_cents: number;
   total_cents: number;
   deposit_cents: number;
@@ -61,6 +70,19 @@ interface Props {
 function money(cents: number): string {
   if (cents % 100 === 0) return `$${(cents / 100).toFixed(0)}`;
   return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Format a 24-hour "HH:MM" into "h:MM AM/PM" for the Server fee
+ *  row's "shift ends" label. Mirrors the helper in the creator's
+ *  quote builder so both sides format identically. */
+function formatTime12h(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm);
+  if (!m) return hhmm;
+  const h24 = parseInt(m[1], 10);
+  if (isNaN(h24)) return hhmm;
+  const ampm = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${m[2]} ${ampm}`;
 }
 
 /** Tick down to the expiration time — runs only when more than an hour
@@ -232,11 +254,30 @@ export function QuoteReviewClient({ quote, paidParam, viewerRole }: Props) {
         <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
           <ul className="space-y-1.5 text-sm">
             <TotalRow label="Food subtotal" value={money(quote.food_subtotal_cents)} />
-            {quote.fees_cents > 0 && (
-              <TotalRow
-                label="Fees (delivery, labor)"
-                value={money(quote.fees_cents)}
-              />
+            {/* Structured fee rows (migration 016). One row per
+                category so the customer sees what each fee covers,
+                not just a single opaque "Fees" line. Falls back to
+                the legacy single-row rendering when fee_items is
+                empty (old quote rows). */}
+            {quote.fee_items && quote.fee_items.length > 0 ? (
+              quote.fee_items.map((f, i) => (
+                <TotalRow
+                  key={i}
+                  label={
+                    f.tag === "server" && f.shift_end_time
+                      ? `${f.label} · ends ${formatTime12h(f.shift_end_time)}`
+                      : f.label
+                  }
+                  value={money(f.amount_cents)}
+                />
+              ))
+            ) : (
+              quote.fees_cents > 0 && (
+                <TotalRow
+                  label="Fees (delivery, labor)"
+                  value={money(quote.fees_cents)}
+                />
+              )
             )}
             {quote.tax_cents > 0 && (
               <TotalRow label="Tax" value={money(quote.tax_cents)} />

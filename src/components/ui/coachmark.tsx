@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { useReducedMotion } from "framer-motion";
+import { X } from "lucide-react";
 import {
   dismissCoachmark,
   isCoachmarkDismissed,
@@ -27,22 +33,56 @@ interface CoachmarkProps {
    */
   showDelayMs?: number;
   /**
-   * Fires when the user dismisses (Got it / backdrop tap). Lets the
-   * parent chain coachmarks — show one at a time, and only render
-   * the next after the previous is dismissed.
+   * Fires when the user dismisses (Got it / X / backdrop tap). Lets
+   * the parent chain coachmarks explicitly when it wants ordered
+   * dependencies. (The global queue handles ad-hoc multiplicity
+   * automatically; this callback is still useful for derived state.)
    */
   onDismiss?: () => void;
+}
+
+// ── Global FIFO queue ───────────────────────────────────────────
+// Pages frequently mount several <Coachmark>s at once (e.g. the
+// new-plate form has four). The earlier implementation rendered all
+// of them simultaneously, which stacked Got-It buttons on top of
+// each other and made dismissal feel broken — tapping one popup
+// revealed another underneath in the same screen region, so users
+// reported "the tooltip isn't disappearing." This queue ensures
+// exactly one coachmark is visible at any moment, in mount order.
+const coachmarkQueue: string[] = [];
+const listeners = new Set<() => void>();
+function notifyQueue() {
+  listeners.forEach((l) => l());
+}
+function enqueue(uid: string) {
+  if (!coachmarkQueue.includes(uid)) {
+    coachmarkQueue.push(uid);
+    notifyQueue();
+  }
+}
+function dequeue(uid: string) {
+  const i = coachmarkQueue.indexOf(uid);
+  if (i !== -1) {
+    coachmarkQueue.splice(i, 1);
+    notifyQueue();
+  }
 }
 
 /**
  * First-visit-only educational coachmark. Highlights a single UI
  * element with a dim spotlight + tooltip-style bubble explaining
- * what it does. Tap "Got it" or anywhere off the bubble to dismiss
- * forever (localStorage-keyed by id).
+ * what it does. Tap "Got it", the X icon, or anywhere off the
+ * bubble to dismiss forever (localStorage-keyed by id).
  *
  * Pair with `<InfoTip>` for the persistent re-readable hint after
  * dismissal — same copy, lower-stakes affordance the user can return
  * to anytime via a (?) icon.
+ *
+ * Pages can mount several Coachmarks at once; the global FIFO queue
+ * ensures they render one at a time in mount order. (For an
+ * explicit dependency between two coachmarks, the `onDismiss`
+ * callback still works — it fires the moment THIS coachmark exits,
+ * which is also the moment the next-in-queue takes over.)
  *
  * Honors `prefers-reduced-motion` (skip fade animations).
  */
@@ -53,20 +93,46 @@ export function Coachmark({
   showDelayMs = 0,
   onDismiss,
 }: CoachmarkProps) {
+  const uid = useId();
   const [dismissed, setDismissed] = useState<boolean>(() =>
     isCoachmarkDismissed(id)
   );
   const [rect, setRect] = useState<DOMRect | null>(null);
   const reduceMotion = useReducedMotion();
 
-  // Measure the target element. Triggers `rect` becoming non-null,
-  // which gates the portal render. Doubles as the "wait for client
-  // mount" gate (effects only run on the client). The setState calls
-  // here all live inside callbacks (rAF / setTimeout / event handlers),
-  // never synchronously in the effect body — that satisfies the
-  // react-hooks/set-state-in-effect lint rule.
+  // Subscribe to the global queue head so this instance flips to
+  // active exactly when it's our turn (i.e. all earlier-mounted
+  // coachmarks have dismissed).
+  const isActive = useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    () => coachmarkQueue[0] === uid,
+    () => false
+  );
+
+  // Register / unregister with the queue. Dismissed coachmarks
+  // never enqueue. Cleanup removes us if we unmount before
+  // dismissing (e.g. parent route change).
   useEffect(() => {
     if (dismissed) return;
+    enqueue(uid);
+    return () => {
+      dequeue(uid);
+    };
+  }, [uid, dismissed]);
+
+  // Measure the target element. Only attempts to measure once we're
+  // the active coachmark — earlier-queue items haven't reached us
+  // yet, so the bubble shouldn't have laid out either. The setState
+  // calls here all live inside callbacks (rAF / setTimeout / event
+  // handlers), never synchronously in the effect body — satisfies
+  // the react-hooks/set-state-in-effect lint rule.
+  useEffect(() => {
+    if (dismissed || !isActive) return;
     const el = targetRef.current;
     if (!el) return;
 
@@ -96,13 +162,21 @@ export function Coachmark({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [dismissed, targetRef, showDelayMs]);
+  }, [dismissed, isActive, targetRef, showDelayMs]);
 
-  if (dismissed || !rect || typeof document === "undefined") {
+  if (
+    dismissed ||
+    !isActive ||
+    !rect ||
+    typeof document === "undefined"
+  ) {
     return null;
   }
 
   const handleDismiss = () => {
+    // Dequeue + persist + local-flip + parent notify, in that order
+    // so the next coachmark renders immediately on the same tick.
+    dequeue(uid);
     dismissCoachmark(id);
     setDismissed(true);
     onDismiss?.();
@@ -148,9 +222,13 @@ export function Coachmark({
 
       {/* Bubble — glass-card-elevated for the iOS-y depth + glass-shine
           for the specular highlight. The green ring + border keep
-          KDER's brand tint. */}
+          KDER's brand tint. Three dismiss affordances:
+            1. X icon top-right (most discoverable)
+            2. Got it primary CTA bottom-right
+            3. Tap anywhere off the bubble (backdrop)
+          Any one of them fires handleDismiss. */}
       <div
-        className={`glass-card-elevated glass-shine absolute w-[${BUBBLE_W}px] max-w-[calc(100vw-2rem)] border border-green-400/40 p-4 ring-1 ring-green-400/15 ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-200"}`}
+        className={`glass-card-elevated glass-shine absolute max-w-[calc(100vw-2rem)] border border-green-400/40 p-4 pr-10 ring-1 ring-green-400/15 ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-200"}`}
         style={{
           top: bubbleTop,
           left: clampedLeft,
@@ -159,6 +237,16 @@ export function Coachmark({
         }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* X close — top-right corner of the bubble. Some users skip
+            primary CTAs and look for an X; this gives them an out. */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          aria-label="Dismiss tip"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-white/55 hover:bg-white/[0.08] hover:text-white active:scale-90 transition-all"
+        >
+          <X size={16} strokeWidth={2.5} />
+        </button>
         <p className="text-sm leading-relaxed text-white/90">{copy}</p>
         <div className="mt-3 flex items-center justify-end">
           <button

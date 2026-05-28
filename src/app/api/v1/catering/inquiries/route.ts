@@ -201,6 +201,9 @@ export async function POST(request: NextRequest) {
       indoor_outdoor: ["indoor", "outdoor", "mixed"].includes(body.indoor_outdoor)
         ? body.indoor_outdoor
         : null,
+      service_style: ["full_service", "drop_off"].includes(body.service_style)
+        ? body.service_style
+        : null,
       needs_server: !!body.needs_server,
       needs_setup: !!body.needs_setup,
       earliest_setup_time: body.earliest_setup_time || null,

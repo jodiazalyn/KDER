@@ -128,6 +128,13 @@ export function InquiryForm({
   const [eventAddress, setEventAddress] = useState("");
   const [venueType, setVenueType] = useState<"residence" | "venue" | "other" | "">("");
   const [indoorOutdoor, setIndoorOutdoor] = useState<"indoor" | "outdoor" | "mixed" | "">("");
+  // Service style — full_service (caterer brings staff: server,
+  // delivery, setup) vs drop_off (food delivered fresh, no staff on
+  // site; warming fee may apply). Drives which fee categories the
+  // creator can add when they build the quote.
+  const [serviceStyle, setServiceStyle] = useState<
+    "full_service" | "drop_off" | ""
+  >("");
   const [needsServer, setNeedsServer] = useState(false);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [earliestSetup, setEarliestSetup] = useState("");
@@ -337,6 +344,7 @@ export function InquiryForm({
           event_address: eventAddress.trim() || null,
           event_venue_type: venueType || null,
           indoor_outdoor: indoorOutdoor || null,
+          service_style: serviceStyle || null,
           needs_server: needsServer,
           needs_setup: needsSetup,
           earliest_setup_time: earliestSetup || null,
@@ -717,6 +725,78 @@ export function InquiryForm({
                     )}
                   >
                     {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Service style — Full Service vs Drop-Off. Drives the
+              creator's quote-builder so they offer the right fee
+              categories (server/delivery/setup vs warming). Optional
+              on the form but creators see the choice clearly when
+              they build their quote. */}
+          <section aria-labelledby="service-style-label">
+            <span
+              id="service-style-label"
+              className="mb-2 block text-sm font-medium text-white/60"
+            >
+              Service style
+            </span>
+            <div
+              className="space-y-2"
+              role="radiogroup"
+              aria-labelledby="service-style-label"
+            >
+              {(
+                [
+                  {
+                    value: "full_service",
+                    title: "Full service",
+                    body:
+                      "Caterer brings staff to serve, deliver, and set up.",
+                  },
+                  {
+                    value: "drop_off",
+                    title: "Drop-off",
+                    body:
+                      "Food is freshly prepared and delivered with no staff on site. A warming fee may apply since the caterer comes back to pick up their items.",
+                  },
+                ] as const
+              ).map((opt) => {
+                const active = serviceStyle === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() =>
+                      setServiceStyle(active ? "" : opt.value)
+                    }
+                    className={cn(
+                      "block w-full rounded-2xl border p-3 text-left transition-all active:scale-[0.99]",
+                      active
+                        ? "border-green-400/50 bg-green-900/30"
+                        : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "block text-sm font-bold",
+                        active ? "text-green-200" : "text-white"
+                      )}
+                    >
+                      {opt.title}
+                    </span>
+                    <span
+                      className={cn(
+                        "mt-0.5 block text-xs",
+                        active ? "text-green-100/80" : "text-white/55"
+                      )}
+                    >
+                      {opt.body}
+                    </span>
                   </button>
                 );
               })}
