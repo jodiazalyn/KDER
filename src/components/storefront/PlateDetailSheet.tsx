@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ImageOff, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
+import { Calendar, ImageOff, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { MediaCarousel } from "./MediaCarousel";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import type { Listing } from "@/types";
@@ -62,6 +62,19 @@ export function PlateDetailSheet({
   const hasMedia = listing.photos.length > 0 || !!listing.video;
   const maxQty = Math.max(1, listing.quantity);
 
+  // Pre-order context. NULL = instant. Long label "Thu, Mar 14"
+  // is shown in the under-photo banner so customers know the
+  // weekday they're planning for.
+  const preOrderDateLong = listing.pre_order_available_date
+    ? new Date(
+        listing.pre_order_available_date + "T00:00:00"
+      ).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+
   const fulfillmentLabel =
     listing.fulfillment_type === "both"
       ? "Pickup & Delivery"
@@ -106,10 +119,31 @@ export function PlateDetailSheet({
                   </span>
                 </div>
               )}
+              {/* Pre-order pill on the hero (same treatment as the
+                  storefront tile). Hidden when sold-out. */}
+              {preOrderDateLong && !soldOut && (
+                <span className="absolute right-2 top-2 rounded-full border border-green-400/30 bg-green-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-200 backdrop-blur-[16px] backdrop-saturate-[180%]">
+                  Pre-order
+                </span>
+              )}
             </div>
 
             {/* Card body */}
             <div className="p-4">
+              {/* Pre-order banner — directly under the photo/video,
+                  above the name. Tells the customer what date the
+                  food is actually ready before they read anything
+                  else. Calendar icon makes the date scan as a
+                  schedule signal. */}
+              {preOrderDateLong && (
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-green-400/[0.25] bg-green-900/[0.20] px-3 py-2">
+                  <Calendar size={14} className="text-green-300" />
+                  <span className="text-xs font-semibold text-green-100">
+                    Pre-order · available {preOrderDateLong}
+                  </span>
+                </div>
+              )}
+
               <SheetTitle className="text-xl font-bold leading-tight text-white">
                 {listing.name}
               </SheetTitle>

@@ -83,6 +83,20 @@ function clearDraft() {
   sessionStorage.removeItem(DRAFT_KEY);
 }
 
+/** Format an ISO YYYY-MM-DD date as a friendly short label used in
+ *  the pre-order hint line (e.g. "Thu, Mar 14"). Used by the form's
+ *  preview copy under the date input. */
+function formatPreOrderDateShort(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 /** Build a contextual seed prompt for the Pricing Coach based on what
  *  the creator has typed so far. Used by the inline "Ask the coach"
  *  triggers in the price section. Short and natural — the user can
@@ -165,6 +179,20 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [name, setName] = useState(listing?.name ?? restored?.name ?? "");
   const [description, setDescription] = useState(listing?.description ?? restored?.description ?? "");
   const [price, setPrice] = useState(listing?.price?.toString() ?? restored?.price ?? "");
+
+  // Plate-only: "Instant" (food ready now) vs "Pre-order" (food
+  // ready on a specific future date). When set to "pre_order" the
+  // date input appears + becomes required on submit. Catering
+  // listings have their own date model (event date on the inquiry)
+  // and don't use this toggle. Stored at the DB level as a single
+  // nullable date column: NULL = instant, set = pre-order with
+  // that available date.
+  const [plateMode, setPlateMode] = useState<"instant" | "pre_order">(
+    listing?.pre_order_available_date ? "pre_order" : "instant"
+  );
+  const [preOrderDate, setPreOrderDate] = useState<string>(
+    listing?.pre_order_available_date ?? ""
+  );
   const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
   const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? restored?.photos ?? []);
@@ -391,9 +419,29 @@ export function PlateForm({ listing }: PlateFormProps) {
     catering_inclusions:
       kind === "catering" ? cateringInclusions.trim() || null : null,
     catering_inclusion_groups: kind === "catering" ? cateringInclusionGroups : {},
+    // Plate-only pre-order date. Sent only when kind='plate' AND
+    // the creator picked Pre-order AND filled in a date — otherwise
+    // we always send null so toggling from pre-order back to
+    // instant actually clears the date on update.
+    pre_order_available_date:
+      kind === "plate" && plateMode === "pre_order" && preOrderDate
+        ? preOrderDate
+        : null,
   });
 
   const handleSave = async (status: ListingStatus) => {
+    // Pre-order plates need a date — the toggle alone isn't enough.
+    // Block publish (and draft save too — the column is meaningless
+    // without a date) so we don't write a half-broken row.
+    if (
+      kind === "plate" &&
+      plateMode === "pre_order" &&
+      !preOrderDate
+    ) {
+      toast.error("Pick a date for the pre-order availability.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -537,6 +585,106 @@ export function PlateForm({ listing }: PlateFormProps) {
               </p>
             )}
           </section>
+
+          {/* Instant vs Pre-order — only for plate listings. Catering
+              has its own date model (the customer-supplied event_date
+              on the inquiry). When set to "pre-order" a date picker
+              appears below; that date is stored as
+              listings.pre_order_available_date and surfaces as a
+              PRE-ORDER pill + "Available {date}" banner on the
+              storefront. */}
+          {kind === "plate" && (
+            <section aria-labelledby="plate-mode-label">
+              <div className="mb-2 flex items-center">
+                <span
+                  id="plate-mode-label"
+                  className="text-sm font-medium text-white/60"
+                >
+                  Availability
+                </span>
+              </div>
+              <div
+                role="radiogroup"
+                aria-labelledby="plate-mode-label"
+                className="glass-segment flex gap-1 p-1"
+              >
+                {(
+                  [
+                    {
+                      value: "instant",
+                      label: "Instant",
+                      hint: "Ready now",
+                    },
+                    {
+                      value: "pre_order",
+                      label: "Pre-order",
+                      hint: "Ready on a future date",
+                    },
+                  ] as const
+                ).map((opt) => {
+                  const active = plateMode === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => {
+                        setPlateMode(opt.value);
+                        // Clear the date when switching back to
+                        // instant so a stale date can't sneak into
+                        // the submit payload.
+                        if (opt.value === "instant") setPreOrderDate("");
+                      }}
+                      className={cn(
+                        "glass-segment-item flex-1 flex flex-col items-center justify-center py-2.5 transition-all active:scale-[0.98]",
+                        active
+                          ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                          : "text-white/60 hover:text-white/80"
+                      )}
+                    >
+                      <span className="text-sm font-semibold leading-none">
+                        {opt.label}
+                      </span>
+                      <span className="mt-0.5 text-[10px] leading-none text-white/40">
+                        {opt.hint}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {plateMode === "pre_order" && (
+                <div className="mt-2">
+                  <label
+                    htmlFor="pre-order-date"
+                    className="mb-1.5 block text-xs text-white/55"
+                  >
+                    When will this plate be ready?
+                  </label>
+                  <input
+                    id="pre-order-date"
+                    type="date"
+                    value={preOrderDate}
+                    min={(() => {
+                      // Don't allow past dates — pre-order only makes
+                      // sense for the future.
+                      const d = new Date();
+                      const y = d.getFullYear();
+                      const m = String(d.getMonth() + 1).padStart(2, "0");
+                      const day = String(d.getDate()).padStart(2, "0");
+                      return `${y}-${m}-${day}`;
+                    })()}
+                    onChange={(e) => setPreOrderDate(e.target.value)}
+                    className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  />
+                  <p className="mt-1.5 text-[11px] text-white/40">
+                    Customers will see a PRE-ORDER badge on the photo
+                    and an &ldquo;Available {preOrderDate ? formatPreOrderDateShort(preOrderDate) : "{date}"}&rdquo; line under the plate.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Media */}
           <section>

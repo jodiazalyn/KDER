@@ -25,6 +25,15 @@ interface PlateTileProps {
 export function PlateTile({ listing, onClick, priority = false }: PlateTileProps) {
   const photo = listing.photos[0] || null;
   const soldOut = listing.quantity <= 0;
+  // Pre-order if the creator set a future-availability date on the
+  // plate. Catering listings never set this so the pill won't
+  // appear for them. The short-date label keeps the pill compact
+  // on a small grid tile ("PRE-ORDER · MAR 14").
+  const preOrderDateShort = listing.pre_order_available_date
+    ? new Date(
+        listing.pre_order_available_date + "T00:00:00"
+      ).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+    : null;
 
   return (
     <button
@@ -82,6 +91,15 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
       {soldOut && (
         <span className="absolute right-1.5 top-1.5 rounded-full border border-white/[0.10] bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur-[16px] backdrop-saturate-[180%]">
           Sold out
+        </span>
+      )}
+
+      {/* Pre-order pill — top-left so it doesn't fight the sold-out
+          pill in the top-right. Kder-green tinted so it reads as a
+          positive "coming soon" signal, not a "blocked" warning. */}
+      {preOrderDateShort && !soldOut && (
+        <span className="absolute left-1.5 top-1.5 rounded-full border border-green-400/30 bg-green-900/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-200 backdrop-blur-[16px] backdrop-saturate-[180%]">
+          Pre-order · {preOrderDateShort}
         </span>
       )}
     </button>

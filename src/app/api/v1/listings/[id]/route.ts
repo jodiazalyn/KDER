@@ -163,6 +163,19 @@ export async function PATCH(
         body.catering_inclusion_groups
       );
     }
+    // Pre-order date (migration 017). Accept null (creator switched
+    // back to instant) or a YYYY-MM-DD string. Reject anything else
+    // by treating it as undefined (no change).
+    if (body.pre_order_available_date !== undefined) {
+      if (body.pre_order_available_date === null) {
+        allowed.pre_order_available_date = null;
+      } else if (
+        typeof body.pre_order_available_date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(body.pre_order_available_date)
+      ) {
+        allowed.pre_order_available_date = body.pre_order_available_date;
+      }
+    }
 
     allowed.updated_at = new Date().toISOString();
 
