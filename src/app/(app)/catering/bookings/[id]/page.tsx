@@ -66,6 +66,34 @@ export default async function BookingDetailPage({ params }: PageProps) {
   if (!booking) notFound();
   if (booking.creator_id !== creator.id) notFound();
 
+  // Pull recent messages between this creator and the customer. The
+  // catering routes auto-mirror booking events (deposit paid,
+  // accepted, balance charged, completed) into this thread via
+  // lib/catering/insert-thread-message.ts — so this surface shows
+  // the full timeline of what's been said and what's happened, not
+  // just chat.
+  let recentMessages: Array<{
+    id: string;
+    sender_id: string;
+    recipient_id: string;
+    body: string;
+    created_at: string;
+  }> = [];
+  if (booking.customer?.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: msgs } = await (supabase as any)
+      .from("messages")
+      .select("id, sender_id, recipient_id, body, created_at")
+      .or(
+        `and(sender_id.eq.${user.id},recipient_id.eq.${booking.customer.id}),and(sender_id.eq.${booking.customer.id},recipient_id.eq.${user.id})`
+      )
+      .order("created_at", { ascending: false })
+      .limit(4);
+    recentMessages = ((msgs ?? []) as typeof recentMessages).reverse();
+  }
+
+  const customerName = booking.customer?.display_name ?? "Customer";
+
   const eventDateLabel = new Date(
     booking.event_date + "T00:00:00"
   ).toLocaleDateString("en-US", {
@@ -82,7 +110,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    // pb-[10rem+safe] reserves room for the stacked footer:
+    // BottomNav (5rem) + BookingActions bar (~5rem when active) +
+    // breathing room. Padding is constant — even when the action bar
+    // doesn't render (completed / cancelled / pending_acceptance) the
+    // page bottom doesn't suddenly grow back; preserves predictable
+    // scroll behavior across booking states.
+    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(10rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <Link
@@ -211,14 +245,66 @@ export default async function BookingDetailPage({ params }: PageProps) {
           </section>
         )}
 
-        {/* Message thread shortcut */}
-        <Link
-          href={`/messages/${booking.customer?.id ?? ""}`}
-          className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-[0.99]"
-        >
-          <MessageCircle size={16} />
-          Open chat thread
-        </Link>
+        {/* Recent messages + chat-thread shortcut. The thread is
+            where catering events (deposit paid, accepted, balance
+            charged) are also mirrored, so this is effectively the
+            full activity log for this booking. */}
+        {recentMessages.length > 0 && booking.customer?.id ? (
+          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40">
+                Recent messages
+              </h2>
+              <Link
+                href={`/messages/${booking.customer.id}`}
+                className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
+              >
+                Open chat
+                <MessageCircle size={11} />
+              </Link>
+            </div>
+            <ul className="space-y-2.5">
+              {recentMessages.map((m) => {
+                const fromCreator = m.sender_id === user.id;
+                return (
+                  <li
+                    key={m.id}
+                    className={`flex flex-col gap-0.5 ${
+                      fromCreator ? "items-end" : "items-start"
+                    }`}
+                  >
+                    <span className="text-[10px] uppercase tracking-wider text-white/40">
+                      {fromCreator ? "You" : customerName} ·{" "}
+                      {new Date(m.created_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <span
+                      className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                        fromCreator
+                          ? "rounded-br-md bg-[#1B5E20] text-white"
+                          : "rounded-bl-md bg-white/[0.06] text-white/90"
+                      }`}
+                    >
+                      {m.body}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : (
+          <Link
+            href={`/messages/${booking.customer?.id ?? ""}`}
+            className="flex items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-[0.99]"
+          >
+            <MessageCircle size={16} />
+            Open chat thread
+          </Link>
+        )}
       </div>
 
       <BookingActions bookingId={id} status={booking.status} />

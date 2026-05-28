@@ -35,7 +35,18 @@ export function PricingCoachLauncher() {
   // Hide in fullscreen DMs (same convention BottomNav uses).
   const inMessageThread = /^\/messages\/[^/]+/.test(pathname ?? "");
 
-  if (isOnAgentPage || isOpen || inMessageThread) return null;
+  // Hide on catering inquiry + booking detail pages — those surfaces
+  // have a sticky bottom action bar with the primary CTAs (Message /
+  // Build quote / Accept / Cancel). The FAB sits in the same right-
+  // edge zone and was overlapping the green primary button, plus
+  // tempting the creator away from the moment-critical action.
+  const onCateringDetail = /^\/catering\/(inquiries|bookings)\/[^/]+/.test(
+    pathname ?? ""
+  );
+
+  if (isOnAgentPage || isOpen || inMessageThread || onCateringDetail) {
+    return null;
+  }
 
   return (
     <button

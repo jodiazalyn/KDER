@@ -167,8 +167,16 @@ export function InquiryActions({
         </div>
       )}
 
-      {/* Sticky action bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/80 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
+      {/* Sticky action bar — positioned ABOVE the BottomNav so it
+          isn't covered. The BottomNav lives at `bottom-0 z-50` and is
+          ~80px tall (5rem), so we anchor at `bottom-[5rem+safe]`. The
+          nav handles iOS safe-area below us, so we use a flat `py-3`
+          here (the old `pb-[calc(0.75rem+safe)]` was double-padding).
+          Bug history: the previous `bottom-0 z-40` placement put the
+          bar directly under the z-50 nav — invisible on mobile, an
+          early-tester reported the Message + Build quote buttons as
+          "no buttons at all." */}
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto flex max-w-lg gap-2">
           {/* Pending acceptance: Accept + Decline. Quote stays read-only. */}
           {booking?.status === "pending_acceptance" ? (

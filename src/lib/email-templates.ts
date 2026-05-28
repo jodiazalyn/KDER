@@ -355,9 +355,9 @@ export function cateringInquiryReceivedCreator(args: {
          ${rows.join("")}
        </table>
        ${notesBlock}
-       <p>Open the request to send back a quote with line items and a deposit total.</p>`,
+       <p>Open the request to message ${escapeHtml(customer.display_name)} or build them a quote with line items and a deposit total.</p>`,
       `${APP_URL}/catering/inquiries/${inquiry.id}`,
-      "Open & build quote"
+      "Open & reply"
     ),
   };
 }
