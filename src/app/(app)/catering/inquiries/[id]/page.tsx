@@ -222,7 +222,12 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 Recent messages
               </h2>
               <Link
-                href={`/messages/${customer.id}`}
+                // /messages/[threadId] expects the slug "general_{id}"
+                // for a non-order conversation. Passing the bare member
+                // id slices "general_".length off the front and lands
+                // on an empty thread — this was the "blank chat page"
+                // bug the user hit.
+                href={`/messages/general_${customer.id}`}
                 className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
               >
                 Open chat
