@@ -1072,7 +1072,11 @@ export function PlateForm({ listing }: PlateFormProps) {
           (not editing) so existing creators editing a plate don't get
           re-nagged. Sequenced: photos → name → price. Each waits for
           the previous to dismiss. The 250ms delay lets the form finish
-          mounting before targeting. */}
+          mounting before targeting.
+          NOTE: the Coachmark component also runs a global FIFO queue
+          so simultaneous mounts can't stack visually — but explicit
+          chaining keeps the visual order deterministic regardless of
+          mount timing. */}
       {!isEditing && !photosCoachDone && (
         <Coachmark
           id="creator-plate-photos"
@@ -1099,15 +1103,19 @@ export function PlateForm({ listing }: PlateFormProps) {
           showDelayMs={250}
         />
       )}
-      {/* Catering kind-toggle tip — fires for ALL creators (not just
-          new-plate creation) the first time they see the catering
-          option, since this is a behaviorally distinct flow. */}
-      <Coachmark
-        id="creator-catering-kind-toggle"
-        copy={COACHMARK_COPY["creator-catering-kind-toggle"]}
-        targetRef={cateringKindCoachRef}
-        showDelayMs={500}
-      />
+      {/* Catering kind-toggle tip — chained AFTER the new-plate
+          sequence (or rendered standalone when editing). Used to
+          fire in parallel with the photos coachmark, which stacked
+          two "Got it" buttons on the same screen and made dismissal
+          feel broken. */}
+      {(isEditing || (photosCoachDone && nameCoachDone)) && (
+        <Coachmark
+          id="creator-catering-kind-toggle"
+          copy={COACHMARK_COPY["creator-catering-kind-toggle"]}
+          targetRef={cateringKindCoachRef}
+          showDelayMs={500}
+        />
+      )}
     </div>
   );
 }
