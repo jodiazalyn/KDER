@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 import { createClient } from "@/lib/supabase/client";
 import { BuiltForHouston } from "@/components/landing/BuiltForHouston";
 import { CreatorCards } from "@/components/landing/CreatorCards";
@@ -89,15 +89,7 @@ export default function LandingPage() {
               "radial-gradient(ellipse at 50% 40%, rgba(46,125,50,0.25) 0%, transparent 65%)",
           }}
         />
-        <Image
-          src="/icons/kder-logo.png"
-          alt="KDER"
-          width={96}
-          height={96}
-          priority
-          className="animate-pulse"
-          style={{ filter: "drop-shadow(0 0 32px rgba(46,125,50,0.6))" }}
-        />
+        <KderSpinner size={96} />
       </main>
     );
   }
