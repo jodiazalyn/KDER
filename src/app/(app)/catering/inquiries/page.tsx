@@ -1,39 +1,38 @@
 import Link from "next/link";
 import { Inbox, Users, Calendar } from "lucide-react";
-import { redirect } from "next/navigation";
+import { requireCreator } from "@/lib/loaders/auth";
 
 export const dynamic = "force-dynamic";
 
+type StatusFilter = "all" | "open" | "quoted";
+
+interface PageProps {
+  searchParams: Promise<{ status?: string }>;
+}
+
 /**
- * Creator's catering inquiry inbox. Shows open + quoted requests sorted
- * by event-date proximity (next event first) so the most urgent items
- * float to the top.
+ * Creator's catering inquiry inbox.
  *
- * PR 3 adds the quote-builder link from the detail page. PR 4 adds the
- * past/booked filter chips.
+ * Shows open + quoted requests sorted by event-date proximity
+ * (next event first). Filter tabs (All / Open / Quoted) let the
+ * creator scope to "what's waiting on a quote" vs "quotes I sent
+ * that are waiting on a deposit" — the latter being the surface
+ * we were missing before, where creators were losing track of
+ * sent quotes during the deposit-pay window.
+ *
+ * Tabs are URL-driven (`?status=quoted`) so the page stays a
+ * Server Component — no client island needed.
  */
-export default async function CateringInquiriesPage() {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
+export default async function CateringInquiriesPage({
+  searchParams,
+}: PageProps) {
+  const { supabase, creator } = await requireCreator();
+  const { status } = await searchParams;
+  const filter: StatusFilter =
+    status === "open" || status === "quoted" ? status : "all";
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  // /login doesn't exist in this app — the only sign-in path is /signup
-  // (handles both create-account and sign-in). Middleware also catches
-  // this for /catering/*, so this is belt-and-suspenders.
-  if (!user) redirect("/signup");
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: creator } = await (supabase as any)
-    .from("creators")
-    .select("id")
-    .eq("member_id", user.id)
-    .single();
-
-  if (!creator) redirect("/onboarding/creator");
-
-  // Open + quoted only — booked/declined live elsewhere in PR 4.
+  // Pull both statuses; tab badges read off the full set, the
+  // visible list is filtered client-render via the URL filter.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inquiries } = await (supabase as any)
     .from("catering_inquiries")
@@ -46,7 +45,7 @@ export default async function CateringInquiriesPage() {
     .in("status", ["open", "quoted"])
     .order("event_date", { ascending: true });
 
-  const rows = (inquiries ?? []) as Array<{
+  const allRows = (inquiries ?? []) as Array<{
     id: string;
     event_date: string;
     event_time: string | null;
@@ -57,6 +56,16 @@ export default async function CateringInquiriesPage() {
     member: { display_name: string; photo_url: string | null } | null;
   }>;
 
+  const openCount = allRows.filter((r) => r.status === "open").length;
+  const quotedCount = allRows.filter((r) => r.status === "quoted").length;
+
+  const rows =
+    filter === "open"
+      ? allRows.filter((r) => r.status === "open")
+      : filter === "quoted"
+        ? allRows.filter((r) => r.status === "quoted")
+        : allRows;
+
   return (
     <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {/* Header */}
@@ -64,10 +73,38 @@ export default async function CateringInquiriesPage() {
         <div className="mx-auto max-w-lg">
           <h1 className="text-xl font-bold text-white">Catering inquiries</h1>
           <p className="text-xs text-white/50">
-            {rows.length === 0
+            {allRows.length === 0
               ? "No active requests."
-              : `${rows.length} active request${rows.length === 1 ? "" : "s"}`}
+              : `${openCount} need a quote · ${quotedCount} waiting on deposit`}
           </p>
+
+          {/* Filter tabs — URL-driven, server-rendered. No client
+              island, no JS cost. Each tab carries its own count. */}
+          <nav
+            className="glass-segment mt-3 flex gap-1 p-1"
+            aria-label="Filter inquiries"
+          >
+            <TabLink
+              label="All"
+              count={allRows.length}
+              active={filter === "all"}
+              href="/catering/inquiries"
+            />
+            <TabLink
+              label="Open"
+              count={openCount}
+              active={filter === "open"}
+              href="/catering/inquiries?status=open"
+              tone="amber"
+            />
+            <TabLink
+              label="Quoted"
+              count={quotedCount}
+              active={filter === "quoted"}
+              href="/catering/inquiries?status=quoted"
+              tone="blue"
+            />
+          </nav>
         </div>
       </div>
 
@@ -78,11 +115,17 @@ export default async function CateringInquiriesPage() {
               <Inbox size={28} className="text-white/30" />
             </div>
             <p className="text-center text-sm text-white/50">
-              Catering requests from customers will show up here.
+              {filter === "quoted"
+                ? "No quotes waiting on a deposit right now."
+                : filter === "open"
+                  ? "No new inquiries waiting on a quote."
+                  : "Catering requests from customers will show up here."}
             </p>
-            <p className="text-center text-xs text-white/30">
-              Make sure you&apos;ve published at least one catering listing.
-            </p>
+            {filter === "all" && (
+              <p className="text-center text-xs text-white/30">
+                Make sure you&apos;ve published at least one catering listing.
+              </p>
+            )}
           </div>
         ) : (
           <ul className="space-y-2">
@@ -152,5 +195,46 @@ export default async function CateringInquiriesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function TabLink({
+  label,
+  count,
+  active,
+  href,
+  tone,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  href: string;
+  tone?: "amber" | "blue";
+}) {
+  const countTone = active
+    ? "text-white/80"
+    : tone === "amber"
+      ? "text-amber-300/80"
+      : tone === "blue"
+        ? "text-blue-300/80"
+        : "text-white/40";
+  return (
+    <Link
+      href={href}
+      // Anchor tags inside the glass-segment behave the same as
+      // buttons would — we just lose the search-param state on a
+      // full reload, which is fine.
+      className={`glass-segment-item flex-1 py-2 text-center text-xs font-medium transition-all ${
+        active
+          ? "glass-segment-item-active text-white"
+          : "text-white/55 hover:text-white/80"
+      }`}
+      aria-current={active ? "page" : undefined}
+    >
+      {label}
+      {count > 0 && (
+        <span className={`ml-1 text-[10px] ${countTone}`}>{count}</span>
+      )}
+    </Link>
   );
 }

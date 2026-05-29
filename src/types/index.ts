@@ -466,6 +466,12 @@ export interface Conversation {
   lastMessageAt: string;
   unreadCount: number;
   orderId: string | null;
+  /** True when any message in this thread is a catering-system
+   *  message (inserted by insertCateringThreadMessage). Drives
+   *  the "Catering" pill on the inbox row so creators can scan
+   *  for catering threads at a glance. Optional for back-compat
+   *  with older payloads. */
+  isCatering?: boolean;
 }
 
 // --- Gamification types ---

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import { CopyLinkButton } from "@/components/shared/CopyLinkButton";
 import { OrderCard } from "@/components/orders/OrderCard";
-import { CateringInquiryBanner } from "@/components/catering/CateringInquiryBanner";
+import { CateringInflightCard } from "@/components/catering/CateringInflightCard";
+import type { CateringInflight } from "@/lib/loaders/catering-inflight";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
@@ -55,6 +56,11 @@ interface Props {
   /** Resolved server-side from the creator's handle. Used by the
    *  empty-state CTA. Falls back to sessionStorage if absent. */
   handle: string;
+  /** In-flight catering work (open inquiries / sent quotes /
+   *  pending bookings). Rendered as a rich card above the
+   *  plate-orders tabs so creators never lose track of catering
+   *  during the quote/negotiation phase. */
+  cateringInflight: CateringInflight;
 }
 
 /**
@@ -67,7 +73,11 @@ interface Props {
  * which re-runs the Server Component loader and re-hydrates
  * `initialOrders` on the next render.
  */
-export function OrdersClient({ initialOrders, handle }: Props) {
+export function OrdersClient({
+  initialOrders,
+  handle,
+  cateringInflight,
+}: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("active");
 
@@ -171,10 +181,14 @@ export function OrdersClient({ initialOrders, handle }: Props) {
       <main className="px-4 pb-4 pt-6">
         <h1 className="text-3xl font-black text-white">Orders</h1>
 
-        {/* Catering inquiries surface here too — they live in a
-            separate table but creators expect to see "anything
-            that needs my attention" in one place. */}
-        <CateringInquiryBanner />
+        {/* Catering "in-flight" surface — covers the gap between
+            an inquiry landing and a booking being confirmed.
+            Shows open inquiries (need a quote), sent quotes
+            (waiting on deposit), and pending bookings (4hr
+            accept clock running). Data flows from the server
+            via cateringInflight prop and refreshes on the
+            15s router.refresh tick alongside the orders list. */}
+        <CateringInflightCard inflight={cateringInflight} />
 
         <div className="glass-segment mt-4 flex gap-1 p-1">
           {TABS.map((tab) => {

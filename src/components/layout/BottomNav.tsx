@@ -37,16 +37,20 @@ export function BottomNav() {
     let cancelled = false;
     const fetchCount = async () => {
       try {
-        const res = await fetch("/api/v1/catering/inquiries?status=open", {
+        // Dedicated attention-count endpoint — returns just the
+        // counts (no row payloads), and INCLUDES pending bookings
+        // (the 4hr-clock items). The earlier version only counted
+        // open inquiries, so creators could miss a paid-deposit
+        // booking sitting in the 4hr accept window.
+        const res = await fetch("/api/v1/catering/attention-count", {
           credentials: "include",
         });
         if (!res.ok) return;
         const body = await res.json();
         if (cancelled) return;
-        const count = Array.isArray(body?.data?.inquiries)
-          ? body.data.inquiries.length
-          : 0;
-        setInquiryCount(count);
+        const total =
+          typeof body?.data?.total === "number" ? body.data.total : 0;
+        setInquiryCount(total);
       } catch {
         // Ignore — badge just won't render.
       }

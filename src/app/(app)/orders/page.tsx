@@ -1,5 +1,6 @@
 import { requireCreator } from "@/lib/loaders/auth";
 import { loadCreatorOrders } from "@/lib/loaders/orders";
+import { loadCateringInflight } from "@/lib/loaders/catering-inflight";
 import { OrdersClient } from "./orders-client";
 
 // Per-creator orders inbox. router.refresh on every mutation +
@@ -10,10 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function OrdersPage() {
   const { supabase, user, creator } = await requireCreator();
 
-  // Pull the creator's handle in parallel so the empty-state CTA
-  // ("share your link to get your first order") doesn't need a
-  // separate client-side fetch.
-  const [ordersRes, memberRes] = await Promise.all([
+  // Three independent fetches in parallel. The catering-inflight
+  // loader replaces the old self-fetching CateringInquiryBanner —
+  // its data is now part of the same RSC payload + refreshes on
+  // the 15s polling tick along with orders.
+  const [ordersRes, memberRes, cateringInflight] = await Promise.all([
     loadCreatorOrders(supabase, creator.id),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
@@ -21,9 +23,16 @@ export default async function OrdersPage() {
       .select("handle")
       .eq("id", user.id)
       .single() as Promise<{ data: { handle: string } | null }>,
+    loadCateringInflight(supabase, creator.id),
   ]);
 
   const handle = memberRes.data?.handle ?? "mystore";
 
-  return <OrdersClient initialOrders={ordersRes.data} handle={handle} />;
+  return (
+    <OrdersClient
+      initialOrders={ordersRes.data}
+      handle={handle}
+      cateringInflight={cateringInflight}
+    />
+  );
 }
