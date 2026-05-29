@@ -79,9 +79,13 @@ interface FeeItemDraft {
    *  (e.g. "Server") but creators can customize for "Custom" rows. */
   label: string;
   amount_cents: number;
-  /** Only meaningful when tag === "server" — when the server's shift
-   *  ends. The start time = inquiry.event_time (the customer's
-   *  event start). 24-hour "HH:MM". */
+  /** Only meaningful when tag === "server". 24-hour "HH:MM".
+   *  Defaults to the inquiry's event_time when the fee is added
+   *  but is fully editable — servers don't always arrive exactly
+   *  when the event starts (early setup, late shift, partial
+   *  coverage). */
+  shift_start_time: string | null;
+  /** Only meaningful when tag === "server". 24-hour "HH:MM". */
   shift_end_time: string | null;
 }
 
@@ -209,6 +213,9 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
           tag: "server",
           label: FEE_CATALOG.server.title,
           amount_cents: wholeDollarsToCents(FEE_CATALOG.server.suggested),
+          // Default the shift to start at the event start time —
+          // common case for a full-service shift.
+          shift_start_time: inquiry.event_time ?? null,
           shift_end_time: null,
         },
       ]);
@@ -272,6 +279,10 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
         tag,
         label: cat.title,
         amount_cents: wholeDollarsToCents(cat.suggested),
+        // Server defaults to the event start; everything else
+        // ignores both shift fields and stores null.
+        shift_start_time:
+          tag === "server" ? inquiry.event_time ?? null : null,
         shift_end_time: null,
       },
     ]);
@@ -311,6 +322,8 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
             tag: f.tag,
             label: f.label.trim() || FEE_CATALOG[f.tag].title,
             amount_cents: f.amount_cents,
+            shift_start_time:
+              f.tag === "server" ? f.shift_start_time || null : null,
             shift_end_time:
               f.tag === "server" ? f.shift_end_time || null : null,
           })),
@@ -587,17 +600,20 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
               {/* Each fee row shows the category label so the
                   customer sees what they're paying for, not just one
                   collapsed "Fees" number. */}
-              {feeItems.map((f) => (
-                <Row
-                  key={f.uid}
-                  label={
-                    f.tag === "server" && f.shift_end_time
-                      ? `${FEE_CATALOG[f.tag].title} · ends ${formatTime12h(f.shift_end_time)}`
-                      : f.label || FEE_CATALOG[f.tag].title
-                  }
-                  value={money(f.amount_cents)}
-                />
-              ))}
+              {feeItems.map((f) => {
+                const base = f.label || FEE_CATALOG[f.tag].title;
+                const hours =
+                  f.tag === "server"
+                    ? shiftLabel(f.shift_start_time, f.shift_end_time)
+                    : "";
+                return (
+                  <Row
+                    key={f.uid}
+                    label={hours ? `${base} · ${hours}` : base}
+                    value={money(f.amount_cents)}
+                  />
+                );
+              })}
               {taxCents > 0 && <Row label="Tax" value={money(taxCents)} />}
               <li className="my-2 h-px bg-white/[0.06]" />
               <Row label="Total" value={money(totalCents)} bold />
@@ -897,17 +913,25 @@ function FeeItemRow({
           <X size={14} />
         </button>
       </div>
-      {/* Server-only: shift end time. Start is the event start time
-          (shown for context). */}
+      {/* Server-only: shift start + end. Both editable — a server
+          often arrives early to set up, late if the host is
+          running a cocktail hour first, or works less than the
+          full event for budget reasons. Starts pre-fills with
+          the inquiry's event_time on add but the creator can
+          override. Ends's minTime tracks the row's own
+          shift_start_time so changing Start re-constrains End
+          automatically. */}
       {fee.tag === "server" && (
         <div className="mt-2.5 grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
-            <span className="block text-[10px] uppercase tracking-wider text-white/40">
+          <div>
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
               Starts
             </span>
-            <span className="mt-0.5 block text-sm font-medium text-white/75">
-              {eventStartTime ? formatTime12h(eventStartTime) : "Event start"}
-            </span>
+            <TimePicker12h
+              value={fee.shift_start_time ?? ""}
+              onChange={(v) => onUpdate({ shift_start_time: v || null })}
+              placeholder="Pick shift start"
+            />
           </div>
           <div>
             <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
@@ -917,7 +941,7 @@ function FeeItemRow({
               value={fee.shift_end_time ?? ""}
               onChange={(v) => onUpdate({ shift_end_time: v || null })}
               placeholder="Pick shift end"
-              minTime={eventStartTime ?? null}
+              minTime={fee.shift_start_time ?? eventStartTime ?? null}
             />
           </div>
         </div>
@@ -938,4 +962,20 @@ function formatTime12h(hhmm: string): string {
   const ampm = h24 >= 12 ? "PM" : "AM";
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h12}:${minute} ${ampm}`;
+}
+
+/** Build the human-readable shift-hours suffix for a Server fee
+ *  row. Both ends present → "7:30 PM – 11:30 PM"; only end →
+ *  "ends 11:30 PM" (legacy quotes); only start → "starts 7:30 PM";
+ *  neither → empty string (caller hides the separator). */
+function shiftLabel(
+  start: string | null | undefined,
+  end: string | null | undefined
+): string {
+  const s = start ? formatTime12h(start) : "";
+  const e = end ? formatTime12h(end) : "";
+  if (s && e) return `${s} – ${e}`;
+  if (e) return `ends ${e}`;
+  if (s) return `starts ${s}`;
+  return "";
 }

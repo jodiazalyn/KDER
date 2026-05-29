@@ -38,6 +38,9 @@ interface QuoteData {
     tag: "server" | "delivery" | "setup" | "warming" | "custom";
     label: string;
     amount_cents: number;
+    /** Server-only. Pre-018 quotes don't have this; render path
+     *  falls back to "ends {shift_end_time}" via shiftLabel. */
+    shift_start_time?: string | null;
     shift_end_time: string | null;
   }>;
   tax_cents: number;
@@ -83,6 +86,21 @@ function formatTime12h(hhmm: string): string {
   const ampm = h24 >= 12 ? "PM" : "AM";
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h12}:${m[2]} ${ampm}`;
+}
+
+/** Human-readable shift-hours suffix for a Server fee row. Both
+ *  ends present → "7:30 PM – 11:30 PM"; only end → "ends 11:30 PM"
+ *  (legacy quotes); only start → "starts 7:30 PM"; neither → "". */
+function shiftLabel(
+  start: string | null | undefined,
+  end: string | null | undefined
+): string {
+  const s = start ? formatTime12h(start) : "";
+  const e = end ? formatTime12h(end) : "";
+  if (s && e) return `${s} – ${e}`;
+  if (e) return `ends ${e}`;
+  if (s) return `starts ${s}`;
+  return "";
 }
 
 /** Tick down to the expiration time — runs only when more than an hour
@@ -260,17 +278,19 @@ export function QuoteReviewClient({ quote, paidParam, viewerRole }: Props) {
                 the legacy single-row rendering when fee_items is
                 empty (old quote rows). */}
             {quote.fee_items && quote.fee_items.length > 0 ? (
-              quote.fee_items.map((f, i) => (
-                <TotalRow
-                  key={i}
-                  label={
-                    f.tag === "server" && f.shift_end_time
-                      ? `${f.label} · ends ${formatTime12h(f.shift_end_time)}`
-                      : f.label
-                  }
-                  value={money(f.amount_cents)}
-                />
-              ))
+              quote.fee_items.map((f, i) => {
+                const hours =
+                  f.tag === "server"
+                    ? shiftLabel(f.shift_start_time ?? null, f.shift_end_time)
+                    : "";
+                return (
+                  <TotalRow
+                    key={i}
+                    label={hours ? `${f.label} · ${hours}` : f.label}
+                    value={money(f.amount_cents)}
+                  />
+                );
+              })
             ) : (
               quote.fees_cents > 0 && (
                 <TotalRow
