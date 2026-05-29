@@ -133,6 +133,29 @@ export interface Listing {
    *  was introduced — UI falls back to `catering_inclusions` text when
    *  this is empty. */
   catering_inclusion_groups: CateringInclusionGroups;
+
+  /** Plate-only optional add-ons offered at checkout (migration 018).
+   *  Each entry: {name, price_cents}. price_cents may be 0 (free
+   *  extras like "extra spice"). Always an empty array for catering
+   *  listings — they use fee_items on quotes for the same role. */
+  extras: ListingExtra[];
+}
+
+/** One add-on offered by the creator on a plate listing.
+ *  price_cents may be 0 — free extras (e.g. "extra spice") are
+ *  meaningful as customer-visible options, not just paid ones. */
+export interface ListingExtra {
+  name: string;
+  price_cents: number;
+}
+
+/** A customer's pick of an extra inside a cart line. Snapshots both
+ *  the name and price at add-time so a creator editing the listing
+ *  later doesn't retroactively shift pending carts. */
+export interface CartItemExtra {
+  name: string;
+  price_cents: number;
+  qty: number;
 }
 
 /** A creator's calendar blackout. `one_off` blocks a specific date;
@@ -398,6 +421,27 @@ export interface Order {
   member_photo: string | null;
   listing_name: string;
   listing_photo: string | null;
+  /** Full JSONB items array snapshotted at checkout (migration 018+).
+   *  Each row: {listing_id, name, price, quantity, photo, extras?}.
+   *  Older orders omit `extras` per row — render path treats
+   *  missing/empty as no extras. May be undefined if a fetch query
+   *  doesn't select the column. */
+  items?: OrderItemSnapshot[];
+}
+
+/** One snapshot row inside Order.items. The cart-line shape at
+ *  checkout time — what the customer actually paid for. Prices are
+ *  in dollars (legacy) but extras prices are in cents (newer model)
+ *  to match the snapshot format used by migration 018. */
+export interface OrderItemSnapshot {
+  listing_id: string;
+  name: string;
+  price: number; // dollars (legacy)
+  quantity: number;
+  photo: string | null;
+  /** Optional add-ons the customer picked at checkout. Each row:
+   *  {name, price_cents, qty}. Omitted on pre-018 orders. */
+  extras?: Array<{ name: string; price_cents: number; qty: number }>;
 }
 
 // --- Message types ---

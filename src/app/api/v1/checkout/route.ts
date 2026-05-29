@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe, PLATFORM_FEE_PERCENT } from "@/lib/stripe/client";
 import { apiError } from "@/lib/api";
 
+interface CheckoutItemExtra {
+  name: string;
+  price_cents: number;
+  qty: number;
+}
+
 interface CheckoutItem {
   listing_id: string;
   name: string;
   price: number;
   quantity: number;
   photo: string | null;
+  /** Customer-picked add-ons (migration 018). Server re-verifies
+   *  each against the listing's current extras and rewrites
+   *  price_cents from the server-side value, so client tampering
+   *  can't inflate the order. */
+  extras?: CheckoutItemExtra[];
 }
 
 interface CheckoutBody {
@@ -61,18 +72,41 @@ export async function POST(request: NextRequest) {
     }
 
     const listingIds = items.map((i) => i.listing_id);
+    // Pull `extras` too so we can verify customer-supplied add-on
+    // prices server-side instead of trusting whatever the client
+    // posts. Migration 018.
+    type ListingRow = {
+      id: string;
+      price: number;
+      name: string;
+      status: string;
+      extras: Array<{ name: string; price_cents: number }> | null;
+    };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: listings } = await (supabase as any)
       .from("listings")
-      .select("id, price, name, status")
-      .in("id", listingIds) as { data: Array<{ id: string; price: number; name: string; status: string }> | null };
+      .select("id, price, name, status, extras")
+      .in("id", listingIds) as { data: ListingRow[] | null };
 
     if (!listings || listings.length !== items.length) {
       return apiError("One or more items are no longer available", 400);
     }
 
-    const priceMap = new Map(
-      listings.map((l: { id: string; price: number; name: string; status: string }) => [l.id, { price: l.price, name: l.name, status: l.status }])
+    const priceMap = new Map<
+      string,
+      { price: number; name: string; status: string; extras: Map<string, number> }
+    >(
+      listings.map((l) => [
+        l.id,
+        {
+          price: l.price,
+          name: l.name,
+          status: l.status,
+          extras: new Map(
+            (l.extras ?? []).map((e) => [e.name, Math.max(0, Math.floor(e.price_cents))])
+          ),
+        },
+      ])
     );
 
     for (const item of items) {
@@ -85,35 +119,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use server-side prices, not client-supplied
+    // Use server-side prices, not client-supplied. Same for extras:
+    // we look each up by name against the listing's current `extras`
+    // and use the server-side price_cents. Unknown extra names are
+    // silently dropped — that protects creators from a tampered
+    // client trying to inject $0 add-ons or unknown SKUs.
     const verifiedItems = items.map((item) => {
       const listing = priceMap.get(item.listing_id)!;
+      const rawExtras = Array.isArray(item.extras) ? item.extras : [];
+      const verifiedExtras: Array<{
+        name: string;
+        price_cents: number;
+        qty: number;
+      }> = [];
+      for (const e of rawExtras) {
+        if (!e || typeof e !== "object") continue;
+        const name = typeof e.name === "string" ? e.name : "";
+        const qty = Math.max(0, Math.min(99, Math.floor(Number(e.qty) || 0)));
+        if (!name || qty <= 0) continue;
+        const serverPrice = listing.extras.get(name);
+        if (serverPrice === undefined) continue; // unknown extra
+        verifiedExtras.push({ name, price_cents: serverPrice, qty });
+      }
       return {
         ...item,
         price: listing.price,
         name: listing.name,
         quantity: Math.min(Math.max(1, Math.round(item.quantity)), 99),
+        extras: verifiedExtras,
       };
     });
 
-    // Build line items for Stripe using verified prices
-    const line_items = verifiedItems.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name,
-          ...(item.photo ? { images: [item.photo] } : {}),
+    // Build line items for Stripe using verified prices. Each extra
+    // gets its own Stripe line so the customer's Stripe receipt
+    // reads "Plate × 2" + "Lemonade × 4" + "Cookie × 2" rather than
+    // a single rolled-up sum.
+    const line_items = verifiedItems.flatMap((item) => {
+      const base = [
+        {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: item.name,
+              ...(item.photo ? { images: [item.photo] } : {}),
+            },
+            unit_amount: Math.round(item.price * 100),
+          },
+          quantity: item.quantity,
         },
-        unit_amount: Math.round(item.price * 100),
-      },
-      quantity: item.quantity,
-    }));
+      ];
+      const extraLines = item.extras.map((e) => ({
+        price_data: {
+          currency: "usd",
+          product_data: { name: `${item.name} · ${e.name}` },
+          unit_amount: e.price_cents,
+        },
+        quantity: e.qty,
+      }));
+      return [...base, ...extraLines];
+    });
 
-    // Calculate subtotal for platform fee
-    const subtotalCents = verifiedItems.reduce(
-      (sum, item) => sum + Math.round(item.price * 100) * item.quantity,
-      0
-    );
+    // Calculate subtotal for platform fee. Includes plate × qty +
+    // every verified extra (price_cents × qty per extra).
+    const subtotalCents = verifiedItems.reduce((sum, item) => {
+      const plateCents =
+        Math.round(item.price * 100) * item.quantity;
+      const extrasCents = item.extras.reduce(
+        (acc, e) => acc + e.price_cents * e.qty,
+        0
+      );
+      return sum + plateCents + extrasCents;
+    }, 0);
     const platformFeeCents = Math.round(
       subtotalCents * (PLATFORM_FEE_PERCENT / 100)
     );
@@ -194,6 +270,9 @@ export async function POST(request: NextRequest) {
           // render a "No photo" placeholder for multi-item orders (where the
           // listings JOIN can't pick a single image).
           photo: i.photo ?? null,
+          // Selected add-ons (migration 018). Omitted on legacy
+          // orders; render path treats missing/empty as no extras.
+          extras: i.extras.length > 0 ? i.extras : undefined,
         })),
       })
       .select("id")

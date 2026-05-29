@@ -14,6 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { clearCart } from "@/lib/cart-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { OrderExtrasList } from "@/components/orders/OrderExtrasList";
 import { OrderMessages } from "@/components/orders/OrderMessages";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
@@ -39,6 +40,16 @@ interface OrderResponse {
   listing_photo: string | null;
   creator_member_id: string | null;
   creator_display_name: string | null;
+  /** Snapshot of cart items at checkout (migration 018). Each row's
+   *  optional `extras` field is the customer's add-on picks. */
+  items?: Array<{
+    listing_id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    photo: string | null;
+    extras?: Array<{ name: string; price_cents: number; qty: number }>;
+  }>;
 }
 
 const TERMINAL_STATUSES: OrderStatus[] = [
@@ -275,6 +286,10 @@ function OrderConfirmationInner() {
               <p className="mt-1 text-lg font-bold text-green-300">
                 ${order.total_amount.toFixed(2)}
               </p>
+              {/* Customer-side extras breakdown — shows the add-ons
+                  they paid for so the receipt is honest about the
+                  total. Hidden when no extras. */}
+              <OrderExtrasList items={order.items} density="comfortable" />
             </div>
           </div>
 

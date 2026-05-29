@@ -28,12 +28,13 @@ import {
   getCart,
   addToCart,
   updateCartQty,
+  updateCartExtraQty,
   removeFromCart,
   getCartTotal,
   getCartCount,
   type CartItem,
 } from "@/lib/cart-store";
-import type { Listing, Message } from "@/types";
+import type { CartItemExtra, Listing, Message } from "@/types";
 import { toast } from "sonner";
 
 // Defer the three heavy sheets to async chunks. ~70% of buyer visits to a
@@ -153,8 +154,8 @@ export function StorefrontClient({
   }, [handle]);
 
   const handleAddToCart = useCallback(
-    (listing: Listing, qty: number) => {
-      const updated = addToCart(handle, listing, qty);
+    (listing: Listing, qty: number, selectedExtras?: CartItemExtra[]) => {
+      const updated = addToCart(handle, listing, qty, selectedExtras);
       setCart(updated);
       toast.success(`${listing.name} added to cart`);
     },
@@ -162,7 +163,7 @@ export function StorefrontClient({
   );
 
   const handleBuyNow = useCallback(
-    (listing: Listing, qty: number) => {
+    (listing: Listing, qty: number, selectedExtras?: CartItemExtra[]) => {
       // Single code path regardless of auth state. The CheckoutSheet
       // itself handles the no-auth case inline: it shows name+phone
       // inputs and calls /api/v1/auth/anon-customer to register an
@@ -170,7 +171,7 @@ export function StorefrontClient({
       // (Twilio A2P 10DLC pending — OTP is removed from the customer
       // purchase path during the registration window. See
       // /api/v1/auth/anon-customer for the temporary auth bridge.)
-      const updated = addToCart(handle, listing, qty);
+      const updated = addToCart(handle, listing, qty, selectedExtras);
       setCart(updated);
       setSelectedPlate(null);
       setHasOpenedCheckout(true);
@@ -190,6 +191,14 @@ export function StorefrontClient({
   const handleRemove = useCallback(
     (listingId: string) => {
       const updated = removeFromCart(handle, listingId);
+      setCart(updated);
+    },
+    [handle]
+  );
+
+  const handleUpdateExtraQty = useCallback(
+    (listingId: string, extraName: string, qty: number) => {
+      const updated = updateCartExtraQty(handle, listingId, extraName, qty);
       setCart(updated);
     },
     [handle]
@@ -699,6 +708,7 @@ export function StorefrontClient({
           items={cart}
           onUpdateQty={handleUpdateQty}
           onRemove={handleRemove}
+          onUpdateExtraQty={handleUpdateExtraQty}
           onCheckout={() => {
             if (!currentUserId) {
               // Gate unauthenticated checkout — redirect to signup, come back

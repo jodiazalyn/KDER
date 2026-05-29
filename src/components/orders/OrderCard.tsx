@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { CountdownTimer } from "./CountdownTimer";
+import { OrderExtrasList } from "./OrderExtrasList";
 import type { Order } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -83,6 +84,10 @@ export function OrderCard({
           <p className="text-xs text-white/50 truncate">
             {order.listing_name} × {order.quantity}
           </p>
+          {/* Compact extras sub-list — only renders when the order
+              has any. Density="tight" keeps inbox rows scannable. */}
+          <OrderExtrasList items={order.items} density="tight" showPrices={false} />
+
 
           <div className="mt-1.5 flex items-center gap-2">
             {/* Status badge */}

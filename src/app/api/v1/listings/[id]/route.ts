@@ -3,6 +3,31 @@ import { apiSuccess, apiError } from "@/lib/api";
 import { revalidateStorefrontByCreatorId } from "@/lib/storefront-cache";
 import { CATERING_INCLUSION_CATEGORIES } from "@/types";
 
+/** Same shape as the POST route's helper for extras (migration 018).
+ *  Duplicated rather than reexported to keep route handlers
+ *  self-contained. */
+function sanitizeExtras(
+  raw: unknown
+): Array<{ name: string; price_cents: number }> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ name: string; price_cents: number }> = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = item as any;
+    const name = typeof r.name === "string" ? r.name.trim().slice(0, 60) : "";
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const price_cents = Math.max(0, Math.floor(Number(r.price_cents) || 0));
+    out.push({ name, price_cents });
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 /** Same shape as the POST route's helper — duplicated rather than
  *  reexported to keep these route handlers self-contained. */
 function sanitizeInclusionGroups(
@@ -175,6 +200,11 @@ export async function PATCH(
       ) {
         allowed.pre_order_available_date = body.pre_order_available_date;
       }
+    }
+    // Extras (migration 018). Always sanitize through the helper so
+    // a malformed payload becomes [] rather than poisoning the row.
+    if (body.extras !== undefined) {
+      allowed.extras = sanitizeExtras(body.extras);
     }
 
     allowed.updated_at = new Date().toISOString();
