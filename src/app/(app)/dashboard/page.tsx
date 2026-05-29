@@ -1,195 +1,60 @@
-"use client";
-
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Pause, Play, Mail } from "lucide-react";
-import { StorefrontHeader } from "@/components/dashboard/StorefrontHeader";
-import { ShareLinkCard } from "@/components/dashboard/ShareLinkCard";
-import { QuickStats } from "@/components/dashboard/QuickStats";
-import { ActivePlatesPreview } from "@/components/dashboard/ActivePlatesPreview";
-import { RecentOrders } from "@/components/dashboard/RecentOrders";
-import { getCreatorProfileAsync, setStorefrontActive } from "@/lib/creator-store";
+import { requireCreator } from "@/lib/loaders/auth";
+import { loadCreatorListings } from "@/lib/loaders/listings";
+import { loadCreatorOrders } from "@/lib/loaders/orders";
+import { loadCreatorProfile } from "@/lib/loaders/profile";
 import { getStreak } from "@/lib/streak-store";
 import { getBadges } from "@/lib/badges-store";
-import { StreakBanner } from "@/components/dashboard/StreakBanner";
-import { BadgeShelf } from "@/components/dashboard/BadgeShelf";
-// Leaderboard moved to floating button in layout
-import type { CreatorProfile } from "@/lib/creator-store";
-import type { Listing, Order, Streak, Badge } from "@/types";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { DashboardClient } from "./dashboard-client";
 
-export default function DashboardPage() {
-  const [profile, setProfile] = useState<CreatorProfile | null>(null);
-  const [activePlates, setActivePlates] = useState<Listing[]>([]);
-  const [activeCount, setActiveCount] = useState(0);
-  const [streak, setStreak] = useState<Streak>({ currentStreak: 0, longestStreak: 0, lastOrderDate: null, isActive: false });
-  const [badges, setBadges] = useState<Badge[]>([]);
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+// Dashboard is auth + creator scoped. Each visit is per-user, so
+// we can't share a cached HTML payload across users; render
+// dynamically per request. The data fetches now happen on the
+// server in parallel — the response includes real content in
+// the initial HTML so the user doesn't see a hydration-then-
+// fetch waterfall.
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    let cancelled = false;
+export default async function DashboardPage() {
+  const { supabase, user, creator } = await requireCreator();
 
-    async function load() {
-      // Profile + active-plates + orders queries are independent (each API
-      // resolves the creator from the auth cookie). Run them in parallel —
-      // saves ~400-800ms on mobile cellular cold loads.
-      const [p, listingsRes, ordersRes] = await Promise.all([
-        getCreatorProfileAsync(),
-        fetch("/api/v1/listings?mine=true&status=active")
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null),
-        fetch("/api/v1/orders")
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null),
-      ]);
-      if (cancelled) return;
-      setProfile(p);
+  // Three independent queries — fire in parallel. The previous
+  // client useEffect did the same Promise.all but each await
+  // crossed a network boundary (browser → API → Supabase). Now
+  // each await is server → Supabase only, which is roughly half
+  // the round-trip cost AND happens before the user sees
+  // anything (so the cost overlaps with HTML transit instead of
+  // adding to it).
+  const [profile, listingsRes, ordersRes] = await Promise.all([
+    loadCreatorProfile(supabase, user.id),
+    loadCreatorListings(supabase, creator.id, { activeOnly: true }),
+    loadCreatorOrders(supabase, creator.id),
+  ]);
 
-      if (listingsRes?.data?.listings) {
-        const plates = listingsRes.data.listings as Listing[];
-        setActivePlates(plates);
-        setActiveCount(plates.length);
-      }
+  const allOrders = ordersRes.data;
+  const completedOrders = allOrders.filter((o) => o.status === "completed");
 
-      // Fetch returns all statuses, newest-first. Derive the subsets each
-      // dashboard widget needs from the single response.
-      const allOrders: Order[] = ordersRes?.data?.orders ?? [];
-      const completedOrders = allOrders.filter((o) => o.status === "completed");
+  // RecentOrders shows the 5 most recent live orders (declined /
+  // cancelled are noise on the dashboard — those have a dedicated
+  // tab on /orders).
+  const recentOrders = allOrders
+    .filter((o) => o.status !== "declined" && o.status !== "cancelled")
+    .slice(0, 5);
 
-      // RecentOrders shows the 5 most recent live orders (declined/cancelled
-      // are noise on the dashboard — those have a dedicated tab on /orders).
-      const recent = allOrders
-        .filter((o) => o.status !== "declined" && o.status !== "cancelled")
-        .slice(0, 5);
-      setRecentOrders(recent);
-
-      const s = getStreak(completedOrders);
-      setStreak(s);
-
-      const b = getBadges({
-        streak: s,
-        totalOrders: completedOrders.length,
-        vibeScore: p.vibe_score,
-        leaderboardRank: null,
-      });
-      setBadges(b);
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, []);
-
-  if (!profile) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-400 border-t-transparent" />
-      </main>
-    );
-  }
-
-  const heroImage = activePlates.length > 0 && activePlates[0].photos.length > 0
-    ? activePlates[0].photos[0]
-    : null;
-
-  const toggleStorefront = () => {
-    const newState = !profile.storefront_active;
-    setStorefrontActive(newState);
-    setProfile({ ...profile, storefront_active: newState });
-    toast.success(
-      newState ? "Your storefront is live!" : "Your storefront is paused."
-    );
-  };
+  const streak = getStreak(completedOrders);
+  const badges = getBadges({
+    streak,
+    totalOrders: completedOrders.length,
+    vibeScore: profile.vibe_score,
+    leaderboardRank: null,
+  });
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0A0A0A] via-[#0D1A0D] to-[#0A0A0A]">
-      {/* Storefront Header Hero */}
-      <StorefrontHeader
-        profile={profile}
-        heroImage={heroImage}
-        onPhotoChange={(url) => setProfile({ ...profile, photo_url: url })}
-      />
-
-      {/* Content */}
-      <div className="space-y-5 px-4 pb-8 pt-4">
-        {/* Missing-email backfill nudge — legacy creators who onboarded
-            before the email-collection migration won't receive new-order
-            alerts until they add one. Surfaces persistently (no dismiss)
-            because the cost of missing an order is high. */}
-        {!profile.email && (
-          <Link
-            href="/settings"
-            className="flex w-full items-start gap-3 rounded-2xl border border-orange-400/30 bg-orange-900/20 px-4 py-3 text-sm text-orange-200 active:scale-[0.99] transition-transform"
-          >
-            <Mail size={18} className="mt-0.5 flex-shrink-0 text-orange-300" />
-            <div>
-              <p className="font-semibold">Add your email so you don&apos;t miss orders</p>
-              <p className="mt-0.5 text-xs text-orange-200/70">
-                We send new-order alerts to your email — tap to add one in Settings.
-              </p>
-            </div>
-          </Link>
-        )}
-
-        {/* Storefront status */}
-        <button
-          type="button"
-          onClick={toggleStorefront}
-          className={cn(
-            "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm font-medium transition-all active:scale-[0.98]",
-            profile.storefront_active
-              ? "border-green-400/20 bg-green-900/20 text-green-300"
-              : "border-orange-400/20 bg-orange-900/20 text-orange-300"
-          )}
-        >
-          <span className="flex items-center gap-2">
-            {profile.storefront_active ? (
-              <>
-                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                Your storefront is live
-              </>
-            ) : (
-              <>
-                <Pause size={14} />
-                Your storefront is paused
-              </>
-            )}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-white/40">
-            {profile.storefront_active ? (
-              <>
-                <Pause size={12} /> Pause
-              </>
-            ) : (
-              <>
-                <Play size={12} /> Resume
-              </>
-            )}
-          </span>
-        </button>
-
-        {/* Share your link */}
-        <ShareLinkCard handle={profile.handle} />
-
-        {/* Streak Banner */}
-        <StreakBanner streak={streak} />
-
-        {/* Badges */}
-        <BadgeShelf badges={badges} />
-
-        {/* Quick stats */}
-        <QuickStats
-          activePlates={activeCount}
-          pendingOrders={0}
-          weekEarnings={0}
-        />
-
-        {/* Active plates preview */}
-        <ActivePlatesPreview plates={activePlates} />
-
-        {/* Recent orders */}
-        <RecentOrders handle={profile.handle} orders={recentOrders} />
-      </div>
-    </main>
+    <DashboardClient
+      profile={profile}
+      activePlates={listingsRes.data}
+      recentOrders={recentOrders}
+      streak={streak}
+      badges={badges}
+    />
   );
 }

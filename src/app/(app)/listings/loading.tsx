@@ -1,16 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
- * Listings (Plates) loading skeleton.
- *
- * Sits over the listings/page.tsx data-fetch window. Mirrors that
- * page's layout: sticky title bar + "+ New plate" CTA, then a
- * list of plate cards each showing a thumbnail + name + price +
- * status pill.
+ * Listings (Plates) loading skeleton. Branded KDER spinner at
+ * top + shape-mirroring skeleton below.
  */
 export default function ListingsLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Header row: title + new-plate CTA */}
       <div className="flex items-center justify-between">
         <Skeleton className="h-7 w-24" />

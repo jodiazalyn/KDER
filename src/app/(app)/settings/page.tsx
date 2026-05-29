@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, MapPin, Trash2 } from "lucide-react";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 import { toast } from "sonner";
 import { EditableAvatar } from "@/components/shared/EditableAvatar";
 import { FloatingActionBar } from "@/components/ui/floating-action-bar";
@@ -213,7 +214,7 @@ export default function SettingsPage() {
   if (!form) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
-        <Loader2 size={28} className="animate-spin text-white/40" />
+        <KderSpinner size={64} />
       </main>
     );
   }

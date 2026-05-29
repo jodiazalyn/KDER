@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 import { PlateForm } from "@/components/listings/PlateForm";
 import type { Listing } from "@/types";
 
@@ -51,7 +51,7 @@ export default function EditListingPage({
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
-        <Loader2 size={28} className="animate-spin text-white/40" />
+        <KderSpinner size={64} />
       </div>
     );
   }

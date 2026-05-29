@@ -1,16 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
- * Earnings loading skeleton.
- *
- * Sits over the brief window before the cached server render
- * arrives (every 60s the first request triggers a fresh
- * fan-out). Mirrors EarningsView layout: big balance hero, KYC
- * banner placeholder, a stats row, and a recent-transactions list.
+ * Earnings loading skeleton. Spinning KDER mark up top while
+ * the cached server render arrives (60s revalidate).
  */
 export default function EarningsLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Title */}
       <Skeleton className="h-7 w-24" />
 

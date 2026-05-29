@@ -83,6 +83,15 @@
   }
 }
 
+/* Slow continuous rotation used by the KderSpinner. Slower than
+   Tailwind's default `animate-spin` (1s) because the K-mark is
+   asymmetric — at 1s/rev it reads as a stuttering twist; at 2.4s
+   per rev it reads as a deliberate rotation. */
+@keyframes kder-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @layer utilities {
   .animate-glass-shimmer {
     background-image: linear-gradient(
@@ -93,5 +102,18 @@
     );
     background-size: 200% 100%;
     animation: glass-shimmer 1.6s linear infinite;
+  }
+
+  .animate-kder-spin {
+    animation: kder-spin 2.4s linear infinite;
+  }
+}
+
+/* Respect prefers-reduced-motion — for users who've opted out of
+   animations, fade-pulse instead of rotating. Less vestibular
+   trigger, same "things are loading" affordance. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-kder-spin {
+    animation: pulse 2s ease-in-out infinite;
   }
 }

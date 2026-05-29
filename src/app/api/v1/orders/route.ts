@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
-import { rowToOrder } from "@/lib/orders-server";
-import type { Order } from "@/types";
-
-const ACTIVE_STATUSES = ["pending", "accepted", "ready"] as const;
+// rowToOrder + ACTIVE_STATUSES + Order type are now encapsulated
+// inside `@/lib/loaders/orders`. This route is a thin
+// auth-shield + delegator.
 
 /**
  * GET /api/v1/orders — list the authenticated creator's orders.
@@ -44,33 +43,21 @@ export async function GET(request: NextRequest) {
     // at /api/v1/cron/order-reminders escalates email reminders at 15 min,
     // 1 hr, 4 hr, and 24 hr instead of silently flipping to declined.
 
-    // Single query, LEFT JOIN listings for the photo + name fallback. Using the
-    // Supabase foreign-key relation syntax; `listing` here is an alias for the
-    // related row.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query = (supabase as any)
-      .from("orders")
-      .select("*, listing:listings(name, photos)")
-      .eq("creator_id", creator.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (statusParam === "active") {
-      query = query.in("status", ACTIVE_STATUSES);
-    } else if (statusParam === "completed") {
-      query = query.eq("status", "completed");
-    } else if (statusParam === "declined") {
-      query = query.eq("status", "declined");
-    }
-    // No filter → return all statuses so the client can compute tab counts.
-
-    const { data: rows, error } = await query;
-    if (error) {
-      console.error("[orders] list query failed:", error.message);
-      return apiError("Failed to load orders.", 500);
-    }
-
-    const orders: Order[] = Array.isArray(rows) ? rows.map(rowToOrder) : [];
+    // Delegate to the shared loader so the /orders Server Component
+    // page and this route stay byte-for-byte consistent.
+    const { loadCreatorOrders } = await import("@/lib/loaders/orders");
+    const filter =
+      statusParam === "active" ||
+      statusParam === "completed" ||
+      statusParam === "declined"
+        ? statusParam
+        : null;
+    const { data: orders, error } = await loadCreatorOrders(
+      supabase,
+      creator.id,
+      filter
+    );
+    if (error) return apiError("Failed to load orders.", 500);
     return apiSuccess({ orders });
   } catch (err) {
     console.error("[orders] list error:", err);

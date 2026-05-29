@@ -1,15 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
- * Catering Calendar loading skeleton.
- *
- * Mirrors catering/calendar/calendar-client.tsx layout: title +
- * recurring CTA, month-grid placeholder (42 cells = 6 weeks ×
- * 7 days), legend row, and an upcoming-inquiries list.
+ * Catering Calendar loading skeleton. KDER mark up top, month
+ * grid placeholder below.
  */
 export default function CalendarLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Header — title + recurring CTA */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">

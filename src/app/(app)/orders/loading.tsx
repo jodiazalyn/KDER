@@ -1,15 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
- * Orders loading skeleton.
- *
- * Mirrors orders/page.tsx layout: title + tab row (active /
- * completed / declined), then a list of OrderCards each showing
- * customer avatar + name + plate × qty + price + status badge.
+ * Orders loading skeleton. Spinning KDER mark + shape-mirroring
+ * skeleton below.
  */
 export default function OrdersLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Title */}
       <Skeleton className="h-7 w-28" />
 

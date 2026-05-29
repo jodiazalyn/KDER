@@ -1,15 +1,17 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
- * Messages (Chat) loading skeleton.
- *
- * Mirrors messages/page.tsx layout: title + a list of conversation
- * rows each showing partner avatar + name + last-message preview +
- * timestamp.
+ * Messages (Chat) loading skeleton. Branded spinner + a list of
+ * placeholder conversation rows.
  */
 export default function MessagesLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Title */}
       <Skeleton className="h-7 w-20" />
 

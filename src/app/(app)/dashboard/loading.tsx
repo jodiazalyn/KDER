@@ -1,21 +1,23 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { KderSpinner } from "@/components/ui/kder-spinner";
 
 /**
  * Dashboard (Store) loading skeleton.
  *
- * Rendered automatically by Next.js while the dashboard's client
- * component mounts + does its initial parallel data fetch (profile
- * + listings + orders). Replaces the previous "blank page until
- * everything's ready" experience; the user sees structured shimmer
- * the instant they tap the Store tab.
- *
- * Layout mirrors `dashboard/page.tsx`: profile avatar + name + tagline,
- * a share-link card, a stats row, and a 2-col plate grid. Match the
- * rhythm so the page→content transition isn't a layout jolt.
+ * Rendered by Next.js while the Server Component awaits its data.
+ * The KderSpinner pins to the top so the rotating KDER mark is
+ * the first thing the user sees on every tab switch — branded
+ * affordance that the app is working. Skeletons below mirror the
+ * page's actual shape so the transition to real content isn't a
+ * layout jolt.
  */
 export default function DashboardLoading() {
   return (
     <main className="mx-auto max-w-2xl px-4 pb-10 pt-6">
+      <div className="flex justify-center py-6">
+        <KderSpinner size={48} />
+      </div>
+
       {/* Profile header */}
       <div className="flex items-center gap-3">
         <Skeleton className="h-16 w-16 rounded-full" />
