@@ -3,8 +3,15 @@ import { EarningsView } from "@/components/earnings/EarningsView";
 import { loadEarningsData } from "@/lib/earnings-server";
 import type { EarningsData } from "@/lib/earnings-types";
 
-// Money is never cached. Every visit re-runs the Stripe + DB fan-out.
-export const dynamic = "force-dynamic";
+// Money was previously `force-dynamic` — every tab-switch into
+// Earnings re-ran auth + creator lookup + 3 Stripe calls (balance,
+// payouts, account) + 2 DB queries. ~500ms-1.2s of waterfall per
+// visit. Now we cache the rendered output for 60s; the page
+// revalidates on the first request after the window expires.
+// Trade-off: balance and payout list can be up to 60s stale.
+// Acceptable — Stripe updates these on its own clock anyway, and
+// the in-app "Withdraw" action does a fresh fetch when it lands.
+export const revalidate = 60;
 
 export default async function EarningsPage() {
   // Catch only auth/creator-resolution + dev-config errors. Anything else
