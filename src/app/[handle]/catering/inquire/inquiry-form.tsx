@@ -602,6 +602,7 @@ export function InquiryForm({
                   value={eventTime}
                   onChange={setEventTime}
                   ariaLabelledBy="event-time-start-label"
+                  placeholder="Select start time"
                 />
               </div>
               <div className="flex-1">
@@ -612,6 +613,8 @@ export function InquiryForm({
                   value={eventEndTime}
                   onChange={setEventEndTime}
                   ariaLabelledBy="event-time-end-label"
+                  placeholder="Select end time"
+                  minTime={eventTime}
                 />
               </div>
             </div>
@@ -854,6 +857,7 @@ export function InquiryForm({
                 value={earliestSetup}
                 onChange={setEarliestSetup}
                 ariaLabelledBy="setup-time-label"
+                placeholder="Select setup time"
               />
             </section>
           )}

@@ -219,7 +219,26 @@ export async function PATCH(
       .single();
 
     if (error || !data) {
-      return apiError("Failed to update listing.", 500);
+      // Surface the real DB error to both Netlify logs and the API
+      // response. The toast on the form just said "Failed to update
+      // listing." for ages, which made every failure look the same —
+      // a missing migration column, a CHECK constraint, an RLS
+      // denial all collapsed into one opaque message. Logging the
+      // error message + code + the keys we tried to write makes
+      // future regressions diagnosable from the browser network
+      // tab without server access.
+      console.error("[listings.PATCH] update failed:", {
+        id,
+        creator_id: creator.id,
+        keys_sent: Object.keys(allowed),
+        error_message: error?.message,
+        error_code: (error as { code?: string } | null)?.code,
+        error_details: (error as { details?: string } | null)?.details,
+      });
+      const detail = error?.message
+        ? `Failed to update listing: ${error.message}`
+        : "Failed to update listing (no row returned).";
+      return apiError(detail, 500);
     }
 
     // Flush this creator's storefront cache so edits/status changes
@@ -227,8 +246,10 @@ export async function PATCH(
     await revalidateStorefrontByCreatorId(supabase, creator.id);
 
     return apiSuccess({ listing: data });
-  } catch {
-    return apiError("Failed to update listing.", 500);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[listings.PATCH] threw:", msg);
+    return apiError(`Failed to update listing: ${msg}`, 500);
   }
 }
 

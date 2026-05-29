@@ -250,7 +250,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return apiError("Failed to create listing.", 500);
+      // Same diagnostics pattern as the PATCH route — surface the
+      // actual DB error so a missing migration column or CHECK
+      // constraint shows up in the toast + Netlify logs instead of
+      // collapsing into a generic 500.
+      console.error("[listings.POST] insert failed:", {
+        creator_id: creator.id,
+        keys_sent: Object.keys(allowed),
+        error_message: error.message,
+        error_code: (error as { code?: string }).code,
+        error_details: (error as { details?: string }).details,
+      });
+      return apiError(`Failed to create listing: ${error.message}`, 500);
     }
 
     // Flush this creator's storefront page cache so the new plate appears
@@ -260,7 +271,9 @@ export async function POST(request: NextRequest) {
     }
 
     return apiSuccess({ listing: data });
-  } catch {
-    return apiError("Failed to create listing.", 500);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[listings.POST] threw:", msg);
+    return apiError(`Failed to create listing: ${msg}`, 500);
   }
 }

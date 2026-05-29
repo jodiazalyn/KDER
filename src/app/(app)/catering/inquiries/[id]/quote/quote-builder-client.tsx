@@ -343,7 +343,11 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
   });
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    // pb-[10rem+safe] reserves room for the stacked footer:
+    // BottomNav (5rem) + the sticky send-quote bar (~5rem) +
+    // breathing room. Without this the "Customer will see" preview
+    // block ends up tucked behind the send bar.
+    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(10rem+env(safe-area-inset-bottom))]">
       {/* Header */}
       <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
@@ -608,8 +612,15 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
         </div>
       </div>
 
-      {/* Sticky send bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
+      {/* Sticky send bar — positioned ABOVE the BottomNav (5rem +
+          safe-area) so the "Send quote to {customer}" button isn't
+          painted over by the z-50 nav tabs. Without this, creators
+          finish the quote and can't find any submit button at the
+          bottom of the page. Same fix pattern as
+          InquiryActions/BookingActions (commit 87228df). The nav
+          handles iOS safe-area below us, so we use a flat py-3
+          here (the old `pb-[calc(0.75rem+safe)]` was double-padding). */}
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto max-w-lg">
           <button
             type="button"
@@ -905,7 +916,8 @@ function FeeItemRow({
             <TimePicker12h
               value={fee.shift_end_time ?? ""}
               onChange={(v) => onUpdate({ shift_end_time: v || null })}
-              ariaLabelledBy={undefined}
+              placeholder="Pick shift end"
+              minTime={eventStartTime ?? null}
             />
           </div>
         </div>
