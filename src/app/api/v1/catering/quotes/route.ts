@@ -82,22 +82,28 @@ export async function POST(request: NextRequest) {
             ? r.label.trim().slice(0, 60)
             : tag.charAt(0).toUpperCase() + tag.slice(1);
         // shift_end_time only meaningful for server rows. Accept
-        // "HH:MM" 24-hour; reject everything else.
-        let shiftEnd: string | null = null;
-        if (tag === "server" && typeof r.shift_end_time === "string") {
-          const m = /^(\d{1,2}):(\d{2})$/.exec(r.shift_end_time);
-          if (m) {
-            const h = parseInt(m[1], 10);
-            const min = parseInt(m[2], 10);
-            if (h >= 0 && h <= 23 && min >= 0 && min <= 59) {
-              shiftEnd = `${String(h).padStart(2, "0")}:${m[2]}`;
-            }
-          }
-        }
+        // Helper — strict "HH:MM" 24-hour. Returns null for
+        // anything else. Used for both shift_start_time and
+        // shift_end_time. Only meaningful on Server rows; other
+        // tags always coerce to null below.
+        const parseShiftTime = (raw: unknown): string | null => {
+          if (typeof raw !== "string") return null;
+          const m = /^(\d{1,2}):(\d{2})$/.exec(raw);
+          if (!m) return null;
+          const h = parseInt(m[1], 10);
+          const min = parseInt(m[2], 10);
+          if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+          return `${String(h).padStart(2, "0")}:${m[2]}`;
+        };
+        const shiftStart =
+          tag === "server" ? parseShiftTime(r.shift_start_time) : null;
+        const shiftEnd =
+          tag === "server" ? parseShiftTime(r.shift_end_time) : null;
         return {
           tag,
           label,
           amount_cents: amount,
+          shift_start_time: shiftStart,
           shift_end_time: shiftEnd,
         };
       })
@@ -105,6 +111,7 @@ export async function POST(request: NextRequest) {
         tag: AllowedTag;
         label: string;
         amount_cents: number;
+        shift_start_time: string | null;
         shift_end_time: string | null;
       }>;
 
