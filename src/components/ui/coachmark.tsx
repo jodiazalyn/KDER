@@ -198,11 +198,21 @@ export function Coachmark({
   );
 
   return createPortal(
+    // `pointer-events-auto` is load-bearing: the portal mounts to
+    // document.body, but when a Coachmark fires inside a Radix
+    // Dialog/Sheet (e.g. the Mia chat sheet) Radix sets
+    // pointer-events:none on body to keep clicks inside its
+    // content. Without the explicit override, the coachmark
+    // backdrop + bubble inherit pointer-events:none → the X and
+    // "Got it" buttons render but never fire onClick. Creators
+    // reported this as "the tooltip won't go away" on the Mia
+    // welcome popup. Forcing auto here re-enables clicks on the
+    // whole coachmark layer regardless of ancestor styles.
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Tip"
-      className={`fixed inset-0 z-[80] ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"}`}
+      className={`pointer-events-auto fixed inset-0 z-[80] ${reduceMotion ? "" : "motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"}`}
       onClick={handleDismiss}
     >
       {/* Spotlight ring: a thin border around the target with a huge
