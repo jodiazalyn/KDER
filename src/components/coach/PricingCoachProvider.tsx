@@ -96,11 +96,17 @@ export function PricingCoachProvider({
   const [seedPrompt, setSeedPrompt] = useState<string | undefined>(undefined);
   const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
 
-  // Resolve auth state once on mount. We don't need a subscription —
-  // the user signing in mid-session is rare here, and the embedded
-  // client already handles the anon→authed import via its own effect.
+  // Resolve auth state ONCE, lazily, the first time the user opens
+  // the coach. Previous version fired this on app-shell mount —
+  // adding a ~150ms Supabase round-trip to every authed page load
+  // (dashboard, listings, orders, calendar, earnings, messages),
+  // even though most users never tap Mia in a given session.
+  // Gating on `hasOpenedOnce` defers the cost to actual demand:
+  // first open pays the auth-check tax once, every subsequent open
+  // reuses the resolved value with zero network.
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   useEffect(() => {
+    if (!hasOpenedOnce || isAuthed !== null) return;
     let cancelled = false;
     (async () => {
       try {
@@ -117,7 +123,7 @@ export function PricingCoachProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasOpenedOnce, isAuthed]);
 
   const open = useCallback((nextSeed?: string) => {
     if (nextSeed) setSeedPrompt(nextSeed);
