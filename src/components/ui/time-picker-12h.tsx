@@ -141,10 +141,13 @@ export function TimePicker12h({
           aria-labelledby={ariaLabelledBy}
           aria-label={ariaLabelledBy ? undefined : placeholder}
           className={cn(
-            // Pill matches glass-input height + look, with a clear
-            // chevron + clock icon so the affordance reads as
-            // "tap to open a time picker."
-            "group flex h-12 w-full items-center gap-2 rounded-xl border border-white/[0.10] bg-white/[0.04] px-3 text-left text-base text-white transition-colors",
+            // Pill matches glass-input height + look. Sized tight
+            // so placeholders like "Select start time" fit even in
+            // a half-width column on a 375px viewport without
+            // truncating mid-word. Min-w-0 on the inner span is
+            // what actually lets the parent flex container shrink
+            // the text below its intrinsic width.
+            "group flex h-12 w-full min-w-0 items-center gap-1.5 rounded-xl border border-white/[0.10] bg-white/[0.04] pl-2.5 pr-2 text-left text-white transition-colors",
             "hover:border-white/[0.18] hover:bg-white/[0.06]",
             "focus-visible:border-emerald-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/30",
             "data-[state=open]:border-emerald-400/50 data-[state=open]:bg-white/[0.06]",
@@ -152,7 +155,7 @@ export function TimePicker12h({
           )}
         >
           <Clock
-            size={16}
+            size={14}
             aria-hidden
             className={cn(
               "shrink-0 transition-colors",
@@ -161,14 +164,19 @@ export function TimePicker12h({
           />
           <span
             className={cn(
-              "min-w-0 flex-1 truncate",
-              displayText ? "font-medium text-white" : "text-white/45"
+              // truncate + min-w-0 lets the text shrink/ellipsize
+              // inside the parent flex without forcing the chevron
+              // off-screen. text-sm (14px) keeps the longest
+              // placeholders inside the pill on a half-width
+              // mobile column.
+              "min-w-0 flex-1 truncate text-sm leading-none",
+              displayText ? "font-semibold text-white" : "text-white/50"
             )}
           >
             {displayText || placeholder}
           </span>
           <ChevronDown
-            size={16}
+            size={14}
             aria-hidden
             className="shrink-0 text-white/40 transition-transform group-data-[state=open]:rotate-180"
           />
