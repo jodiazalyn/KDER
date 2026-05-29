@@ -201,7 +201,10 @@ export function PlateDetailSheet({
                   Sits between price and tags so the customer sees
                   optional add-ons in the same visual cluster as the
                   price decision. Each extra has a -/+ stepper; $0
-                  extras show "Included" instead of a price. */}
+                  extras read "Free" so customers know they have to
+                  opt in by tapping +. (An earlier "Included" copy
+                  led a creator's customers to think things like
+                  "extra spice" came on the plate by default.) */}
               {!soldOut && (listing.extras ?? []).length > 0 && (
                 <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
                   <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/40">
@@ -220,9 +223,15 @@ export function PlateDetailSheet({
                             <p className="truncate text-sm text-white/90">
                               {ex.name}
                             </p>
-                            <p className="text-[11px] text-white/45">
+                            <p
+                              className={
+                                isFree
+                                  ? "text-[11px] font-semibold uppercase tracking-wider text-emerald-300/80"
+                                  : "text-[11px] text-white/45"
+                              }
+                            >
                               {isFree
-                                ? "Included"
+                                ? "Free"
                                 : `$${(ex.price_cents / 100).toFixed(
                                     ex.price_cents % 100 === 0 ? 0 : 2
                                   )} each`}
