@@ -3,6 +3,34 @@ import { apiSuccess, apiError } from "@/lib/api";
 import { revalidateStorefrontByCreatorId } from "@/lib/storefront-cache";
 import { CATERING_INCLUSION_CATEGORIES } from "@/types";
 
+/** Sanitize an `extras` payload (migration 018). Plate-only optional
+ *  add-ons offered at checkout. Reject anything that isn't an array;
+ *  per item: name = non-empty string trimmed to 60 chars; price_cents
+ *  = non-negative integer. Dedup by case-insensitive name (first
+ *  occurrence wins). Caps at 20 entries so a runaway client can't
+ *  store unbounded JSON. */
+function sanitizeExtras(
+  raw: unknown
+): Array<{ name: string; price_cents: number }> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ name: string; price_cents: number }> = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const r = item as any;
+    const name = typeof r.name === "string" ? r.name.trim().slice(0, 60) : "";
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const price_cents = Math.max(0, Math.floor(Number(r.price_cents) || 0));
+    out.push({ name, price_cents });
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
 /** Sanitize a catering_inclusion_groups payload: drop unknown keys,
  *  drop non-string items, cap each item at 60 chars. Never trust the
  *  shape of incoming JSONB. */
@@ -210,6 +238,8 @@ export async function POST(request: NextRequest) {
         /^\d{4}-\d{2}-\d{2}$/.test(body.pre_order_available_date)
           ? body.pre_order_available_date
           : null,
+      // Plate-only extras (migration 018). Catering always empty.
+      extras: kind === "plate" ? sanitizeExtras(body.extras) : [],
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

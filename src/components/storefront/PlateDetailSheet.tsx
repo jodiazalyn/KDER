@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Calendar, ImageOff, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { MediaCarousel } from "./MediaCarousel";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import type { Listing } from "@/types";
+import type { CartItemExtra, Listing } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface PlateDetailSheetProps {
@@ -13,11 +13,19 @@ interface PlateDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cartQty: number;
-  onAddToCart: (listing: Listing, qty: number) => void;
+  onAddToCart: (
+    listing: Listing,
+    qty: number,
+    selectedExtras?: CartItemExtra[]
+  ) => void;
   /** One-click checkout — adds the plate to the cart and jumps straight to
    *  the checkout form, skipping the view-cart step entirely. Revenue
    *  capture on first interaction. */
-  onBuyNow: (listing: Listing, qty: number) => void;
+  onBuyNow: (
+    listing: Listing,
+    qty: number,
+    selectedExtras?: CartItemExtra[]
+  ) => void;
   creator: {
     display_name: string;
     handle: string;
@@ -49,10 +57,18 @@ export function PlateDetailSheet({
   creator,
 }: PlateDetailSheetProps) {
   const [qty, setQty] = useState(1);
+  // Per-extra picks for THIS detail-sheet session. Reset each time
+  // the sheet opens or the listing changes so the customer starts
+  // fresh. Stored as a Map keyed by extra.name (extras are looked
+  // up by name throughout the cart pipeline).
+  const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => setQty(1), 0);
+    const t = setTimeout(() => {
+      setQty(1);
+      setExtraQtys({});
+    }, 0);
     return () => clearTimeout(t);
   }, [open, listing?.id]);
 
@@ -82,7 +98,27 @@ export function PlateDetailSheet({
         ? "Pickup"
         : "Delivery";
 
-  const totalForQty = (listing.price * qty).toFixed(2);
+  // Build the selected-extras payload for the cart based on the
+  // current picks. Filter out zero-qty entries — they're not on
+  // the order. Each entry snapshots the listing's current
+  // name/price_cents so a creator editing the listing later
+  // doesn't shift this customer's cart.
+  const selectedExtras = (listing.extras ?? [])
+    .map((ex) => ({
+      name: ex.name,
+      price_cents: ex.price_cents,
+      qty: extraQtys[ex.name] ?? 0,
+    }))
+    .filter((ex) => ex.qty > 0);
+
+  const extrasSubtotalCents = selectedExtras.reduce(
+    (sum, ex) => sum + ex.price_cents * ex.qty,
+    0
+  );
+  const totalForQty = (
+    listing.price * qty +
+    extrasSubtotalCents / 100
+  ).toFixed(2);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -161,6 +197,93 @@ export function PlateDetailSheet({
                 ${listing.price.toFixed(2)}
               </p>
 
+              {/* Extras picker — only when the creator defined any.
+                  Sits between price and tags so the customer sees
+                  optional add-ons in the same visual cluster as the
+                  price decision. Each extra has a -/+ stepper; $0
+                  extras show "Included" instead of a price. */}
+              {!soldOut && (listing.extras ?? []).length > 0 && (
+                <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/40">
+                    Add extras
+                  </p>
+                  <ul className="space-y-1.5">
+                    {listing.extras.map((ex) => {
+                      const exQty = extraQtys[ex.name] ?? 0;
+                      const isFree = ex.price_cents === 0;
+                      return (
+                        <li
+                          key={ex.name}
+                          className="flex items-center gap-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm text-white/90">
+                              {ex.name}
+                            </p>
+                            <p className="text-[11px] text-white/45">
+                              {isFree
+                                ? "Included"
+                                : `$${(ex.price_cents / 100).toFixed(
+                                    ex.price_cents % 100 === 0 ? 0 : 2
+                                  )} each`}
+                            </p>
+                          </div>
+                          <div className="glass-btn-pill flex items-center gap-1 !p-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExtraQtys((prev) => {
+                                  const next = { ...prev };
+                                  const cur = next[ex.name] ?? 0;
+                                  if (cur <= 1) delete next[ex.name];
+                                  else next[ex.name] = cur - 1;
+                                  return next;
+                                })
+                              }
+                              disabled={exQty <= 0}
+                              aria-label={`Decrease ${ex.name}`}
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 disabled:text-white/15 active:scale-90 transition-transform"
+                            >
+                              <Minus size={14} />
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold text-white">
+                              {exQty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExtraQtys((prev) => ({
+                                  ...prev,
+                                  [ex.name]: Math.min(
+                                    99,
+                                    (prev[ex.name] ?? 0) + 1
+                                  ),
+                                }))
+                              }
+                              disabled={exQty >= 99}
+                              aria-label={`Increase ${ex.name}`}
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 disabled:text-white/15 active:scale-90 transition-transform"
+                            >
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {extrasSubtotalCents > 0 && (
+                    <p className="mt-2 text-right text-[11px] text-white/55">
+                      Extras subtotal:{" "}
+                      <span className="font-semibold text-white/80">
+                        ${(extrasSubtotalCents / 100).toFixed(
+                          extrasSubtotalCents % 100 === 0 ? 0 : 2
+                        )}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Tags */}
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70">
@@ -214,7 +337,11 @@ export function PlateDetailSheet({
                   <button
                     type="button"
                     onClick={() => {
-                      onAddToCart(listing, qty);
+                      onAddToCart(
+                        listing,
+                        qty,
+                        selectedExtras.length > 0 ? selectedExtras : undefined
+                      );
                     }}
                     className={cn(
                       "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-bold text-white transition-all active:scale-95",
@@ -263,7 +390,13 @@ export function PlateDetailSheet({
           <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-4 pb-5 pt-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
             <button
               type="button"
-              onClick={() => onBuyNow(listing, qty)}
+              onClick={() =>
+                onBuyNow(
+                  listing,
+                  qty,
+                  selectedExtras.length > 0 ? selectedExtras : undefined
+                )
+              }
               className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-base font-bold text-white shadow-[0_8px_28px_rgba(27,94,32,0.55),0_0_24px_rgba(27,94,32,0.4)] transition-all active:scale-[0.98]"
             >
               <Zap size={18} className="fill-white" />

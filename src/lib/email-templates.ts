@@ -46,6 +46,39 @@ function dollars(cents: number): string {
   return `$${cents.toFixed(2)}`;
 }
 
+/** Render the customer's extras picks (migration 018) as an inline
+ *  HTML fragment for use inside an order email body. Reads the
+ *  Order.items JSONB array, flattens every line item's extras
+ *  array, and prints "+ qty name · $price" rows. Returns "" when
+ *  no extras — call sites can safely interpolate without checks. */
+function extrasHtml(order: Order): string {
+  // Order.items isn't on the strict Order type yet (it's optional
+  // and may not be populated by every fetch path), but the email
+  // pipeline goes through the service-role select which includes it.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items = (order as any).items as
+    | Array<{
+        name: string;
+        extras?: Array<{ name: string; price_cents: number; qty: number }>;
+      }>
+    | undefined;
+  if (!items?.length) return "";
+  const rows: string[] = [];
+  for (const it of items) {
+    for (const ex of it.extras ?? []) {
+      const price =
+        ex.price_cents > 0
+          ? ` · $${((ex.price_cents / 100) * ex.qty).toFixed(2)}`
+          : "";
+      rows.push(`+ ${ex.qty} ${ex.name}${price}`);
+    }
+  }
+  if (rows.length === 0) return "";
+  return `<p style="margin-top:12px;color:#666;font-size:13px">
+       <strong>Extras:</strong><br/>${rows.join("<br/>")}
+     </p>`;
+}
+
 // ── Creator-side ─────────────────────────────────────────────
 
 export function orderPlacedCreator(args: {
@@ -59,6 +92,7 @@ export function orderPlacedCreator(args: {
     html: shell(
       `New order, ${creator.display_name.split(" ")[0]} 🎉`,
       `<p><strong>${member.display_name}</strong> ordered <strong>${order.listing_name} × ${order.quantity}</strong> for <strong>${dollars(order.total_amount)}</strong>.</p>
+       ${extrasHtml(order)}
        <p>Open the order to accept and confirm pickup or delivery details.</p>`,
       `${APP_URL}/orders/${order.id}`,
       "Accept this order"
@@ -106,6 +140,7 @@ export function orderPlacedCustomer(args: {
     html: shell(
       "Your order is in 🍽️",
       `<p>You ordered <strong>${order.listing_name} × ${order.quantity}</strong> from <strong>${creator.display_name}</strong> for <strong>${dollars(order.total_amount)}</strong>.</p>
+       ${extrasHtml(order)}
        <p>${creator.display_name.split(" ")[0]} will confirm soon. We'll text and email you the moment they accept and share pickup details.</p>`,
       `${APP_URL}/orders/${order.id}`,
       "View your order"
@@ -123,6 +158,7 @@ export function orderAcceptedCustomer(args: {
     html: shell(
       "Your order is confirmed 🎉",
       `<p><strong>${creator.display_name}</strong> accepted your order for <strong>${order.listing_name} × ${order.quantity}</strong>.</p>
+       ${extrasHtml(order)}
        <p>You'll hear from them again when it's ready.</p>`,
       `${APP_URL}/orders/${order.id}`,
       "View your order"
@@ -191,6 +227,7 @@ export function orderAcceptedCreator(args: {
     html: shell(
       "Order confirmed ✓",
       `<p>You accepted <strong>${member.display_name}</strong>'s order for <strong>${order.listing_name} × ${order.quantity}</strong>.</p>
+       ${extrasHtml(order)}
        <p>They've been notified. Mark it ready when it's time for pickup or delivery.</p>`,
       `${APP_URL}/orders/${order.id}`,
       "View order"
@@ -207,7 +244,8 @@ export function orderReadyCreator(args: {
     subject: `You marked ${member.display_name}'s order as ready`,
     html: shell(
       "Order marked ready",
-      `<p>You marked <strong>${member.display_name}</strong>'s <strong>${order.listing_name}</strong> as ready. They've been notified to come pick it up.</p>`,
+      `<p>You marked <strong>${member.display_name}</strong>'s <strong>${order.listing_name}</strong> as ready. They've been notified to come pick it up.</p>
+       ${extrasHtml(order)}`,
       `${APP_URL}/orders/${order.id}`,
       "View order"
     ),
@@ -224,6 +262,7 @@ export function orderCompletedCreator(args: {
     html: shell(
       "Order complete 💰",
       `<p><strong>${member.display_name}</strong>'s order for <strong>${order.listing_name} × ${order.quantity}</strong> is done.</p>
+       ${extrasHtml(order)}
        <p>You earned <strong>${dollars(order.creator_payout)}</strong> on this order (after platform fee).</p>`,
       `${APP_URL}/orders/${order.id}`,
       "View order"

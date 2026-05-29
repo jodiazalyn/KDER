@@ -146,6 +146,17 @@ export function CheckoutSheet({
             price: item.listing.price,
             quantity: item.quantity,
             photo: item.listing.photos[0] || null,
+            // Selected add-ons (migration 018). Snapshot the
+            // per-extra qty + name + price the customer is paying
+            // for — server re-computes the subtotal from these to
+            // prevent client-side tampering.
+            extras: (item.selected_extras ?? [])
+              .filter((e) => e.qty > 0 && e.name)
+              .map((e) => ({
+                name: e.name,
+                price_cents: e.price_cents,
+                qty: e.qty,
+              })),
           })),
           member_name: memberName,
           member_phone: memberPhone,
@@ -375,18 +386,39 @@ export function CheckoutSheet({
             />
           </div>
 
-          {/* Order summary */}
+          {/* Order summary — per-line plate row + a sub-list of any
+              selected extras with their per-row subtotal so the
+              customer can see exactly what they're paying for
+              before submitting. */}
           <div className="glass-card p-3 space-y-2">
-            {items.map((item) => (
-              <div key={item.listing.id} className="flex justify-between text-xs">
-                <span className="text-white/60">
-                  {item.listing.name} × {item.quantity}
-                </span>
-                <span className="text-white">
-                  ${(item.listing.price * item.quantity).toFixed(2)}
-                </span>
-              </div>
-            ))}
+            {items.map((item) => {
+              const extras = item.selected_extras ?? [];
+              return (
+                <div key={item.listing.id} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-white/60">
+                      {item.listing.name} × {item.quantity}
+                    </span>
+                    <span className="text-white">
+                      ${(item.listing.price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                  {extras.map((ex) => (
+                    <div
+                      key={ex.name}
+                      className="flex justify-between pl-3 text-[11px]"
+                    >
+                      <span className="text-white/45">
+                        + {ex.qty} {ex.name}
+                      </span>
+                      <span className="text-white/65">
+                        ${((ex.price_cents / 100) * ex.qty).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
             <div className="h-px bg-white/[0.08]" />
             <div className="flex justify-between">
               <span className="text-sm font-bold text-white">Total</span>

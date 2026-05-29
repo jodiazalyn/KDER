@@ -23,9 +23,11 @@ import {
   type CateringFulfillment,
   type CateringInclusionGroups,
   type FulfillmentType,
+  type ListingExtra,
   type ListingStatus,
 } from "@/types";
 import { CateringInclusionsEditor } from "./CateringInclusionsEditor";
+import { PlateExtrasEditor } from "./PlateExtrasEditor";
 import { AskCoachInline } from "@/components/coach/AskCoachInline";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -55,6 +57,9 @@ interface DraftData {
   cateringFulfillment?: CateringFulfillment[];
   cateringInclusions?: string;
   cateringInclusionGroups?: CateringInclusionGroups;
+  // Plate-only optional add-ons (migration 018). Optional so old
+  // drafts in sessionStorage still parse without it.
+  extras?: ListingExtra[];
   savedAt: string;
 }
 
@@ -193,6 +198,13 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [preOrderDate, setPreOrderDate] = useState<string>(
     listing?.pre_order_available_date ?? ""
   );
+
+  // Plate-only optional add-ons (migration 018). Persisted as a
+  // JSONB array on the listing; the storefront detail sheet lets
+  // the customer pick a per-extra quantity at order time.
+  const [extras, setExtras] = useState<ListingExtra[]>(
+    listing?.extras ?? restored?.extras ?? []
+  );
   const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
   const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? restored?.photos ?? []);
@@ -323,6 +335,7 @@ export function PlateForm({ listing }: PlateFormProps) {
       cateringFulfillment,
       cateringInclusions,
       cateringInclusionGroups,
+      extras,
       savedAt: new Date().toISOString(),
     });
     setAutoSaved(true);
@@ -333,6 +346,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
     cateringLeadDays, cateringLeadHoursPart,
     cateringFulfillment, cateringInclusions, cateringInclusionGroups,
+    extras,
     isEditing,
   ]);
   // The second useEffect (autosave timer) needs the same deps as
@@ -358,6 +372,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
     cateringLeadDays, cateringLeadHoursPart,
     cateringFulfillment, cateringInclusions, cateringInclusionGroups,
+    extras,
     isEditing, doAutoSave,
   ]);
 
@@ -427,6 +442,19 @@ export function PlateForm({ listing }: PlateFormProps) {
       kind === "plate" && plateMode === "pre_order" && preOrderDate
         ? preOrderDate
         : null,
+    // Plate-only extras. Filter out blank-name rows so a creator
+    // who tapped "Add extra" but never typed a name doesn't ship
+    // an empty entry. Catering always sends [] (catering uses
+    // fee_items on quotes for the same role).
+    extras:
+      kind === "plate"
+        ? extras
+            .map((e) => ({
+              name: e.name.trim(),
+              price_cents: Math.max(0, Math.floor(e.price_cents)),
+            }))
+            .filter((e) => e.name.length > 0)
+        : [],
   });
 
   const handleSave = async (status: ListingStatus) => {
@@ -1109,6 +1137,34 @@ export function PlateForm({ listing }: PlateFormProps) {
                   />
                 </details>
               )}
+            </section>
+          )}
+
+          {/* Plate-only: Extras (creator-defined optional add-ons).
+              Lets the creator offer drinks, desserts, sides, "extra
+              sauce" etc. — each with a price (or $0 for free) and a
+              customer-picked quantity at order time. Catering uses
+              fee_items on quotes for the same role and doesn't need
+              this surface. */}
+          {kind === "plate" && (
+            <section aria-labelledby="extras-label">
+              <div className="mb-2 flex items-center justify-between">
+                <span
+                  id="extras-label"
+                  className="text-sm font-medium text-white/60"
+                >
+                  Extras
+                  <span className="ml-1.5 text-[11px] font-normal text-white/40">
+                    (optional add-ons)
+                  </span>
+                </span>
+              </div>
+              <p className="mb-2 text-[11px] leading-relaxed text-white/45">
+                Things customers can add to this plate at checkout —
+                drinks, desserts, extra sauce. Set a price or leave at
+                $0 for free options.
+              </p>
+              <PlateExtrasEditor value={extras} onChange={setExtras} />
             </section>
           )}
 

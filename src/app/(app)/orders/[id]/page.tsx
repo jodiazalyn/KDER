@@ -13,6 +13,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { CountdownTimer } from "@/components/orders/CountdownTimer";
+import { OrderExtrasList } from "@/components/orders/OrderExtrasList";
 import { OrderMessages } from "@/components/orders/OrderMessages";
 import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -241,6 +242,10 @@ export default function OrderDetailPage({
             <div className="flex-1">
               <p className="font-semibold text-white">{order.listing_name}</p>
               <p className="text-sm text-white/50">Qty: {order.quantity}</p>
+              {/* Extras the customer picked at checkout — comfortable
+                  density shows name + qty + per-extra subtotal so
+                  the creator can pack the order accurately. */}
+              <OrderExtrasList items={order.items} density="comfortable" />
               {order.notes && (
                 <p className="mt-1 text-xs text-white/40 italic">
                   &ldquo;{order.notes}&rdquo;
