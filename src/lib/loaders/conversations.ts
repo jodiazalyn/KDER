@@ -15,6 +15,13 @@ export interface ConversationOut {
   lastMessageAt: string;
   unreadCount: number;
   orderId: string | null;
+  /** True when any message in this thread was inserted by the
+   *  catering system (insertCateringThreadMessage). Used by the
+   *  inbox to surface a "Catering" pill alongside the existing
+   *  "Order" pill so creators know the thread context before
+   *  drilling in. Detected via the 📋 prefix the inquiry +
+   *  quote routes use. */
+  isCatering: boolean;
 }
 
 type RawMsg = {
@@ -92,6 +99,7 @@ export async function loadConversations(
       lastMessageAt: string;
       orderId: string | null;
       unread: number;
+      isCatering: boolean;
     }
   >();
 
@@ -101,6 +109,11 @@ export async function loadConversations(
     const threadId = m.order_id
       ? `order_${m.order_id}_${partnerId}`
       : `general_${partnerId}`;
+    // Catering-system messages from `insertCateringThreadMessage`
+    // all start with the 📋 emoji. Cheap pattern match, no false
+    // positives expected (regular users don't open chat messages
+    // with that emoji).
+    const isCateringMessage = m.body.startsWith("📋");
 
     let thread = byThread.get(threadId);
     if (!thread) {
@@ -113,8 +126,13 @@ export async function loadConversations(
         lastMessageAt: m.created_at,
         orderId: m.order_id,
         unread: 0,
+        isCatering: isCateringMessage,
       };
       byThread.set(threadId, thread);
+    } else if (isCateringMessage) {
+      // Sticky — once any message in the thread is catering, the
+      // whole thread reads as catering-related.
+      thread.isCatering = true;
     }
     if (m.recipient_id === userId && !m.read_at) {
       thread.unread += 1;
@@ -133,6 +151,7 @@ export async function loadConversations(
       lastMessageAt: t.lastMessageAt,
       unreadCount: t.unread,
       orderId: t.orderId,
+      isCatering: t.isCatering,
     };
     if (t.orderId) orders.push(conv);
     else general.push(conv);

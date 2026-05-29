@@ -32,6 +32,7 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
     lastMessageAt,
     unreadCount,
     orderId,
+    isCatering,
   } = conversation;
 
   const preview =
@@ -64,17 +65,27 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
           <h3
             className={
               unreadCount > 0
-                ? "text-sm font-bold text-white"
-                : "text-sm font-medium text-white/80"
+                ? "truncate text-sm font-bold text-white"
+                : "truncate text-sm font-medium text-white/80"
             }
           >
             {partnerName}
           </h3>
-          <span className="text-[10px] text-white/30 flex-shrink-0">
+          {/* Catering pill — sticks to the partner name so the
+              creator sees the thread context (catering vs. plate
+              vs. general chat) without opening the thread.
+              Order rows are already labeled "Order · " below;
+              catering rows now get an equivalent badge. */}
+          {isCatering && (
+            <span className="shrink-0 rounded-full bg-amber-900/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 ring-1 ring-inset ring-amber-400/30">
+              Catering
+            </span>
+          )}
+          <span className="ml-auto shrink-0 text-[10px] text-white/30">
             {timeAgo}
           </span>
         </div>
