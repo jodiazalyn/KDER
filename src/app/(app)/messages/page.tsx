@@ -1,152 +1,21 @@
-"use client";
+import { requireUser } from "@/lib/loaders/auth";
+import { loadConversations } from "@/lib/loaders/conversations";
+import { MessagesClient } from "./messages-client";
 
-import { useState, useEffect, useCallback } from "react";
-import { MessageCircle, Mail, PenSquare } from "lucide-react";
-import { ConversationRow } from "@/components/messages/ConversationRow";
-import { ComposeSheet } from "@/components/messages/ComposeSheet";
-import type { Conversation } from "@/types";
-import { useCurrentUser } from "@/hooks/use-current-user";
-import { cn } from "@/lib/utils";
+// Per-user inbox. router.refresh after compose-send re-pulls
+// the grouped thread list.
+export const dynamic = "force-dynamic";
 
-type TabKey = "general" | "orders";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "general", label: "General" },
-  { key: "orders", label: "Orders" },
-];
-
-export default function MessagesPage() {
-  const currentUser = useCurrentUser();
-  const [activeTab, setActiveTab] = useState<TabKey>("general");
-  const [general, setGeneral] = useState<Conversation[]>([]);
-  const [orders, setOrders] = useState<Conversation[]>([]);
-  const [inboxActive, setInboxActive] = useState(true);
-  const [composeOpen, setComposeOpen] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!currentUser) return;
-    try {
-      const res = await fetch("/api/v1/messages/conversations");
-      if (!res.ok) return;
-      const json = await res.json();
-      setGeneral((json.data?.general as Conversation[]) ?? []);
-      setOrders((json.data?.orders as Conversation[]) ?? []);
-    } catch {
-      // Non-fatal: leave lists empty, user can refresh
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    const id = setTimeout(() => {
-      refresh();
-    }, 0);
-    return () => clearTimeout(id);
-  }, [refresh]);
-
-  const conversations = activeTab === "general" ? general : orders;
-  const generalUnread = general.reduce((sum, c) => sum + c.unreadCount, 0);
-  const ordersUnread = orders.reduce((sum, c) => sum + c.unreadCount, 0);
-
+export default async function MessagesPage() {
+  // Messages are for everyone (creator + customer), not just
+  // creators — use requireUser, not requireCreator.
+  const { supabase, user } = await requireUser();
+  const { general, orders } = await loadConversations(supabase, user.id);
   return (
-    <main className="px-4 pb-4 pt-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-black text-white">Messages</h1>
-
-        {/* Inbox toggle — glass-btn-pill substrate with green tint when on */}
-        <button
-          type="button"
-          onClick={() => setInboxActive(!inboxActive)}
-          className={cn(
-            "glass-btn-pill px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-            inboxActive
-              ? "bg-green-900/30 border border-green-400/25 text-green-300 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-              : "text-white/50"
-          )}
-        >
-          Inbox {inboxActive ? "On" : "Off"}
-        </button>
-      </div>
-
-      {/* Paused banner */}
-      {!inboxActive && (
-        <div className="mt-3 rounded-xl border border-orange-400/20 bg-orange-900/20 px-4 py-2.5 text-xs text-orange-300">
-          General inbox is paused — messages are queued
-        </div>
-      )}
-
-      {/* Tabs — glass-segment + glass-segment-item substrate */}
-      <div className="glass-segment mt-4 flex w-full gap-1 p-1">
-        {TABS.map((tab) => {
-          const unread =
-            tab.key === "general" ? generalUnread : ordersUnread;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "glass-segment-item flex-1 py-2 text-xs font-medium transition-all",
-                activeTab === tab.key
-                  ? "bg-white/[0.12] text-white"
-                  : "text-white/40 hover:text-white/60"
-              )}
-            >
-              {tab.label}
-              {unread > 0 && (
-                <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
-                  {unread}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Conversation list */}
-      {conversations.length > 0 ? (
-        <div className="mt-4 space-y-2">
-          {conversations.map((conv) => (
-            <ConversationRow key={conv.threadId} conversation={conv} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-4 pt-24">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-            {activeTab === "general" ? (
-              <MessageCircle size={28} className="text-white/20" />
-            ) : (
-              <Mail size={28} className="text-white/20" />
-            )}
-          </div>
-          {activeTab === "general" ? (
-            <p className="text-center text-sm text-white/50">
-              No messages yet. Tap the compose button below to start a new
-              conversation with a past customer.
-            </p>
-          ) : (
-            <p className="text-center text-sm text-white/50">
-              No order messages yet. They&apos;ll appear here when you
-              receive orders.
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Floating compose button — sits above the bottom nav */}
-      <button
-        type="button"
-        onClick={() => setComposeOpen(true)}
-        aria-label="New message"
-        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E20] text-white shadow-[0_8px_28px_rgba(27,94,32,0.55)] ring-1 ring-green-400/20 transition-all hover:bg-[#207024] active:scale-90"
-      >
-        <PenSquare size={20} />
-      </button>
-
-      <ComposeSheet
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        currentUserId={currentUser?.id || "demo_creator"}
-      />
-    </main>
+    <MessagesClient
+      initialGeneral={general}
+      initialOrders={orders}
+      currentUserId={user.id}
+    />
   );
 }

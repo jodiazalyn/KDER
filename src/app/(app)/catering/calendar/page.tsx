@@ -1,14 +1,29 @@
+import { requireCreator } from "@/lib/loaders/auth";
+import { loadCreatorBlackouts } from "@/lib/loaders/blackouts";
+import { loadOpenInquiryCount } from "@/lib/loaders/inquiries";
 import CalendarClient from "./calendar-client";
 
 /**
  * Creator's catering calendar.
  *
- * PR 1: read-only view of blackouts + tools to add/remove them.
- *       No bookings yet (those land in PR 3).
- *
- * PR 3 will pipe `catering_bookings` into this page so the dot
- * badges fill in.
+ * Server-component shell hydrates the blackouts list + the
+ * open-inquiry count in parallel and hands them to the client
+ * island. Eliminates the previous mount-time double fetch
+ * (~300-600ms on mobile) — the grid renders with real data on
+ * first paint.
  */
-export default function CateringCalendarPage() {
-  return <CalendarClient />;
+export const dynamic = "force-dynamic";
+
+export default async function CateringCalendarPage() {
+  const { supabase, creator } = await requireCreator();
+  const [blackoutsRes, openInquiryCount] = await Promise.all([
+    loadCreatorBlackouts(supabase, creator.id),
+    loadOpenInquiryCount(supabase, creator.id),
+  ]);
+  return (
+    <CalendarClient
+      initialBlackouts={blackoutsRes.data}
+      initialOpenInquiryCount={openInquiryCount}
+    />
+  );
 }

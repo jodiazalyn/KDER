@@ -60,10 +60,11 @@ export async function GET(request: NextRequest) {
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
 
-    let query = supabase.from("listings").select("*");
-
     if (mine) {
-      // Scope to the authenticated creator's listings (all statuses)
+      // Scope to the authenticated creator's listings. Delegates
+      // to the shared loader so the /listings + /dashboard
+      // Server Component pages use the exact same query body
+      // and we don't drift the two surfaces.
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -78,22 +79,35 @@ export async function GET(request: NextRequest) {
 
       if (!creator) return apiSuccess({ listings: [] });
 
-      query = query.eq("creator_id", creator.id);
-      if (status) query = query.eq("status", status);
-    } else if (status) {
+      const { loadCreatorListings } = await import("@/lib/loaders/listings");
+      const { data, error } = await loadCreatorListings(
+        supabase,
+        creator.id,
+        { activeOnly: status === "active" }
+      );
+      if (error) return apiError("Failed to fetch listings.", 500);
+      // If a non-active status was requested, filter client-side
+      // (single-status filtering); the loader covers the
+      // activeOnly fast path so the common case stays as one
+      // indexed query.
+      const filtered =
+        status && status !== "active"
+          ? data.filter((l) => l.status === status)
+          : data;
+      return apiSuccess({ listings: filtered });
+    }
+
+    // Public path — used by discovery surfaces. No auth scope.
+    let query = supabase.from("listings").select("*");
+    if (status) {
       query = query.eq("status", status);
     } else {
       query = query.eq("status", "active");
     }
-
     const { data, error } = await query.order("created_at", {
       ascending: false,
     });
-
-    if (error) {
-      return apiError("Failed to fetch listings.", 500);
-    }
-
+    if (error) return apiError("Failed to fetch listings.", 500);
     return apiSuccess({ listings: data });
   } catch {
     return apiError("Failed to fetch listings.", 500);

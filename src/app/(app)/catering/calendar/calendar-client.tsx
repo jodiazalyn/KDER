@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Plus, X, Repeat, Loader2, Inbox } from "lucide-react";
 import { toast } from "sonner";
@@ -10,12 +10,24 @@ import { cn } from "@/lib/utils";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
 
+interface Props {
+  /** Hydrated server-side via loadCreatorBlackouts. The
+   *  client never refetches on mount — it owns this list and
+   *  mutates it optimistically (POST/DELETE blackout). */
+  initialBlackouts: CreatorBlackout[];
+  /** Count of inquiries with status='open' for the badge on
+   *  the inbox link. Hydrated server-side, never refreshed
+   *  here (the OrdersClient + tab badge handle their own
+   *  freshness). */
+  initialOpenInquiryCount: number;
+}
+
 /**
  * Calendar dashboard.
  *
  * State model:
  *   - `month`     — the first day of the visible month
- *   - `blackouts` — fetched once for this creator; we filter
+ *   - `blackouts` — seeded from server props; we filter
  *                   client-side per month so paging doesn't refetch
  *   - `selectedDate` — opens the right-side day drawer
  *
@@ -23,57 +35,30 @@ import { COACHMARK_COPY } from "@/lib/coachmarks";
  * dates inside the visible month for rendering. We don't expand
  * forever — only what's on screen.
  */
-export default function CalendarClient() {
+export default function CalendarClient({
+  initialBlackouts,
+  initialOpenInquiryCount,
+}: Props) {
   const today = useMemo(() => new Date(), []);
   const [month, setMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  const [blackouts, setBlackouts] = useState<CreatorBlackout[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Seeded from the server. Mutations (addOneOff, addRecurring,
+  // removeBlackout) keep updating this list optimistically.
+  const [blackouts, setBlackouts] =
+    useState<CreatorBlackout[]>(initialBlackouts);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [busyDate, setBusyDate] = useState<string | null>(null);
   const [recurringOpen, setRecurringOpen] = useState(false);
   // Coachmark anchor — wraps the rendered MonthCalendar so the
   // first-time tip points at the actual grid.
   const calendarCoachRef = useRef<HTMLDivElement>(null);
-  // Open-inquiry count for the badge on the inbox link. -1 means
-  // "still loading" so we render the link without a stale "0".
-  const [openInquiryCount, setOpenInquiryCount] = useState(-1);
-
-  // ── Fetch blackouts + inquiry count in parallel ────────────
-  const fetchAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [blackoutsRes, inquiriesRes] = await Promise.all([
-        fetch("/api/v1/catering/blackouts?mine=true"),
-        fetch("/api/v1/catering/inquiries?status=open"),
-      ]);
-      const blackoutsBody = await blackoutsRes.json();
-      if (blackoutsRes.ok) {
-        setBlackouts(blackoutsBody.data?.blackouts ?? []);
-      } else {
-        toast.error(blackoutsBody?.error || "Couldn't load blackouts.");
-      }
-      if (inquiriesRes.ok) {
-        const inquiriesBody = await inquiriesRes.json();
-        setOpenInquiryCount(
-          Array.isArray(inquiriesBody.data?.inquiries)
-            ? inquiriesBody.data.inquiries.length
-            : 0
-        );
-      } else {
-        setOpenInquiryCount(0);
-      }
-    } catch {
-      toast.error("Couldn't load calendar. Try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  // No more "loading" state — open-inquiry count arrives in the
+  // initial render. Pass-through prop.
+  const openInquiryCount = initialOpenInquiryCount;
+  // Loading is always false now (server hydrated). Keep the
+  // variable so the JSX below can reference it without churn.
+  const loading = false;
 
   // ── Derive blackout dates for the visible month ────────────
   // Expand recurring (weekday) rules into specific dates inside

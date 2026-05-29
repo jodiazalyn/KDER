@@ -46,19 +46,18 @@ export async function GET(request: NextRequest) {
       return apiError("Provide ?creator_id or ?mine=true.", 400);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("creator_blackouts")
-      .select("id, creator_id, kind, blackout_date, weekday, reason, created_at")
-      .eq("creator_id", creatorId)
-      .order("blackout_date", { ascending: true, nullsFirst: false });
-
-    if (error) {
-      console.error("[blackouts] fetch failed:", error.message);
-      return apiError("Failed to fetch blackouts.", 500);
-    }
-
-    return apiSuccess({ blackouts: data ?? [] });
+    // Delegate to the shared loader — used by both this route
+    // and the calendar Server Component page so the query body
+    // can't drift between surfaces.
+    const { loadCreatorBlackouts } = await import(
+      "@/lib/loaders/blackouts"
+    );
+    const { data, error } = await loadCreatorBlackouts(
+      supabase,
+      creatorId
+    );
+    if (error) return apiError("Failed to fetch blackouts.", 500);
+    return apiSuccess({ blackouts: data });
   } catch {
     return apiError("Failed to fetch blackouts.", 500);
   }
