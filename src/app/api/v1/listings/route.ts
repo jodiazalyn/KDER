@@ -176,6 +176,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Uber Direct activation gate (migration 019): a plate
+    // listing offering delivery can't go active without a
+    // pickup address — without one we can't dispatch a courier
+    // when an order comes in. Drafts are fine; only block on
+    // status=active.
+    if (
+      body.status === "active" &&
+      body.kind === "plate" &&
+      (body.fulfillment_type === "delivery" ||
+        body.fulfillment_type === "both") &&
+      (typeof body.pickup_address !== "string" ||
+        !body.pickup_address.trim())
+    ) {
+      return apiError(
+        "Add a pickup address for delivery orders before publishing.",
+        400
+      );
+    }
+
     // Normalize photo: accept single photo_url or photos[] array, store as photos[]
     const photos: string[] = Array.isArray(body.photos)
       ? body.photos.filter((p: unknown) => typeof p === "string")
@@ -254,6 +273,23 @@ export async function POST(request: NextRequest) {
           : null,
       // Plate-only extras (migration 018). Catering always empty.
       extras: kind === "plate" ? sanitizeExtras(body.extras) : [],
+      // Uber Direct pickup address (migration 019). Plate-only;
+      // catering uses its own pickup model via the inquiry/
+      // booking flow. Stored as free text — Uber server-side-
+      // geocodes at quote time. Capped at 200 chars to match
+      // the form input cap.
+      pickup_address:
+        kind === "plate" &&
+        typeof body.pickup_address === "string" &&
+        body.pickup_address.trim().length > 0
+          ? body.pickup_address.trim().slice(0, 200)
+          : null,
+      pickup_instructions:
+        kind === "plate" &&
+        typeof body.pickup_instructions === "string" &&
+        body.pickup_instructions.trim().length > 0
+          ? body.pickup_instructions.trim().slice(0, 280)
+          : null,
     };
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

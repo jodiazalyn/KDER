@@ -139,6 +139,16 @@ export interface Listing {
    *  extras like "extra spice"). Always an empty array for catering
    *  listings — they use fee_items on quotes for the same role. */
   extras: ListingExtra[];
+
+  /** Plate-only pickup address for Uber Direct delivery orders
+   *  (migration 019). NULL on pickup-only listings + on catering
+   *  (catering has its own pickup model via inquiries/bookings).
+   *  Required at the API layer when the listing is active AND
+   *  fulfillment_type includes delivery. */
+  pickup_address: string | null;
+  /** Optional courier instructions shown at pickup. Max 280 chars
+   *  per Uber Direct. */
+  pickup_instructions: string | null;
 }
 
 /** One add-on offered by the creator on a plate listing.

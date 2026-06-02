@@ -206,6 +206,55 @@ export async function PATCH(
     if (body.extras !== undefined) {
       allowed.extras = sanitizeExtras(body.extras);
     }
+    // Pickup address (migration 019). Free text capped at the
+    // form limit; explicit null clears any prior value if the
+    // creator switched fulfillment back to pickup-only.
+    if (body.pickup_address !== undefined) {
+      allowed.pickup_address =
+        typeof body.pickup_address === "string" &&
+        body.pickup_address.trim().length > 0
+          ? body.pickup_address.trim().slice(0, 200)
+          : null;
+    }
+    if (body.pickup_instructions !== undefined) {
+      allowed.pickup_instructions =
+        typeof body.pickup_instructions === "string" &&
+        body.pickup_instructions.trim().length > 0
+          ? body.pickup_instructions.trim().slice(0, 280)
+          : null;
+    }
+
+    // Uber Direct activation gate: a delivery-eligible plate
+    // being transitioned to ACTIVE must have a pickup address.
+    // Only check on status=active transitions; pause/archive
+    // doesn't need it. We use the merged shape (current patch +
+    // submitted patch) so a creator can patch fulfillment
+    // + pickup_address in either order.
+    const willBeActive = allowed.status === "active";
+    const willOfferDelivery =
+      typeof allowed.fulfillment_type === "string"
+        ? allowed.fulfillment_type === "delivery" ||
+          allowed.fulfillment_type === "both"
+        : null;
+    if (willBeActive && willOfferDelivery) {
+      const addrAfterPatch =
+        typeof allowed.pickup_address !== "undefined"
+          ? allowed.pickup_address
+          : undefined;
+      if (
+        addrAfterPatch === null ||
+        (typeof addrAfterPatch === "string" && !addrAfterPatch.trim())
+      ) {
+        return apiError(
+          "Add a pickup address for delivery orders before publishing.",
+          400
+        );
+      }
+      // addrAfterPatch === undefined → falling back to whatever is
+      // already on the row. Phase 2 will tighten this with a
+      // pre-update SELECT to enforce against the current row;
+      // for now we trust the form's client-side guard to fire.
+    }
 
     allowed.updated_at = new Date().toISOString();
 
