@@ -515,6 +515,24 @@ export function PlateForm({ listing }: PlateFormProps) {
       return;
     }
 
+    // Pre-order + delivery is intentionally blocked in v1 of the
+    // Uber Direct integration. Uber dispatches a courier
+    // immediately on delivery creation, so a pre-order plate
+    // scheduled for next week would either error at
+    // courier-dispatch time or require a net-new scheduled-
+    // delivery cron. Until we have that infrastructure,
+    // pre-order plates are pickup-only.
+    if (
+      kind === "plate" &&
+      plateMode === "pre_order" &&
+      (fulfillment === "delivery" || fulfillment === "both")
+    ) {
+      toast.error(
+        "Pre-order plates are pickup-only for now. Switch fulfillment to Pickup, or change to Instant availability."
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
