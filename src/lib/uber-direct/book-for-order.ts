@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { UberApiError } from "./client";
 import { createDelivery } from "./create-delivery";
+import { quoteDelivery } from "./quote";
 import type { UberAddress, UberManifestItem } from "./types";
 
 /**
@@ -156,26 +158,83 @@ export async function bookUberDeliveryForOrder(
   const pickupPhone = creatorMember?.phone ?? "+10000000000"; // creator phone is required upstream
   const dropoffPhone = order.member_phone ?? "+10000000000";
 
-  // Book it. Uber returns the existing delivery on retries (we
-  // pass orderId as both idempotency_key + external_id) so this
-  // is safe to call concurrently with a webhook retry.
-  const delivery = await createDelivery({
-    orderId: order.id,
-    pickup: {
-      name: pickupName,
-      address: pickupAddress,
-      phoneNumber: pickupPhone,
-      businessName: creatorMember?.display_name ?? undefined,
-      notes: pickupListing.pickup_instructions ?? undefined,
-    },
-    dropoff: {
-      name: order.member_name ?? "Customer",
-      address: dropoffAddress,
-      phoneNumber: dropoffPhone,
-    },
-    manifestItems,
-    quoteId: order.uber_quote_id ?? undefined,
-  });
+  // Book the delivery. Two layers of resilience:
+  //   - Idempotency: order.id passed as both idempotency_key +
+  //     external_id, so concurrent webhook retries return the
+  //     same Uber delivery.
+  //   - Quote expiry fallback: if the stored uber_quote_id has
+  //     expired by the time the webhook fires (rare but possible
+  //     if the customer paused on Stripe Checkout), re-quote
+  //     server-side using the same dropoff + pickup and retry the
+  //     booking WITHOUT a quote_id. Uber uses its current live
+  //     quote in that case. We absorb any small fee variance —
+  //     usually < $1.
+  const bookOnce = (quoteId: string | undefined) =>
+    createDelivery({
+      orderId: order.id,
+      pickup: {
+        name: pickupName,
+        address: pickupAddress,
+        phoneNumber: pickupPhone,
+        businessName: creatorMember?.display_name ?? undefined,
+        notes: pickupListing.pickup_instructions ?? undefined,
+      },
+      dropoff: {
+        name: order.member_name ?? "Customer",
+        address: dropoffAddress,
+        phoneNumber: dropoffPhone,
+      },
+      manifestItems,
+      quoteId,
+    });
+
+  let delivery;
+  try {
+    delivery = await bookOnce(order.uber_quote_id ?? undefined);
+  } catch (err) {
+    // Detect "quote expired" by status (400/422) + body text.
+    // Uber's exact error code/message isn't documented across
+    // every region; the heuristic catches the common phrasings.
+    const isQuoteExpired =
+      err instanceof UberApiError &&
+      (err.status === 400 || err.status === 422) &&
+      /expir|invalid_quote/i.test(err.body);
+
+    if (!isQuoteExpired) {
+      // Log the full Uber error for observability before
+      // re-throwing — Netlify function logs will show the exact
+      // status, body, and request_id we can correlate against
+      // Uber's dashboard.
+      console.error("[uber-book] createDelivery failed (non-retryable)", {
+        order_id: order.id,
+        status: err instanceof UberApiError ? err.status : null,
+        request_id: err instanceof UberApiError ? err.requestId : null,
+        body:
+          err instanceof UberApiError ? err.body.slice(0, 500) : null,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+
+    console.warn("[uber-book] stored quote expired, re-quoting", {
+      order_id: order.id,
+      original_quote_id: order.uber_quote_id,
+    });
+    // Re-quote — pickup + dropoff already in scope.
+    const fresh = await quoteDelivery({
+      pickup: pickupAddress,
+      dropoff: dropoffAddress,
+      pickupPhoneNumber: pickupPhone,
+      dropoffPhoneNumber: dropoffPhone,
+    });
+    console.log("[uber-book] re-quote complete", {
+      order_id: order.id,
+      new_quote_id: fresh.id,
+      new_fee_cents: fresh.fee,
+      original_fee_cents: order.uber_fee_cents,
+    });
+    delivery = await bookOnce(fresh.id);
+  }
 
   // Persist what we got back. The status field is intentionally
   // left for the webhook handler to set — we want a single
@@ -196,9 +255,23 @@ export async function bookUberDeliveryForOrder(
     })
     .eq("id", order.id);
 
-  console.log(
-    `[uber-book] order ${orderId} → delivery ${delivery.id} status=${delivery.status}`
-  );
+  // Structured success log — includes the fee Uber actually
+  // charged vs what we'd already collected from the customer.
+  // A drift here means KDER absorbs or pockets the difference,
+  // so surfacing the diff in logs gives us an operational
+  // signal if drift becomes systematic.
+  const chargedCents = order.uber_fee_cents ?? null;
+  const feeDriftCents =
+    chargedCents !== null ? delivery.fee - chargedCents : null;
+  console.log("[uber-book] success", {
+    order_id: orderId,
+    uber_delivery_id: delivery.id,
+    status: delivery.status,
+    fee_charged_cents: chargedCents,
+    fee_uber_cents: delivery.fee,
+    fee_drift_cents: feeDriftCents,
+    tracking_url: delivery.tracking_url,
+  });
 }
 
 /** Parse a free-text pickup address into Uber's structured form.

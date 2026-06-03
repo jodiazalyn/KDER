@@ -1,7 +1,49 @@
 import { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api";
+import { UberApiError } from "@/lib/uber-direct/client";
 import { quoteDelivery } from "@/lib/uber-direct/quote";
 import type { UberAddress } from "@/lib/uber-direct/types";
+
+/** Map Uber's specific quote-failure modes to a customer-friendly
+ *  message. Uber's quote endpoint returns 400/422 with a body that
+ *  describes WHY it can't quote (no courier, out of coverage,
+ *  invalid address, etc.). The defaults — `unknown` and the
+ *  catch-all — fall back to a generic soft-fail. */
+function quoteErrorMessage(err: UberApiError): string {
+  const parsed = err.parsedBody();
+  // Uber error envelopes vary by region/version. Pull `code` and
+  // `kind` defensively + fall through to substring matching on
+  // the raw body for the common phrasings.
+  const code = (parsed?.code as string | undefined)?.toLowerCase() ?? "";
+  const kind = (parsed?.kind as string | undefined)?.toLowerCase() ?? "";
+  const body = err.body.toLowerCase();
+
+  if (
+    code === "no_couriers_available" ||
+    code === "no_couriers" ||
+    kind === "no_couriers_available" ||
+    /no courier|no couriers/.test(body)
+  ) {
+    return "No couriers available in your area right now — try again in a few minutes, or switch to pickup.";
+  }
+  if (
+    code === "out_of_coverage" ||
+    code === "outside_coverage" ||
+    /out.of.coverage|outside.coverage|coverage area/.test(body)
+  ) {
+    return "We don't deliver to this address yet. Switch to pickup instead.";
+  }
+  if (
+    code === "invalid_dropoff" ||
+    code === "invalid_address" ||
+    /invalid address|could not (?:resolve|geocode)/.test(body)
+  ) {
+    return "We couldn't find that address. Double-check the street, city, and ZIP.";
+  }
+  // Default — non-actionable for the customer; same generic
+  // message we shipped originally.
+  return "Delivery isn't available right now. Try pickup, or try again in a few minutes.";
+}
 
 /**
  * POST /api/v1/uber/quote
@@ -188,9 +230,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof UberApiError) {
+      console.error("[uber.quote] failed:", {
+        status: err.status,
+        request_id: err.requestId,
+        body: err.body.slice(0, 500),
+      });
+      return apiError(quoteErrorMessage(err), 503);
+    }
     console.error("[uber.quote] failed:", msg);
-    // Uber returns 422 / 400 for "no courier available." Map to
-    // a soft-fail so the checkout can pivot to pickup-only.
     return apiError(
       "Delivery isn't available right now. Try pickup, or try again in a few minutes.",
       503

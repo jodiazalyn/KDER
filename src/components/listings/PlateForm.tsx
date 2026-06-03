@@ -148,6 +148,31 @@ interface PlateFormProps {
   listing?: Listing;
 }
 
+/** Split an existing single-field pickup address into three parts so
+ *  the structured inputs prefill correctly when editing a listing
+ *  that was created before the structured inputs shipped. Accepts
+ *  both well-formed ("123 Main St, Houston, TX 77001") and lenient
+ *  ("123 Main St Houston TX 77001") inputs. Returns empty parts
+ *  on null / malformed input so the inputs render empty. */
+function parsePickupOnLoad(raw: string): {
+  street: string;
+  city: string;
+  stateZip: string;
+} {
+  if (!raw) return { street: "", city: "", stateZip: "" };
+  const parts = raw
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length === 3) {
+    return { street: parts[0], city: parts[1], stateZip: parts[2] };
+  }
+  if (parts.length === 2) {
+    return { street: parts[0], city: "", stateZip: parts[1] };
+  }
+  return { street: raw, city: "", stateZip: "" };
+}
+
 export function PlateForm({ listing }: PlateFormProps) {
   const router = useRouter();
   const isEditing = !!listing;
@@ -212,12 +237,27 @@ export function PlateForm({ listing }: PlateFormProps) {
   // will server-side geocode at quote time, plus free-form
   // courier instructions (≤280 chars). Both null on
   // pickup-only listings.
-  const [pickupAddress, setPickupAddress] = useState(
-    listing?.pickup_address ?? ""
-  );
+  // Pickup address — split into three structured inputs (street,
+  // city, state+zip) instead of one free-text box. Forces the
+  // creator to enter the canonical 3-comma-separated format Uber
+  // Direct expects, eliminating the entire class of "creator's
+  // pickup address is malformed" failures at quote/booking time.
+  // Old listings whose address was stored as a single string get
+  // parsed on first load so the structured inputs prefill correctly.
+  const parsedPickup = parsePickupOnLoad(listing?.pickup_address ?? "");
+  const [pickupStreet, setPickupStreet] = useState(parsedPickup.street);
+  const [pickupCity, setPickupCity] = useState(parsedPickup.city || "Houston");
+  const [pickupStateZip, setPickupStateZip] = useState(parsedPickup.stateZip);
   const [pickupInstructions, setPickupInstructions] = useState(
     listing?.pickup_instructions ?? ""
   );
+  // Derived combined string — single source of truth for payload
+  // + activation gate. Format: "street, city, state zip" so the
+  // server-side parser keeps working on this exact shape.
+  const pickupAddress =
+    pickupStreet.trim() && pickupCity.trim() && pickupStateZip.trim()
+      ? `${pickupStreet.trim()}, ${pickupCity.trim()}, ${pickupStateZip.trim()}`
+      : "";
   const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
   const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? restored?.photos ?? []);
@@ -489,18 +529,32 @@ export function PlateForm({ listing }: PlateFormProps) {
   const handleSave = async (status: ListingStatus) => {
     // Delivery-eligible plate listings need a pickup address —
     // without one the Uber Direct flow can't dispatch a courier.
-    // Only block ACTIVE publishes; drafts can save half-finished
-    // so the creator can come back to it.
+    // We also enforce a sane structured shape (all three parts
+    // filled + a "STATE ZIP" pattern) so the courier dispatch
+    // doesn't fail later from a parse error. Only blocks ACTIVE
+    // publishes; drafts can save partial input.
     if (
       kind === "plate" &&
       (fulfillment === "delivery" || fulfillment === "both") &&
-      status === "active" &&
-      !pickupAddress.trim()
+      status === "active"
     ) {
-      toast.error(
-        "Add a pickup address for delivery orders before publishing."
-      );
-      return;
+      const stateZipPattern = /^[A-Z]{2}\s+\d{5}(?:-\d{4})?$/i;
+      if (
+        !pickupStreet.trim() ||
+        !pickupCity.trim() ||
+        !pickupStateZip.trim()
+      ) {
+        toast.error(
+          "Fill in street, city, and state + ZIP for the pickup address before publishing."
+        );
+        return;
+      }
+      if (!stateZipPattern.test(pickupStateZip.trim())) {
+        toast.error(
+          "State + ZIP should look like 'TX 77004' so the courier can find you."
+        );
+        return;
+      }
     }
 
     // Pre-order plates need a date — the toggle alone isn't enough.
@@ -1121,26 +1175,48 @@ export function PlateForm({ listing }: PlateFormProps) {
                   validation). */}
               {(fulfillment === "delivery" || fulfillment === "both") && (
                 <div className="mt-4 space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-                  <div>
+                  <div className="space-y-2">
                     <label
-                      htmlFor="pickup-address"
-                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/55"
+                      htmlFor="pickup-street"
+                      className="block text-xs font-semibold uppercase tracking-wider text-white/55"
                     >
                       Pickup address
                     </label>
                     <input
-                      id="pickup-address"
+                      id="pickup-street"
                       type="text"
-                      value={pickupAddress}
+                      value={pickupStreet}
                       onChange={(e) =>
-                        setPickupAddress(e.target.value.slice(0, 200))
+                        setPickupStreet(e.target.value.slice(0, 120))
                       }
-                      placeholder="123 Main St, Houston, TX 77001"
+                      placeholder="Street address — e.g. 1234 Almeda Rd"
+                      autoComplete="street-address"
                       className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
                     />
-                    <p className="mt-1 text-[11px] text-white/40">
-                      Where the courier picks up. We use this for
-                      every delivery order on this plate.
+                    <input
+                      id="pickup-city"
+                      type="text"
+                      value={pickupCity}
+                      onChange={(e) =>
+                        setPickupCity(e.target.value.slice(0, 60))
+                      }
+                      placeholder="City"
+                      autoComplete="address-level2"
+                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                    />
+                    <input
+                      id="pickup-state-zip"
+                      type="text"
+                      value={pickupStateZip}
+                      onChange={(e) =>
+                        setPickupStateZip(e.target.value.slice(0, 20))
+                      }
+                      placeholder="State + ZIP — e.g. TX 77004"
+                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                    />
+                    <p className="text-[11px] text-white/40">
+                      Where the courier picks up. We send this to Uber
+                      on every delivery order for this plate.
                     </p>
                   </div>
                   <div>
