@@ -93,6 +93,13 @@ export async function GET(
       // Override pickup_address (null from rowToOrder) with the creator's
       // actual pickup address pulled from the join.
       pickup_address: row.creator?.pickup_address ?? null,
+      // Uber Direct live state (Phase 2 — migration 019). These
+      // come straight off the orders row; rowToOrder doesn't know
+      // about them yet because the generated types haven't been
+      // regenerated. Inline pass-through keeps the API contract
+      // honest without a serializer round-trip.
+      uber_tracking_url: row.uber_tracking_url ?? null,
+      uber_status: row.uber_status ?? null,
     };
 
     return apiSuccess({ order });
