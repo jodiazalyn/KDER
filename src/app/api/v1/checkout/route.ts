@@ -406,6 +406,13 @@ export async function POST(request: NextRequest) {
         notes: sanitizedNotes,
         platform_fee_cents: String(platformFeeCents),
         item_ids: verifiedItems.map((i) => i.listing_id).join(","),
+        // Uber Direct context (Phase 2). Makes Stripe events
+        // self-describing — any payment in the Stripe Dashboard
+        // can be cross-referenced against its Uber booking
+        // without joining tables. Empty strings on pickup
+        // orders.
+        uber_quote_id: uberQuoteId ?? "",
+        uber_fee_cents: uberFeeCents ? String(uberFeeCents) : "",
       },
       success_url: `${origin}/order-confirmation?session_id={CHECKOUT_SESSION_ID}&handle=${encodeURIComponent(creator_handle)}&order_id=${orderId}`,
       cancel_url: `${origin}/@${creator_handle}`,

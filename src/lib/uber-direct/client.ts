@@ -150,7 +150,11 @@ export async function uberRequest<T>(opts: RequestOpts): Promise<T> {
       console.error(
         `[uber-direct.${opts.op}] non-2xx ${res.status} request_id=${requestId} body=${text.slice(0, 500)}`
       );
-      throw new Error(
+      throw new UberApiError(
+        opts.op,
+        res.status,
+        text,
+        requestId,
         `Uber Direct ${opts.op} failed: HTTP ${res.status}${
           requestId ? ` (request_id=${requestId})` : ""
         }`
@@ -161,6 +165,40 @@ export async function uberRequest<T>(opts: RequestOpts): Promise<T> {
   };
 
   return doRequest(0);
+}
+
+/** Structured error type for Uber API failures. Lets the helper
+ *  layer match on `.status` + parse `.body` to detect known
+ *  recoverable cases (expired quote, no courier, out-of-coverage)
+ *  rather than re-parsing the message string. */
+export class UberApiError extends Error {
+  readonly op: string;
+  readonly status: number;
+  readonly body: string;
+  readonly requestId: string | null;
+  constructor(
+    op: string,
+    status: number,
+    body: string,
+    requestId: string | null,
+    message: string
+  ) {
+    super(message);
+    this.name = "UberApiError";
+    this.op = op;
+    this.status = status;
+    this.body = body;
+    this.requestId = requestId;
+  }
+  /** Best-effort parse of the body as JSON; returns null on
+   *  parse failure so callers can use optional-chaining. */
+  parsedBody(): Record<string, unknown> | null {
+    try {
+      return JSON.parse(this.body) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export function getCustomerId(): string {
