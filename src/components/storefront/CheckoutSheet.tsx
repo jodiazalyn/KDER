@@ -105,10 +105,14 @@ export function CheckoutSheet({
   const [quoteState, setQuoteState] = useState<QuoteState>({ kind: "idle" });
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
-  // Guest fields — only used when no currentUser (Twilio A2P pending,
-  // OTP gate is removed; see /api/v1/auth/anon-customer).
+  // Guest contact info — minimal-friction model. We keep the name
+  // field so the order feels personal to the creator (their inbox
+  // reads "Maria's order", not "Customer 5310"). For notifications:
+  // phone is REQUIRED on delivery (Uber's courier needs to call
+  // the door); pickup accepts phone OR email, whichever the
+  // customer prefers. Same pattern DoorDash + Uber Eats use.
   const [guestName, setGuestName] = useState("");
-  const [guestPhoneRaw, setGuestPhoneRaw] = useState(""); // formatted display
+  const [guestPhoneRaw, setGuestPhoneRaw] = useState("");
   const guestPhoneDigits = guestPhoneRaw.replace(/\D/g, "");
   const [email, setEmail] = useState("");
 
@@ -252,10 +256,18 @@ export function CheckoutSheet({
   const deliveryFeeDollars =
     quoteState.kind === "ok" ? quoteState.quote.fee_cents / 100 : 0;
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
-  // When authed, the existing user satisfies name+phone. When not, the
-  // guest inputs must be valid (non-empty trimmed name + 10 digits).
+  // Contact validation for guest orders. Name is always required
+  // (keeps the creator's inbox personal). Notification channel:
+  //   - delivery → phone REQUIRED (Uber's courier needs a number
+  //     to reach the customer at the door)
+  //   - pickup   → phone OR email (one channel is enough; this
+  //     removes the "I don't share my phone" friction for
+  //     pickup-only orders)
+  const emailValid = /\S+@\S+\.\S+/.test(email.trim());
+  const phoneValid = guestPhoneDigits.length === 10;
   const guestFieldsValid =
-    guestName.trim().length > 0 && guestPhoneDigits.length === 10;
+    guestName.trim().length > 0 &&
+    (fulfillment === "delivery" ? phoneValid : phoneValid || emailValid);
   // Delivery orders need an active quote — without it we can't
   // book a courier on the Stripe success webhook side. Pickup
   // orders skip this gate.
@@ -278,12 +290,17 @@ export function CheckoutSheet({
 
       if (!currentUser) {
         const trimmedName = guestName.trim();
+        const trimmedEmail = email.trim();
         const anonRes = await fetch("/api/v1/auth/anon-customer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: trimmedName,
-            phone: guestPhoneDigits,
+            // Phone may be empty on pickup orders (email-only flow).
+            // The endpoint accepts null and uses email as the
+            // notification channel instead.
+            phone: guestPhoneDigits || null,
+            email: trimmedEmail || null,
           }),
         });
         const anonJson = await anonRes.json();
@@ -300,8 +317,12 @@ export function CheckoutSheet({
           return;
         }
         memberName = (anonJson?.data?.display_name as string) ?? trimmedName;
+        // Phone may be empty when the customer went email-only on a
+        // pickup order. Downstream (checkout API + orders.member_phone)
+        // accepts empty string and skips SMS notifications.
         memberPhone =
-          (anonJson?.data?.phone as string) ?? `+1${guestPhoneDigits}`;
+          (anonJson?.data?.phone as string) ??
+          (guestPhoneDigits ? `+1${guestPhoneDigits}` : "");
       } else {
         memberName = currentUser.display_name;
         memberPhone = currentUser.phone;
@@ -463,28 +484,51 @@ export function CheckoutSheet({
                 onChange={(e) =>
                   setGuestPhoneRaw(formatPhoneInput(e.target.value))
                 }
-                placeholder="(323) 555-0123"
+                placeholder={
+                  fulfillment === "delivery"
+                    ? "Phone (required for delivery)"
+                    : "Phone (for SMS updates)"
+                }
                 autoComplete="tel"
                 className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
               />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={
+                  fulfillment === "delivery"
+                    ? "Email (optional, for receipt)"
+                    : "Email (or use phone above)"
+                }
+                autoComplete="email"
+                inputMode="email"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+              />
               <p className="text-xs text-white/35">
-                The creator will text you order updates here.
+                {fulfillment === "delivery"
+                  ? "The courier and creator will reach you via phone."
+                  : "Pick one — we'll send order updates there."}
               </p>
             </div>
           )}
 
-          {/* Email — optional, shown for all users */}
-          <div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email (for order updates)"
-              autoComplete="email"
-              inputMode="email"
-              className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
-            />
-          </div>
+          {/* Email — optional add-on for authed users (they may
+              not have one on file). Hidden for guests because the
+              contact-info block above already collects it. */}
+          {currentUser && (
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email (optional, for receipt)"
+                autoComplete="email"
+                inputMode="email"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+              />
+            </div>
+          )}
 
           {/* Fulfillment */}
           <div>
