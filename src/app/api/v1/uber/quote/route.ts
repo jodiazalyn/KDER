@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api";
+import { checkRateLimit } from "@/lib/rate-limiter";
 import { UberApiError } from "@/lib/uber-direct/client";
 import { quoteDelivery } from "@/lib/uber-direct/quote";
 import type { UberAddress } from "@/lib/uber-direct/types";
@@ -157,15 +158,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Quote is intentionally anonymous-friendly — customers should see
+  // the delivery fee + ETA on the storefront BEFORE they're asked to
+  // provide name/phone (which happens at Pay time, not Quote time).
+  // Same pattern as DoorDash / Uber Eats / every modern food
+  // marketplace. Abuse defense is IP-based rate limiting rather than
+  // an auth gate.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "anonymous-no-ip";
+  const rate = checkRateLimit(
+    `uber_quote:ip:${ip}`,
+    // 60 quotes / hour / IP. Generous — a real customer rarely
+    // re-quotes more than ~5 times per checkout (editing address,
+    // changing dropoff). Catches spam without hitting normal use.
+    60,
+    60 * 60 * 1000
+  );
+  if (!rate.allowed) {
+    return apiError("Too many quote requests. Try again in a minute.", 429);
+  }
+
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return apiError("Sign in to get a delivery quote.", 401);
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: listing } = await (supabase as any)
