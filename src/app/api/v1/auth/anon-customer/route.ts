@@ -7,22 +7,27 @@ import { checkRateLimit } from "@/lib/rate-limiter";
  *
  * TEMPORARY (Twilio A2P 10DLC pending). Removes OTP friction from
  * customer checkout so a buyer can place an order with just name +
- * phone. Once A2P registration lands, the OTP path returns and this
- * endpoint can be retired.
+ * one notification channel (phone OR email). Once A2P registration
+ * lands, the OTP path returns and this endpoint can be retired.
  *
  * Flow:
- *   1. Validate name (1-40 chars trimmed) + phone (10 US digits).
+ *   1. Validate name (1-40 chars trimmed) + at least one of:
+ *      phone (10 US digits) OR email (basic shape match). Delivery
+ *      orders require phone upstream (the courier needs to reach
+ *      the customer at the door), so the relaxed contract is only
+ *      reachable from pickup checkouts.
  *   2. Rate-limit by IP (10/hour) — no SMS gate, so a network-level
  *      limiter is the only friction against bot abuse.
  *   3. supabase.auth.signInAnonymously() — creates an auth.users row
  *      with is_anonymous=true and writes the session cookie via the
  *      SSR client.
  *   4. Upsert a public.members row keyed to that anon user.id with
- *      the typed phone + display_name. Upsert (onConflict: id) so a
- *      same-device retry updates rather than 23505s.
- *   5. Return { user_id, phone, display_name } so the caller can
- *      proceed straight to /api/v1/checkout — which already accepts
- *      anonymous sessions because user.id is a real UUID.
+ *      whatever contact details the customer typed (phone, email, or
+ *      both). Upsert (onConflict: id) so a same-device retry updates
+ *      rather than 23505s.
+ *   5. Return { user_id, phone, email, display_name } so the caller
+ *      can proceed straight to /api/v1/checkout — which already
+ *      accepts anonymous sessions because user.id is a real UUID.
  *
  * Required Supabase config: Auth → Providers → Anonymous Sign-Ins
  * must be ON. If it's not, signInAnonymously returns the
@@ -46,7 +51,7 @@ function getClientIp(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { name?: unknown; phone?: unknown };
+  let body: { name?: unknown; phone?: unknown; email?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -55,6 +60,7 @@ export async function POST(request: NextRequest) {
 
   const rawName = typeof body?.name === "string" ? body.name.trim() : "";
   const rawPhone = typeof body?.phone === "string" ? body.phone : "";
+  const rawEmail = typeof body?.email === "string" ? body.email.trim() : "";
 
   if (rawName.length === 0 || rawName.length > NAME_MAX) {
     return apiError(
@@ -65,11 +71,27 @@ export async function POST(request: NextRequest) {
 
   // Strip everything but digits, take last 10 — accepts "(323) 555-0123",
   // "323-555-0123", "+13235550123", etc. Same shape callers already use.
+  // Phone is now optional at the API level; the caller (CheckoutSheet)
+  // enforces it for delivery orders before getting here.
   const digits = rawPhone.replace(/\D/g, "").slice(-PHONE_DIGITS);
-  if (digits.length !== PHONE_DIGITS) {
-    return apiError("Enter a valid US phone number.", 400);
+  const phoneProvided = digits.length === PHONE_DIGITS;
+  const e164Phone = phoneProvided ? `+1${digits}` : null;
+
+  // Loose email validation — anything-at-anything-dot-anything is
+  // enough to send a receipt; Stripe/SendGrid will bounce on
+  // genuinely invalid addresses.
+  const emailLower = rawEmail.toLowerCase().slice(0, 254);
+  const emailValid = /\S+@\S+\.\S+/.test(emailLower);
+
+  // At least ONE notification channel is required. If both are
+  // missing, the customer has no way to receive order updates and
+  // the creator can't reach them.
+  if (!phoneProvided && !emailValid) {
+    return apiError(
+      "Enter a phone number or email so we can send order updates.",
+      400
+    );
   }
-  const e164Phone = `+1${digits}`;
 
   // HTML-strip the display name like /api/v1/members/create:34 does.
   const cleanName = rawName.replace(/<[^>]*>/g, "").trim();
@@ -104,13 +126,14 @@ export async function POST(request: NextRequest) {
 
   if (signInError || !signInData?.user) {
     const errCode = (signInError as { code?: string } | null)?.code;
-    const phoneSuffix = digits.slice(-4);
+    const phoneSuffix = phoneProvided ? digits.slice(-4) : null;
     console.error("[auth/anon-customer] signInAnonymously failed", {
       code: errCode,
       status: (signInError as { status?: number } | null)?.status,
       message: signInError?.message,
       hasUser: !!signInData?.user,
       phoneSuffix,
+      hasEmail: emailValid,
     });
     // anonymous_provider_disabled: operator hasn't toggled Anonymous
     // Sign-Ins ON in Supabase Auth → Providers. Surface clearly.
@@ -132,27 +155,30 @@ export async function POST(request: NextRequest) {
 
   // Upsert the members row keyed to the anon user. onConflict: 'id'
   // so a same-device retry updates the existing row instead of
-  // erroring on the PK.
+  // erroring on the PK. Phone/email are written only when supplied
+  // so an email-only customer doesn't store an empty phone string
+  // (which would later fail E.164 validation downstream).
+  const memberRow: Record<string, unknown> = {
+    id: userId,
+    display_name: cleanName,
+    role: "member",
+    updated_at: new Date().toISOString(),
+  };
+  if (e164Phone) memberRow.phone = e164Phone;
+  if (emailValid) memberRow.email = emailLower;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: upsertError } = await (supabase as any)
     .from("members")
-    .upsert(
-      {
-        id: userId,
-        phone: e164Phone,
-        display_name: cleanName,
-        role: "member",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+    .upsert(memberRow, { onConflict: "id" });
 
   if (upsertError) {
-    const phoneSuffix = digits.slice(-4);
+    const phoneSuffix = phoneProvided ? digits.slice(-4) : null;
     console.error("[auth/anon-customer] members upsert failed", {
       message: upsertError.message,
       code: (upsertError as { code?: string }).code,
       phoneSuffix,
+      hasEmail: emailValid,
     });
     return apiError(
       `Couldn't save your details: ${upsertError.message}`,
@@ -161,12 +187,15 @@ export async function POST(request: NextRequest) {
   }
 
   console.log(
-    `[auth/anon-customer] ok user_id=${userId} phoneSuffix=${digits.slice(-4)}`
+    `[auth/anon-customer] ok user_id=${userId} phoneSuffix=${
+      phoneProvided ? digits.slice(-4) : "none"
+    } email=${emailValid ? "yes" : "no"}`
   );
 
   return apiSuccess({
     user_id: userId,
-    phone: e164Phone,
+    phone: e164Phone, // null when email-only
+    email: emailValid ? emailLower : null,
     display_name: cleanName,
   });
 }

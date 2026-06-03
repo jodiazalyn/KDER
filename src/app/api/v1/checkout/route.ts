@@ -113,8 +113,26 @@ export async function POST(request: NextRequest) {
       return apiError("Cart is empty", 400);
     }
 
-    if (!member_name || !member_phone) {
-      return apiError("Name and phone are required", 400);
+    // Contact requirements split by fulfillment:
+    //   - delivery → name + phone REQUIRED (Uber's courier needs
+    //     a number to reach the customer at the door)
+    //   - pickup   → name + (phone OR email) — one notification
+    //     channel is enough so we don't gate the order on a
+    //     number the customer doesn't want to share
+    if (!member_name) {
+      return apiError("Name is required.", 400);
+    }
+    if (isDelivery && !member_phone) {
+      return apiError(
+        "Phone is required for delivery — the courier needs to reach you at the door.",
+        400
+      );
+    }
+    if (!isDelivery && !member_phone && !customerEmail) {
+      return apiError(
+        "Enter a phone number or email so we can send order updates.",
+        400
+      );
     }
 
     // Require authenticated customer. The client-side gate should have
@@ -338,7 +356,10 @@ export async function POST(request: NextRequest) {
         creator_handle,
         member_id: user.id,
         member_name: member_name.trim(),
-        member_phone: member_phone.trim(),
+        // Trim and coerce empty → null so an email-only pickup
+        // order doesn't carry around a stray "" we'd later have
+        // to special-case downstream (SMS sender, order pages).
+        member_phone: member_phone?.trim() || null,
         fulfillment_type,
         delivery_address:
           dropoffStreet ||
