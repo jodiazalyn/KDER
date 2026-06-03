@@ -30,6 +30,24 @@ interface CheckoutBody {
   creator_handle: string;
   delivery_address?: string;
   customer_email?: string;
+  /** Structured dropoff for Uber Direct (Phase 2 — migration 019).
+   *  Optional / NULL for pickup orders. */
+  dropoff?: {
+    street_address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+  } | null;
+  /** Uber Direct quote_id the customer accepted at the storefront.
+   *  Reused at delivery-creation time in the post-payment webhook
+   *  so the fee we book matches the fee we charged. */
+  uber_quote_id?: string | null;
+  /** Cents — what Uber quoted. Server re-validates the quote
+   *  server-side if we're being cautious, but for v1 we trust
+   *  the client value (Uber will re-quote at create-delivery
+   *  time anyway; the difference is small enough to absorb if
+   *  it doesn't match). */
+  uber_fee_cents?: number | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -49,6 +67,47 @@ export async function POST(request: NextRequest) {
       typeof body.customer_email === "string" && body.customer_email.trim()
         ? body.customer_email.trim().toLowerCase().slice(0, 254)
         : null;
+
+    // ── Uber Direct delivery fields (Phase 2, migration 019) ─────
+    // We only honor these when fulfillment_type is "delivery" — for
+    // pickup orders any client-supplied uber_* gets dropped to null
+    // so a tampered client can't sneak a fee onto a pickup order.
+    const isDelivery = fulfillment_type === "delivery";
+    const uberQuoteId =
+      isDelivery && typeof body.uber_quote_id === "string"
+        ? body.uber_quote_id.slice(0, 80)
+        : null;
+    const uberFeeCents =
+      isDelivery && typeof body.uber_fee_cents === "number" &&
+      body.uber_fee_cents >= 0 && body.uber_fee_cents < 100_00
+        ? Math.floor(body.uber_fee_cents)
+        : 0;
+    const dropoffStreet =
+      isDelivery && typeof body.dropoff?.street_address === "string"
+        ? body.dropoff.street_address.trim().slice(0, 200)
+        : null;
+    const dropoffCity =
+      isDelivery && typeof body.dropoff?.city === "string"
+        ? body.dropoff.city.trim().slice(0, 80)
+        : null;
+    const dropoffState =
+      isDelivery && typeof body.dropoff?.state === "string"
+        ? body.dropoff.state.trim().toUpperCase().slice(0, 2)
+        : null;
+    const dropoffZip =
+      isDelivery && typeof body.dropoff?.zip_code === "string"
+        ? body.dropoff.zip_code.trim().slice(0, 10)
+        : null;
+
+    // Delivery orders without a quote or structured dropoff can't
+    // be fulfilled — block the order at checkout rather than
+    // letting it succeed and silently fail at delivery booking.
+    if (isDelivery && (!uberQuoteId || !uberFeeCents || !dropoffZip)) {
+      return apiError(
+        "Delivery details are incomplete. Pick a dropoff address and wait for the quote, or switch to pickup.",
+        400
+      );
+    }
 
     if (!items || items.length === 0) {
       return apiError("Cart is empty", 400);
@@ -179,8 +238,24 @@ export async function POST(request: NextRequest) {
       return [...base, ...extraLines];
     });
 
+    // Add delivery fee as its own Stripe line so the customer's
+    // receipt reads "Uber Direct delivery $X" clearly. Skipped on
+    // pickup orders (uberFeeCents stays 0 there).
+    if (isDelivery && uberFeeCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Delivery (Uber Direct)" },
+          unit_amount: uberFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
     // Calculate subtotal for platform fee. Includes plate × qty +
-    // every verified extra (price_cents × qty per extra).
+    // every verified extra (price_cents × qty per extra). Delivery
+    // fee is NOT in the platform-fee base — KDER's 10% only
+    // applies to the food, not to the pass-through Uber cost.
     const subtotalCents = verifiedItems.reduce((sum, item) => {
       const plateCents =
         Math.round(item.price * 100) * item.quantity;
@@ -193,6 +268,16 @@ export async function POST(request: NextRequest) {
     const platformFeeCents = Math.round(
       subtotalCents * (PLATFORM_FEE_PERCENT / 100)
     );
+    // The Stripe `application_fee_amount` routes ALL of KDER's
+    // share to our platform account:
+    //   - platform_fee_cents = 10% of food (existing KDER revenue)
+    //   - uber_fee_cents = pass-through to KDER, who pays Uber's
+    //     invoice on the back end
+    // Net to the creator's Connect account = grand total minus
+    // this combined application fee, which equals the food
+    // subtotal minus 10%. Pickup orders have uber_fee_cents=0
+    // so the math is unchanged for them.
+    const applicationFeeCents = platformFeeCents + uberFeeCents;
 
     // Build origin URL for redirects
     const origin =
@@ -236,9 +321,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const totalAmount = subtotalCents / 100;
+    // Grand total = food + delivery (delivery is 0 on pickup).
+    const grandTotalCents = subtotalCents + uberFeeCents;
+    const totalAmount = grandTotalCents / 100;
     const platformFee = platformFeeCents / 100;
-    const creatorPayout = totalAmount - platformFee;
+    // Creator nets food minus 10% on delivery orders too — the
+    // delivery slice doesn't touch their payout.
+    const creatorPayout = (subtotalCents - platformFeeCents) / 100;
 
     // Let Postgres generate the UUID via DEFAULT gen_random_uuid()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -251,7 +340,25 @@ export async function POST(request: NextRequest) {
         member_name: member_name.trim(),
         member_phone: member_phone.trim(),
         fulfillment_type,
-        delivery_address: delivery_address?.trim() || null,
+        delivery_address:
+          dropoffStreet ||
+          delivery_address?.trim() ||
+          null,
+        // Uber Direct order context (migration 019). Persisted at
+        // checkout time so the post-payment webhook has everything
+        // it needs to create the delivery without re-touching the
+        // request payload.
+        uber_quote_id: uberQuoteId,
+        uber_fee_cents: uberFeeCents || null,
+        dropoff_address: dropoffStreet,
+        dropoff_instructions:
+          isDelivery && dropoffCity && dropoffState && dropoffZip
+            ? JSON.stringify({
+                city: dropoffCity,
+                state: dropoffState,
+                zip_code: dropoffZip,
+              })
+            : null,
         customer_email: customerEmail,
         notes: sanitizedNotes || null,
         quantity: verifiedItems.reduce((s, i) => s + i.quantity, 0),
@@ -310,7 +417,7 @@ export async function POST(request: NextRequest) {
       // default schedule (2-day rolling ACH).
       // PLATFORM_FEE_PERCENT defaults to 10 (set via STRIPE_PLATFORM_FEE_PERCENT env var).
       payment_intent_data: {
-        application_fee_amount: platformFeeCents,
+        application_fee_amount: applicationFeeCents,
         transfer_data: {
           destination: creatorRow.stripe_connect_id,
         },

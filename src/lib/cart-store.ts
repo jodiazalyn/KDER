@@ -10,6 +10,27 @@ export interface CartItem {
   selected_extras?: CartItemExtra[];
 }
 
+/**
+ * INVARIANT — DO NOT REGRESS:
+ *
+ * Carts are keyed per-creator-handle, which means a customer
+ * browsing creator A's storefront has a completely separate
+ * sessionStorage entry from a customer browsing creator B's.
+ * It is STRUCTURALLY IMPOSSIBLE for one cart to contain plates
+ * from multiple creators.
+ *
+ * This invariant matters for Uber Direct: a single delivery has
+ * one pickup point. Mixing creators in one cart would require
+ * either (a) the customer pays multiple delivery fees, (b) we
+ * dispatch multiple couriers from one checkout (we don't
+ * support this), or (c) we'd silently fail at delivery
+ * creation time. By keeping the cart per-creator we sidestep
+ * all of these.
+ *
+ * If a future refactor moves to a global cart, the Uber
+ * checkout flow needs an explicit multi-creator block — see
+ * the Uber Direct integration plan for the rule.
+ */
 function cartKey(handle: string): string {
   return `kder_cart_${handle}`;
 }

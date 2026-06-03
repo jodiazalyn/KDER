@@ -205,6 +205,19 @@ export function PlateForm({ listing }: PlateFormProps) {
   const [extras, setExtras] = useState<ListingExtra[]>(
     listing?.extras ?? restored?.extras ?? []
   );
+
+  // Uber Direct pickup address (migration 019). Required at the
+  // API layer before a delivery-eligible listing can be active.
+  // We capture two fields: a single-line street address Uber
+  // will server-side geocode at quote time, plus free-form
+  // courier instructions (≤280 chars). Both null on
+  // pickup-only listings.
+  const [pickupAddress, setPickupAddress] = useState(
+    listing?.pickup_address ?? ""
+  );
+  const [pickupInstructions, setPickupInstructions] = useState(
+    listing?.pickup_instructions ?? ""
+  );
   const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
   const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
   const [photos, setPhotos] = useState<string[]>(listing?.photos ?? restored?.photos ?? []);
@@ -455,9 +468,41 @@ export function PlateForm({ listing }: PlateFormProps) {
             }))
             .filter((e) => e.name.length > 0)
         : [],
+    // Plate-only pickup address (migration 019). Only sent when
+    // fulfillment includes delivery; explicit null clears any
+    // prior value if the creator switched a delivery listing
+    // back to pickup-only.
+    pickup_address:
+      kind === "plate" &&
+      (fulfillment === "delivery" || fulfillment === "both") &&
+      pickupAddress.trim()
+        ? pickupAddress.trim()
+        : null,
+    pickup_instructions:
+      kind === "plate" &&
+      (fulfillment === "delivery" || fulfillment === "both") &&
+      pickupInstructions.trim()
+        ? pickupInstructions.trim()
+        : null,
   });
 
   const handleSave = async (status: ListingStatus) => {
+    // Delivery-eligible plate listings need a pickup address —
+    // without one the Uber Direct flow can't dispatch a courier.
+    // Only block ACTIVE publishes; drafts can save half-finished
+    // so the creator can come back to it.
+    if (
+      kind === "plate" &&
+      (fulfillment === "delivery" || fulfillment === "both") &&
+      status === "active" &&
+      !pickupAddress.trim()
+    ) {
+      toast.error(
+        "Add a pickup address for delivery orders before publishing."
+      );
+      return;
+    }
+
     // Pre-order plates need a date — the toggle alone isn't enough.
     // Block publish (and draft save too — the column is meaningless
     // without a date) so we don't write a half-broken row.
@@ -467,6 +512,24 @@ export function PlateForm({ listing }: PlateFormProps) {
       !preOrderDate
     ) {
       toast.error("Pick a date for the pre-order availability.");
+      return;
+    }
+
+    // Pre-order + delivery is intentionally blocked in v1 of the
+    // Uber Direct integration. Uber dispatches a courier
+    // immediately on delivery creation, so a pre-order plate
+    // scheduled for next week would either error at
+    // courier-dispatch time or require a net-new scheduled-
+    // delivery cron. Until we have that infrastructure,
+    // pre-order plates are pickup-only.
+    if (
+      kind === "plate" &&
+      plateMode === "pre_order" &&
+      (fulfillment === "delivery" || fulfillment === "both")
+    ) {
+      toast.error(
+        "Pre-order plates are pickup-only for now. Switch fulfillment to Pickup, or change to Instant availability."
+      );
       return;
     }
 
@@ -1048,6 +1111,61 @@ export function PlateForm({ listing }: PlateFormProps) {
                 Fulfillment
               </label>
               <FulfillmentPicker value={fulfillment} onChange={setFulfillment} />
+
+              {/* Pickup address — only when delivery is part of
+                  the fulfillment set. This is where the Uber
+                  courier will collect the food on every
+                  delivery order. Required server-side before
+                  the listing can go active with delivery
+                  enabled (migration 019 + listings POST/PATCH
+                  validation). */}
+              {(fulfillment === "delivery" || fulfillment === "both") && (
+                <div className="mt-4 space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                  <div>
+                    <label
+                      htmlFor="pickup-address"
+                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/55"
+                    >
+                      Pickup address
+                    </label>
+                    <input
+                      id="pickup-address"
+                      type="text"
+                      value={pickupAddress}
+                      onChange={(e) =>
+                        setPickupAddress(e.target.value.slice(0, 200))
+                      }
+                      placeholder="123 Main St, Houston, TX 77001"
+                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                    />
+                    <p className="mt-1 text-[11px] text-white/40">
+                      Where the courier picks up. We use this for
+                      every delivery order on this plate.
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="pickup-instructions"
+                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/55"
+                    >
+                      Notes for the courier (optional)
+                    </label>
+                    <input
+                      id="pickup-instructions"
+                      type="text"
+                      value={pickupInstructions}
+                      onChange={(e) =>
+                        setPickupInstructions(e.target.value.slice(0, 280))
+                      }
+                      placeholder="Ring the side gate, not the front door"
+                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                    />
+                    <p className="mt-1 text-[11px] text-white/40">
+                      {pickupInstructions.length}/280
+                    </p>
+                  </div>
+                </div>
+              )}
             </section>
           ) : (
             <section aria-labelledby="catering-fulfillment-label">

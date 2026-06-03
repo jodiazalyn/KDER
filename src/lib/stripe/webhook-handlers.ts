@@ -5,6 +5,7 @@ import { isValidTransition } from "@/lib/order-state-machine";
 import { notifyDispute } from "@/lib/dispute-notifier";
 import { notifyOrderPlaced } from "@/lib/notifications";
 import { fetchOrderForNotification } from "@/lib/notifications-fetch";
+import { bookUberDeliveryForOrder } from "@/lib/uber-direct/book-for-order";
 
 // We use (supabase as any) for payment-related writes because the
 // generated DB types haven't been regenerated since migration 001+004
@@ -56,6 +57,22 @@ export async function handleCheckoutCompleted(
     return;
   }
   console.log("[webhook] Order", orderId, "paid; awaiting creator accept");
+
+  // Uber Direct: if this is a delivery order, book the courier
+  // now. Idempotent — if Stripe replays this webhook, the helper
+  // returns early on the second pass because uber_delivery_id is
+  // already set. Failure here doesn't fail the order — the order
+  // stays paid + pending; a follow-up cron (Phase 3) will retry
+  // unbooked delivery orders. We log so failures show up in
+  // Netlify monitoring without falling silently.
+  try {
+    await bookUberDeliveryForOrder(supabase, orderId);
+  } catch (err) {
+    console.error(
+      "[webhook] Uber book-for-order failed for", orderId,
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 
   const ctx = await fetchOrderForNotification(supabase, orderId);
   if (ctx) {

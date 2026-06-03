@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, CreditCard, MapPin } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Loader2,
+  CheckCircle2,
+  CreditCard,
+  MapPin,
+  Truck,
+  AlertCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -49,6 +56,25 @@ export interface OrderDetails {
   deliveryAddress: string | null;
 }
 
+/** Live quote response from /api/v1/uber/quote. Mirrors the
+ *  payload that route returns (which itself maps Uber's
+ *  DeliveryQuoteResp into client-friendly snake_case). */
+interface DeliveryQuote {
+  quote_id: string;
+  fee_cents: number;
+  currency: string;
+  duration_minutes: number;
+  pickup_duration_minutes: number;
+  dropoff_eta: string;
+  expires_at: string;
+}
+
+type QuoteState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "ok"; quote: DeliveryQuote }
+  | { kind: "error"; message: string };
+
 const FULFILLMENT_OPTIONS: { value: FulfillmentType; label: string }[] = [
   { value: "pickup", label: "Pickup" },
   { value: "delivery", label: "Delivery" },
@@ -66,6 +92,17 @@ export function CheckoutSheet({
   const [fulfillment, setFulfillment] = useState<FulfillmentType>("pickup");
   const [notes, setNotes] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  // Structured dropoff for Uber Direct. We collect free-text in
+  // `deliveryAddress` (for the order record + courier display) and
+  // parse it client-side into city/state/zip for the Uber quote
+  // call. Customer can also fill the structured fields directly
+  // if the parser fails.
+  const [dropoffCity, setDropoffCity] = useState("");
+  const [dropoffState, setDropoffState] = useState("TX");
+  const [dropoffZip, setDropoffZip] = useState("");
+  // Live Uber Direct quote — re-fetched on (debounced) address
+  // change. NULL state hides the fee/ETA line.
+  const [quoteState, setQuoteState] = useState<QuoteState>({ kind: "idle" });
   const [placing, setPlacing] = useState(false);
   const [success, setSuccess] = useState(false);
   // Guest fields — only used when no currentUser (Twilio A2P pending,
@@ -86,13 +123,148 @@ export function CheckoutSheet({
   }, [open]);
 
   const total = getCartTotal(items);
+
+  /** Best-effort parse of the customer's free-text address into the
+   *  city/state/zip the Uber quote API needs. Auto-populates the
+   *  structured fields whenever the customer types or pastes a full
+   *  address; they can also edit the structured fields directly. */
+  const parseAddress = useCallback((raw: string) => {
+    const parts = raw
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length < 2) return;
+    const last = parts[parts.length - 1];
+    const stateZip = /^([A-Za-z]{2})\s+(\d{5}(?:-\d{4})?)$/.exec(last);
+    if (stateZip) {
+      setDropoffState(stateZip[1].toUpperCase());
+      setDropoffZip(stateZip[2]);
+      if (parts.length >= 3) setDropoffCity(parts[parts.length - 2]);
+    } else if (/^\d{5}(?:-\d{4})?$/.test(last)) {
+      setDropoffZip(last);
+      const prev = parts[parts.length - 2] ?? "";
+      const stateMatch = /^[A-Za-z]{2}$/.exec(prev);
+      if (stateMatch) {
+        setDropoffState(stateMatch[0].toUpperCase());
+        if (parts.length >= 3) setDropoffCity(parts[parts.length - 3]);
+      } else if (parts.length >= 2) {
+        setDropoffCity(parts[parts.length - 2]);
+      }
+    } else if (parts.length >= 2) {
+      setDropoffCity(parts[parts.length - 2]);
+    }
+  }, []);
+
+  // Quote-fetch debouncer. Re-runs whenever a delivery-relevant
+  // field changes; cancels in-flight fetches when the input
+  // changes again before the response lands. Only fires when the
+  // customer has typed enough to make the request meaningful
+  // (street address + zip is the minimum we'll quote on).
+  const quoteAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    if (fulfillment !== "delivery") {
+      setQuoteState({ kind: "idle" });
+      return;
+    }
+    if (items.length === 0) return;
+    const street = deliveryAddress.trim();
+    if (street.length < 5 || !dropoffZip || !/^\d{5}/.test(dropoffZip)) {
+      setQuoteState({ kind: "idle" });
+      return;
+    }
+
+    quoteAbortRef.current?.abort();
+    const ac = new AbortController();
+    quoteAbortRef.current = ac;
+    setQuoteState({ kind: "loading" });
+
+    // 400ms debounce — long enough to swallow typing bursts, short
+    // enough that the customer doesn't feel a lag after they stop.
+    const timer = setTimeout(async () => {
+      // Manifest total is the sum of every cart line + selected
+      // extras. Lets Uber size the delivery + maybe flag high-value
+      // orders for extra-careful handling.
+      const manifestTotalCents = items.reduce((sum, item) => {
+        const plate = Math.round(item.listing.price * 100) * item.quantity;
+        const extras = (item.selected_extras ?? []).reduce(
+          (acc, e) => acc + e.price_cents * e.qty,
+          0
+        );
+        return sum + plate + extras;
+      }, 0);
+
+      try {
+        const res = await fetch("/api/v1/uber/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            // Quote the first cart line's listing — Uber needs a
+            // pickup address, and the cart is per-creator so any
+            // line's pickup_address resolves to the same kitchen.
+            listing_id: items[0].listing.id,
+            dropoff: {
+              street_address: street,
+              city: dropoffCity || "Houston",
+              state: dropoffState || "TX",
+              zip_code: dropoffZip,
+            },
+            manifest_total_value: manifestTotalCents,
+          }),
+          signal: ac.signal,
+        });
+        if (ac.signal.aborted) return;
+        const json = await res.json();
+        if (!res.ok) {
+          // Uber's "no courier available" maps to our 503; treat
+          // it as a graceful soft-fail so the UI can offer the
+          // pickup fallback without screaming red.
+          setQuoteState({
+            kind: "error",
+            message:
+              json?.error ||
+              "Delivery isn't available right now. Try pickup instead.",
+          });
+          return;
+        }
+        setQuoteState({ kind: "ok", quote: json.data as DeliveryQuote });
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+        setQuoteState({
+          kind: "error",
+          message: "Couldn't reach the delivery service. Try pickup instead.",
+        });
+      }
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      ac.abort();
+    };
+  }, [
+    fulfillment,
+    deliveryAddress,
+    dropoffCity,
+    dropoffState,
+    dropoffZip,
+    items,
+  ]);
+
+  const deliveryFeeDollars =
+    quoteState.kind === "ok" ? quoteState.quote.fee_cents / 100 : 0;
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
   // When authed, the existing user satisfies name+phone. When not, the
   // guest inputs must be valid (non-empty trimmed name + 10 digits).
   const guestFieldsValid =
     guestName.trim().length > 0 && guestPhoneDigits.length === 10;
+  // Delivery orders need an active quote — without it we can't
+  // book a courier on the Stripe success webhook side. Pickup
+  // orders skip this gate.
+  const deliveryReady =
+    fulfillment !== "delivery" || quoteState.kind === "ok";
   const canPlace =
-    !needsAddress && (!!currentUser || guestFieldsValid);
+    !needsAddress &&
+    deliveryReady &&
+    (!!currentUser || guestFieldsValid);
 
   const handlePlace = async () => {
     if (placing) return;
@@ -164,6 +336,24 @@ export function CheckoutSheet({
           notes: notes.trim(),
           creator_handle: creatorHandle,
           customer_email: email.trim() || null,
+          // Delivery-only fields. The checkout API uses these to:
+          //   - persist dropoff_address on the order
+          //   - add uber_fee_cents to the Stripe PaymentIntent
+          //   - bake uber_quote_id into order metadata so the
+          //     post-payment webhook can pass it to Uber's
+          //     createDelivery call
+          delivery_address:
+            fulfillment === "delivery" ? deliveryAddress.trim() : null,
+          dropoff: fulfillment === "delivery" ? {
+            street_address: deliveryAddress.trim(),
+            city: dropoffCity || "Houston",
+            state: dropoffState || "TX",
+            zip_code: dropoffZip,
+          } : null,
+          uber_quote_id:
+            quoteState.kind === "ok" ? quoteState.quote.quote_id : null,
+          uber_fee_cents:
+            quoteState.kind === "ok" ? quoteState.quote.fee_cents : null,
         }),
       });
 
@@ -323,17 +513,52 @@ export function CheckoutSheet({
           {/* Notes */}
           {/* Delivery address or Pickup note */}
           {fulfillment === "delivery" ? (
-            <div>
+            <div className="space-y-2">
               <label className="mb-1.5 block text-xs font-medium text-white/50">
                 Delivery address *
               </label>
               <input
                 type="text"
                 value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
+                onChange={(e) => {
+                  setDeliveryAddress(e.target.value);
+                  parseAddress(e.target.value);
+                }}
                 placeholder="123 Main St, Houston, TX 77001"
                 className="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
               />
+              {/* Structured fields — auto-populated by the parser
+                  above, but the customer can also fix them
+                  directly if the parse went sideways. Uber's
+                  quote API needs city/state/zip explicitly. */}
+              <div className="grid grid-cols-[1fr_60px_100px] gap-2">
+                <input
+                  type="text"
+                  value={dropoffCity}
+                  onChange={(e) => setDropoffCity(e.target.value)}
+                  placeholder="City"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                />
+                <input
+                  type="text"
+                  value={dropoffState}
+                  onChange={(e) =>
+                    setDropoffState(e.target.value.slice(0, 2).toUpperCase())
+                  }
+                  placeholder="ST"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs uppercase text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={dropoffZip}
+                  onChange={(e) =>
+                    setDropoffZip(e.target.value.replace(/\D/g, "").slice(0, 5))
+                  }
+                  placeholder="ZIP"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                />
+              </div>
               <button
                 type="button"
                 onClick={() => {
@@ -350,6 +575,7 @@ export function CheckoutSheet({
                         const data = await res.json();
                         if (data.display_name) {
                           setDeliveryAddress(data.display_name);
+                          parseAddress(data.display_name);
                           toast.success("Address found!");
                         }
                       } catch {
@@ -359,11 +585,53 @@ export function CheckoutSheet({
                     () => toast.error("Location access denied")
                   );
                 }}
-                className="mt-2 flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
+                className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
               >
                 <MapPin size={12} />
                 Use my location
               </button>
+
+              {/* Live Uber Direct quote — fee + ETA. Skinny
+                  status row that morphs between loading / OK /
+                  soft-fail states. */}
+              {quoteState.kind === "loading" && (
+                <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-xs text-white/55">
+                  <Loader2 size={12} className="animate-spin" />
+                  Checking delivery availability…
+                </div>
+              )}
+              {quoteState.kind === "ok" && (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] px-3 py-2.5">
+                  <Truck size={14} className="shrink-0 text-emerald-300" />
+                  <div className="flex-1 text-xs">
+                    <p className="font-semibold text-emerald-200">
+                      Delivery available
+                    </p>
+                    <p className="text-emerald-300/80">
+                      Arrives in ~{quoteState.quote.duration_minutes} min
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-200">
+                    ${(quoteState.quote.fee_cents / 100).toFixed(2)}
+                  </p>
+                </div>
+              )}
+              {quoteState.kind === "error" && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-900/[0.18] px-3 py-2.5">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-300" />
+                  <div className="flex-1 text-xs text-amber-100/90">
+                    {quoteState.message}
+                    {" "}
+                    <button
+                      type="button"
+                      onClick={() => setFulfillment("pickup")}
+                      className="ml-1 underline-offset-2 hover:underline font-semibold text-amber-100"
+                    >
+                      Switch to pickup
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="glass-card p-3">
@@ -419,6 +687,17 @@ export function CheckoutSheet({
                 </div>
               );
             })}
+            {/* Delivery fee — surfaced as its own line in the
+                summary when an Uber quote is live so the customer
+                sees the breakdown, not just a higher final number. */}
+            {quoteState.kind === "ok" && (
+              <div className="flex justify-between text-xs">
+                <span className="text-white/60">Delivery (Uber)</span>
+                <span className="text-white">
+                  ${deliveryFeeDollars.toFixed(2)}
+                </span>
+              </div>
+            )}
             <div className="h-px bg-white/[0.08]" />
             <div className="flex justify-between">
               <span className="text-sm font-bold text-white">Total</span>
@@ -426,7 +705,7 @@ export function CheckoutSheet({
                 className="text-lg font-bold text-green-300"
                 style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
               >
-                ${total.toFixed(2)}
+                ${(total + deliveryFeeDollars).toFixed(2)}
               </span>
             </div>
           </div>
@@ -450,7 +729,7 @@ export function CheckoutSheet({
             ) : (
               <>
                 <CreditCard size={16} className="mr-1.5" />
-                Pay ${total.toFixed(2)}
+                Pay ${(total + deliveryFeeDollars).toFixed(2)}
               </>
             )}
           </button>

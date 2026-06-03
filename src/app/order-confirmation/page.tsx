@@ -36,6 +36,19 @@ interface OrderResponse {
   fulfillment_type: "pickup" | "delivery" | "both";
   delivery_address: string | null;
   pickup_address: string | null;
+  /** Uber Direct tracking (Phase 2 — migration 019). Only set on
+   *  delivery orders that have been booked. The order API
+   *  returns these directly when available. */
+  uber_tracking_url?: string | null;
+  uber_status?:
+    | "pending"
+    | "pickup"
+    | "pickup_complete"
+    | "dropoff"
+    | "delivered"
+    | "canceled"
+    | "returned"
+    | null;
   listing_name: string;
   listing_photo: string | null;
   creator_member_id: string | null;
@@ -323,7 +336,7 @@ function OrderConfirmationInner() {
                   size={14}
                   className="mt-0.5 flex-shrink-0 text-white/40"
                 />
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-white/80">Delivery</p>
                   <p className="mt-0.5">
                     {order.delivery_address ?? "Address on file"}
@@ -332,6 +345,46 @@ function OrderConfirmationInner() {
               </>
             )}
           </div>
+
+          {/* Uber Direct live tracking — surfaces once the
+              post-payment webhook has booked the delivery.
+              Status pill auto-updates as the order's
+              `uber_status` column flips via the inbound webhook
+              handler. While the URL is missing (briefly, between
+              payment success and the createDelivery call) we
+              show a neutral "booking your courier" hint instead
+              of nothing. */}
+          {order.fulfillment_type === "delivery" && (
+            <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] p-3">
+              {order.uber_tracking_url ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+                      Live tracking
+                    </p>
+                    {order.uber_status && (
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 ring-1 ring-inset ring-emerald-400/30">
+                        {formatUberStatus(order.uber_status)}
+                      </span>
+                    )}
+                  </div>
+                  <a
+                    href={order.uber_tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex h-10 w-full items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-transform"
+                  >
+                    Track your delivery →
+                  </a>
+                </>
+              ) : (
+                <p className="text-xs text-emerald-200/80">
+                  Booking your courier… your tracking link will
+                  appear here in a moment.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Message thread — only renders when we have the auth user's id and
@@ -528,4 +581,28 @@ export default function OrderConfirmationPage() {
       <OrderConfirmationInner />
     </Suspense>
   );
+}
+
+/** Human-friendly label for an Uber Direct status enum value.
+ *  The seven raw values are courier-side terminology that
+ *  doesn't read well to a customer — translate before showing. */
+function formatUberStatus(
+  status: NonNullable<OrderResponse["uber_status"]>
+): string {
+  switch (status) {
+    case "pending":
+      return "Booking";
+    case "pickup":
+      return "Courier on the way";
+    case "pickup_complete":
+      return "Food picked up";
+    case "dropoff":
+      return "Out for delivery";
+    case "delivered":
+      return "Delivered";
+    case "canceled":
+      return "Canceled";
+    case "returned":
+      return "Returned";
+  }
 }
