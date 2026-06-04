@@ -75,9 +75,12 @@ export function PricingCoachLauncher() {
     >
       {/* KDER brand mark inside the FAB — anchors the "this is the
           KDER coach" identity. Tiny sparkle in the corner cues AI
-          without being clip-art. */}
+          without being clip-art.
+          NOTE: mark-WHITE on the dark-green button. The green-on-green
+          variant (mark-green.png) is intentionally only used on light
+          backgrounds — using it here renders the logo invisible. */}
       <Image
-        src="/brand/mark-green.png"
+        src="/brand/mark-white.png"
         alt=""
         width={28}
         height={28}
