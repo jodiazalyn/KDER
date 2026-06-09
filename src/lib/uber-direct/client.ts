@@ -126,6 +126,17 @@ export async function uberRequest<T>(opts: RequestOpts): Promise<T> {
 
   const doRequest = async (attempt: number): Promise<T> => {
     const token = await getAccessToken();
+    // Diagnostic: print env + host + cid prefix on every Uber call.
+    // Catches the "I thought I was on sandbox but my env vars point
+    // at prod" class of bug (which is exactly how we discovered our
+    // disabled-prod-account false alarm — UBER_DIRECT_ENV was set
+    // to sandbox but UBER_DIRECT_CUSTOMER_ID belonged to the prod
+    // account). Cheap to keep around: one log line per Uber API call.
+    const env = process.env.UBER_DIRECT_ENV ?? "sandbox";
+    const host = new URL(url).host;
+    console.log(
+      `[uber-direct.${opts.op}] env=${env} host=${host} cid=${cid.slice(0, 8)} attempt=${attempt}`
+    );
     const res = await fetch(url, {
       method: opts.method,
       headers: {
