@@ -157,20 +157,32 @@ interface PlateFormProps {
 function parsePickupOnLoad(raw: string): {
   street: string;
   city: string;
-  stateZip: string;
+  state: string;
+  zip: string;
 } {
-  if (!raw) return { street: "", city: "", stateZip: "" };
+  const empty = { street: "", city: "", state: "", zip: "" };
+  if (!raw) return empty;
+  // Split a trailing "STATE ZIP" chunk ("TX 77004", "TX 77004-1234",
+  // or a bare state / bare zip) into its two parts. Lazy state +
+  // optional zip so partial input still prefills the right box.
+  const splitStateZip = (s: string): { state: string; zip: string } => {
+    const m = s.trim().match(/^(.*?)\s*(\d{5}(?:-\d{4})?)?$/);
+    if (!m) return { state: s.trim(), zip: "" };
+    return { state: (m[1] || "").trim(), zip: (m[2] || "").trim() };
+  };
   const parts = raw
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean);
   if (parts.length === 3) {
-    return { street: parts[0], city: parts[1], stateZip: parts[2] };
+    const { state, zip } = splitStateZip(parts[2]);
+    return { street: parts[0], city: parts[1], state, zip };
   }
   if (parts.length === 2) {
-    return { street: parts[0], city: "", stateZip: parts[1] };
+    const { state, zip } = splitStateZip(parts[1]);
+    return { street: parts[0], city: "", state, zip };
   }
-  return { street: raw, city: "", stateZip: "" };
+  return { street: raw, city: "", state: "", zip: "" };
 }
 
 export function PlateForm({ listing }: PlateFormProps) {
@@ -247,7 +259,8 @@ export function PlateForm({ listing }: PlateFormProps) {
   const parsedPickup = parsePickupOnLoad(listing?.pickup_address ?? "");
   const [pickupStreet, setPickupStreet] = useState(parsedPickup.street);
   const [pickupCity, setPickupCity] = useState(parsedPickup.city || "Houston");
-  const [pickupStateZip, setPickupStateZip] = useState(parsedPickup.stateZip);
+  const [pickupState, setPickupState] = useState(parsedPickup.state || "TX");
+  const [pickupZip, setPickupZip] = useState(parsedPickup.zip);
   const [pickupInstructions, setPickupInstructions] = useState(
     listing?.pickup_instructions ?? ""
   );
@@ -255,8 +268,8 @@ export function PlateForm({ listing }: PlateFormProps) {
   // + activation gate. Format: "street, city, state zip" so the
   // server-side parser keeps working on this exact shape.
   const pickupAddress =
-    pickupStreet.trim() && pickupCity.trim() && pickupStateZip.trim()
-      ? `${pickupStreet.trim()}, ${pickupCity.trim()}, ${pickupStateZip.trim()}`
+    pickupStreet.trim() && pickupCity.trim() && pickupState.trim() && pickupZip.trim()
+      ? `${pickupStreet.trim()}, ${pickupCity.trim()}, ${pickupState.trim()} ${pickupZip.trim()}`
       : "";
   const [quantity, setQuantity] = useState(listing?.quantity ?? restored?.quantity ?? 1);
   const [minOrder, setMinOrder] = useState(listing?.min_order?.toString() ?? restored?.minOrder ?? "");
@@ -538,20 +551,28 @@ export function PlateForm({ listing }: PlateFormProps) {
       (fulfillment === "delivery" || fulfillment === "both") &&
       status === "active"
     ) {
-      const stateZipPattern = /^[A-Z]{2}\s+\d{5}(?:-\d{4})?$/i;
+      const statePattern = /^[A-Z]{2}$/i;
+      const zipPattern = /^\d{5}(?:-\d{4})?$/;
       if (
         !pickupStreet.trim() ||
         !pickupCity.trim() ||
-        !pickupStateZip.trim()
+        !pickupState.trim() ||
+        !pickupZip.trim()
       ) {
         toast.error(
-          "Fill in street, city, and state + ZIP for the pickup address before publishing."
+          "Fill in street, city, state, and ZIP for the pickup address before publishing."
         );
         return;
       }
-      if (!stateZipPattern.test(pickupStateZip.trim())) {
+      if (!statePattern.test(pickupState.trim())) {
         toast.error(
-          "State + ZIP should look like 'TX 77004' so the courier can find you."
+          "State should be a 2-letter code like 'TX' so the courier can find you."
+        );
+        return;
+      }
+      if (!zipPattern.test(pickupZip.trim())) {
+        toast.error(
+          "ZIP should look like '77004' so the courier can find you."
         );
         return;
       }
@@ -1204,16 +1225,35 @@ export function PlateForm({ listing }: PlateFormProps) {
                       autoComplete="address-level2"
                       className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
                     />
-                    <input
-                      id="pickup-state-zip"
-                      type="text"
-                      value={pickupStateZip}
-                      onChange={(e) =>
-                        setPickupStateZip(e.target.value.slice(0, 20))
-                      }
-                      placeholder="State + ZIP — e.g. TX 77004"
-                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        id="pickup-state"
+                        type="text"
+                        value={pickupState}
+                        onChange={(e) =>
+                          setPickupState(
+                            e.target.value.replace(/[^a-zA-Z]/g, "").slice(0, 2).toUpperCase()
+                          )
+                        }
+                        placeholder="State — e.g. TX"
+                        autoComplete="address-level1"
+                        className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                      />
+                      <input
+                        id="pickup-zip"
+                        type="text"
+                        inputMode="numeric"
+                        value={pickupZip}
+                        onChange={(e) =>
+                          setPickupZip(
+                            e.target.value.replace(/[^\d-]/g, "").slice(0, 10)
+                          )
+                        }
+                        placeholder="ZIP — e.g. 77004"
+                        autoComplete="postal-code"
+                        className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                      />
+                    </div>
                     <p className="text-[11px] text-white/40">
                       Where the courier picks up. We send this to Uber
                       on every delivery order for this plate.
