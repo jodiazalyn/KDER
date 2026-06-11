@@ -2,80 +2,56 @@
  * Slack poster for ops notifications (order receipt confirmations,
  * disputes).
  *
- * Unlike the beta-signup notifier (which uses an incoming-webhook URL
- * bound to a single channel), this posts to a specific channel BY ID
- * via the Web API `chat.postMessage`. That requires a bot token, not a
- * webhook URL — the channel id `C0B9KNNSK4P` only makes sense as a
- * `channel` argument to the API.
+ * Same pattern as the beta-signup notifier: ONE incoming-webhook URL,
+ * no bot token, no channel argument. The webhook is bound to its
+ * destination channel when you create it, so posting is just a POST of
+ * `{ text }` to that URL.
  *
- * Config (both required, else this is a quiet no-op):
- *   - SLACK_BOT_TOKEN   — a bot token (xoxb-…) with chat:write scope,
- *                         invited to the destination channel.
- *   - SLACK_OPS_CHANNEL — channel id to post into. Defaults to the
- *                         ops dispute channel if unset.
+ * Setup (one-time):
+ *   1. https://api.slack.com/apps → your app → Incoming Webhooks → on
+ *   2. Add New Webhook to Workspace → pick the ops/dispute channel
+ *      (the one whose id is C0B9KNNSK4P)
+ *   3. Copy the https://hooks.slack.com/services/... URL into Netlify
+ *      env as ORDER_OPS_WEBHOOK_URL
  *
- * Best-effort by design: a Slack failure must NEVER break the order
- * flow. Callers can `await` (to log the result) or fire-and-forget;
- * either way this resolves to a boolean and never throws.
+ * If the env var is unset (e.g. local dev), this is a quiet no-op — a
+ * missing webhook must never break the order flow.
+ *
+ * Best-effort: resolves to a boolean, never throws. Callers can await
+ * (to log) or fire-and-forget.
  */
 
-const DEFAULT_OPS_CHANNEL = "C0B9KNNSK4P";
-
 export interface SlackMessage {
-  /** Plain-text fallback / notification text. */
+  /** Message text. Slack incoming webhooks accept mrkdwn here. */
   text: string;
-  /** Optional Block Kit blocks for richer formatting. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  blocks?: any[];
-  /** Override the destination channel id. Defaults to env / ops channel. */
-  channel?: string;
 }
 
 /**
- * Post a message to Slack. Returns true on success, false on any
- * failure (missing config, network error, non-ok API response).
- * Never throws.
+ * Post a message to the ops Slack channel via incoming webhook.
+ * Returns true on success, false on any failure (missing URL, network
+ * error, non-ok response). Never throws.
  */
 export async function postToSlack(msg: SlackMessage): Promise<boolean> {
-  const token = process.env.SLACK_BOT_TOKEN;
-  if (!token) {
-    console.warn("[slack] SLACK_BOT_TOKEN not set — skipping post");
+  const url = process.env.ORDER_OPS_WEBHOOK_URL;
+  if (!url) {
+    console.warn("[slack] ORDER_OPS_WEBHOOK_URL not set — skipping post");
     return false;
   }
 
-  const channel =
-    msg.channel ?? process.env.SLACK_OPS_CHANNEL ?? DEFAULT_OPS_CHANNEL;
-
   try {
-    const res = await fetch("https://slack.com/api/chat.postMessage", {
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        channel,
-        text: msg.text,
-        ...(msg.blocks ? { blocks: msg.blocks } : {}),
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: msg.text }),
       signal: AbortSignal.timeout(4000),
     });
-
-    // Slack always returns HTTP 200; the real status is in the JSON
-    // body's `ok` field (e.g. `channel_not_found`, `not_in_channel`).
-    const json = (await res.json().catch(() => null)) as
-      | { ok?: boolean; error?: string }
-      | null;
-
-    if (!json?.ok) {
-      console.warn(
-        `[slack] postMessage failed: ${json?.error ?? `http ${res.status}`}`
-      );
+    if (!res.ok) {
+      console.warn(`[slack] webhook returned ${res.status}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.warn("[slack] postMessage threw", err);
+    console.warn("[slack] webhook delivery failed", err);
     return false;
   }
 }
