@@ -6,10 +6,12 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * NOTE: Uber's webhook signing scheme isn't published in the
  * OpenAPI spec (the spec only covers the REST API). The exact
  * header name + signing algorithm are documented in the Direct
- * dashboard webhooks page. Defaults below are educated guesses
- * based on the industry norm (HMAC-SHA256 of the raw body,
- * passed in `X-Uber-Signature` as a hex digest); confirm + fix
- * at the start of Phase 3 when we wire the webhook route.
+ * dashboard webhooks page. Defaults below follow the industry
+ * norm (HMAC-SHA256 of the raw body, passed in `X-Uber-Signature`
+ * as a hex digest) and are consumed by the webhook route at
+ * src/app/api/v1/uber/webhook/route.ts. CONFIRM the header name +
+ * algorithm against the Direct dashboard during sandbox bring-up;
+ * if Uber differs, adjust HEADER_NAME / the digest below.
  */
 
 const HEADER_NAME = "x-uber-signature";
