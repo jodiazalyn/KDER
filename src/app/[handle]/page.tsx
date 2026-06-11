@@ -48,6 +48,8 @@ interface CreatorRow {
   storefront_active: boolean | null;
   service_zip_codes: string[] | null;
   vibe_score: number | string | null;
+  review_rating_avg: number | string | null;
+  review_count: number | null;
 }
 
 function resolveZips(zips: string[]) {
@@ -82,7 +84,7 @@ async function loadStorefrontUncached(handle: string): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: creatorRow } = (await (supabase as any)
     .from("creators")
-    .select("id, storefront_active, service_zip_codes, vibe_score")
+    .select("id, storefront_active, service_zip_codes, vibe_score, review_rating_avg, review_count")
     .eq("member_id", member.id)
     .single()) as { data: CreatorRow | null };
 
@@ -133,6 +135,12 @@ async function loadStorefrontUncached(handle: string): Promise<{
       creatorRow.vibe_score !== null && creatorRow.vibe_score !== undefined
         ? Number(creatorRow.vibe_score)
         : null,
+    review_rating_avg:
+      creatorRow.review_rating_avg !== null &&
+      creatorRow.review_rating_avg !== undefined
+        ? Number(creatorRow.review_rating_avg)
+        : null,
+    review_count: creatorRow.review_count ?? 0,
     total_orders: completedOrdersCount ?? 0,
     total_plates: listings.length,
     pickup_address: null,

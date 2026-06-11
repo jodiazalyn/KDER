@@ -71,8 +71,16 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
         <div className="flex flex-1 justify-around">
           <Stat value={creator.total_plates.toString()} label="Plates" />
           <Stat
-            value={`${(creator.vibe_score ?? 5).toFixed(1)}★`}
-            label="Rating"
+            value={
+              creator.review_count > 0 && creator.review_rating_avg != null
+                ? `${creator.review_rating_avg.toFixed(1)}★`
+                : "New"
+            }
+            label={
+              creator.review_count > 0
+                ? `Rating · ${creator.review_count}`
+                : "Rating"
+            }
           />
         </div>
       </div>

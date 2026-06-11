@@ -24,6 +24,12 @@ export interface CreatorProfile {
   neighborhoods: { name: string; zip: string }[];
   storefront_active: boolean;
   vibe_score: number | null;
+  /** Denormalized average star rating from order_reviews (migration
+   *  021). Null until the creator's first review lands. Drives the
+   *  storefront header rating display. */
+  review_rating_avg: number | null;
+  /** Count of order_reviews backing review_rating_avg. */
+  review_count: number;
   total_orders: number;
   total_plates: number;
   pickup_address: string | null;
@@ -57,7 +63,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("creators")
-          .select("service_zip_codes, storefront_active, vibe_score, pickup_address")
+          .select("service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address")
           .eq("member_id", user.id)
           .single(),
       ]);
@@ -80,6 +86,11 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           vibe_score: creator?.vibe_score
             ? Number(creator.vibe_score)
             : null,
+          review_rating_avg:
+            creator?.review_rating_avg != null
+              ? Number(creator.review_rating_avg)
+              : null,
+          review_count: creator?.review_count ?? 0,
           total_orders: 0,
           total_plates: 0,
           pickup_address: creator?.pickup_address || null,
@@ -125,6 +136,8 @@ export function getCreatorProfile(): CreatorProfile {
     neighborhoods,
     storefront_active: storefrontActive !== "false",
     vibe_score: null,
+    review_rating_avg: null,
+    review_count: 0,
     total_orders: 0,
     total_plates: 0,
     pickup_address: profile.pickup_address || null,
@@ -165,6 +178,8 @@ function defaultProfile(): CreatorProfile {
     neighborhoods: [],
     storefront_active: true,
     vibe_score: null,
+    review_rating_avg: null,
+    review_count: 0,
     total_orders: 0,
     total_plates: 0,
     pickup_address: null,
