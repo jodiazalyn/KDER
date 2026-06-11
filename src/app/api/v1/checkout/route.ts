@@ -455,6 +455,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ checkout_url: session.url });
   } catch (error) {
     console.error("Checkout session error:", error);
-    return apiError("Failed to create checkout session", 500);
+    // Pass the real Stripe/DB message through to the client. Stripe's
+    // errors here are operator-facing and safe to show (e.g. "No such
+    // destination", "account ... does not have the transfers
+    // capability enabled", test/live key mismatch) — they're what an
+    // operator needs to fix the misconfiguration. Falls back to the
+    // generic copy if the throw carries no message.
+    const detail =
+      error instanceof Error && error.message
+        ? error.message
+        : "Failed to create checkout session";
+    return apiError(detail, 500);
   }
 }

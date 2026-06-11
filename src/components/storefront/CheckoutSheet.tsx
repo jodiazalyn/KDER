@@ -397,7 +397,14 @@ export function CheckoutSheet({
       window.location.href = data.checkout_url;
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error("Payment setup failed. Please try again.");
+      // Surface the server's real reason (creator not Connect-verified,
+      // Stripe test/live mismatch, missing capability, etc.) instead of
+      // a single opaque "try again" that makes every failure identical.
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "Payment setup failed. Please try again.";
+      toast.error(message);
       setPlacing(false);
     }
   };
