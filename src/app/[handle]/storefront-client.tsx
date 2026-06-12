@@ -3,8 +3,9 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Grid3x3, CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { Grid3x3, CalendarRange, ShoppingCart, UtensilsCrossed, Star } from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
+import { CreatorReviews } from "@/components/storefront/CreatorReviews";
 import {
   ActiveOrderBanner,
   type ActiveOrderSummary,
@@ -87,9 +88,11 @@ export function StorefrontClient({
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  // Active grid tab. Defaults to plates; only meaningful when the creator
-  // has at least one catering listing (the tab strip hides otherwise).
-  const [activeTab, setActiveTab] = useState<"plates" | "catering">("plates");
+  // Active storefront tab. Plates + Reviews are always present; Catering
+  // only appears when the creator has ≥1 catering listing.
+  const [activeTab, setActiveTab] = useState<
+    "plates" | "catering" | "reviews"
+  >("plates");
   // IDs of catering listings the customer has tapped to pre-select.
   // These ride along to the inquiry form so the creator's quote starts
   // pre-populated with the items the customer wants.
@@ -470,6 +473,26 @@ export function StorefrontClient({
     [listings]
   );
 
+  // Tab strip config. Plates + Reviews are always shown; Catering is
+  // inserted between them only when the creator offers catering.
+  const storefrontTabs = useMemo(
+    () =>
+      [
+        { key: "plates" as const, label: "Plates", Icon: Grid3x3 },
+        ...(cateringListings.length > 0
+          ? [
+              {
+                key: "catering" as const,
+                label: "Catering",
+                Icon: CalendarRange,
+              },
+            ]
+          : []),
+        { key: "reviews" as const, label: "Reviews", Icon: Star },
+      ],
+    [cateringListings.length]
+  );
+
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
     // Tag filter only applies to plates; catering tab has its own layout.
@@ -530,53 +553,38 @@ export function StorefrontClient({
           </div>
         )}
 
-        {/* Tab bar — Plates | Catering. Catering tab only renders if
-            the creator has ≥1 catering listing, so plate-only creators
-            see the unchanged single-tab header. */}
-        {cateringListings.length > 0 ? (
-          <div
-            role="tablist"
-            aria-label="Storefront sections"
-            className="flex items-stretch border-y border-white/[0.08]"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "plates"}
-              onClick={() => setActiveTab("plates")}
-              className={cn(
-                "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
-                activeTab === "plates"
-                  ? "border-b-2 border-green-400 text-white"
-                  : "border-b-2 border-transparent text-white/40 hover:text-white/70"
-              )}
-            >
-              <Grid3x3 size={14} />
-              Plates
-            </button>
-            <button
-              ref={cateringTabRef}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === "catering"}
-              onClick={() => setActiveTab("catering")}
-              className={cn(
-                "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
-                activeTab === "catering"
-                  ? "border-b-2 border-green-400 text-white"
-                  : "border-b-2 border-transparent text-white/40 hover:text-white/70"
-              )}
-            >
-              <CalendarRange size={14} />
-              Catering
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center gap-2 border-y border-white/[0.08] py-3 text-[11px] font-bold uppercase tracking-[0.12em] text-white">
-            <Grid3x3 size={14} />
-            Plates
-          </div>
-        )}
+        {/* Tab bar — Plates | [Catering] | Reviews. Plates and Reviews
+            are always present; Catering only appears when the creator
+            has ≥1 catering listing. */}
+        <div
+          role="tablist"
+          aria-label="Storefront sections"
+          className="flex items-stretch border-y border-white/[0.08]"
+        >
+          {storefrontTabs.map((tab) => {
+            const isActive = activeTab === tab.key;
+            const Icon = tab.Icon;
+            return (
+              <button
+                key={tab.key}
+                ref={tab.key === "catering" ? cateringTabRef : undefined}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(tab.key)}
+                className={cn(
+                  "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
+                  isActive
+                    ? "border-b-2 border-green-400 text-white"
+                    : "border-b-2 border-transparent text-white/40 hover:text-white/70"
+                )}
+              >
+                <Icon size={14} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* Two-tier category filter — only on the Plates tab */}
         {activeTab === "plates" && availableTags.length > 0 && (
@@ -608,6 +616,16 @@ export function StorefrontClient({
               Tap items you&apos;re interested in, then request a quote.
             </p>
           </div>
+        )}
+
+        {/* Reviews tab content — ratings + written reviews. Self-fetches
+            on first render via CreatorReviews. */}
+        {activeTab === "reviews" && (
+          <CreatorReviews
+            creatorId={creator.creator_id ?? null}
+            averageRating={creator.review_rating_avg}
+            reviewCount={creator.review_count}
+          />
         )}
 
         {/* Plates grid + empty state — only on the Plates tab */}
