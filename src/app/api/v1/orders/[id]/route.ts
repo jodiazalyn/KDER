@@ -100,6 +100,11 @@ export async function GET(
       // honest without a serializer round-trip.
       uber_tracking_url: row.uber_tracking_url ?? null,
       uber_status: row.uber_status ?? null,
+      // Customer receipt-confirmation state (migration 021). Drives the
+      // "did you receive your order?" + review prompt on the
+      // confirmation page. Pass-through off the orders row.
+      receipt_status: row.receipt_status ?? null,
+      received_confirmed_at: row.received_confirmed_at ?? null,
     };
 
     return apiSuccess({ order });

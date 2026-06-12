@@ -16,6 +16,7 @@ import { clearCart } from "@/lib/cart-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { OrderExtrasList } from "@/components/orders/OrderExtrasList";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { OrderReceiptReview } from "@/components/orders/OrderReceiptReview";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,10 @@ interface OrderResponse {
   listing_photo: string | null;
   creator_member_id: string | null;
   creator_display_name: string | null;
+  /** Customer receipt-confirmation state (migration 021). Set once the
+   *  customer confirms they received the order (or reported a problem). */
+  receipt_status?: "received" | "problem" | null;
+  received_confirmed_at?: string | null;
   /** Snapshot of cart items at checkout (migration 018). Each row's
    *  optional `extras` field is the customer's add-on picks. */
   items?: Array<{
@@ -86,6 +91,9 @@ function OrderConfirmationInner() {
     "loading"
   );
   const [showBanner, setShowBanner] = useState(false);
+  // Bumping this re-runs the fetch effect — used to immediately reflect
+  // a customer receipt confirmation without waiting for the next poll.
+  const [refreshKey, setRefreshKey] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Coachmark anchor for the StatusTracker timeline. First-time tip
   // explains that customers will get SMS updates as the order moves
@@ -176,7 +184,7 @@ function OrderConfirmationInner() {
         pollRef.current = null;
       }
     };
-  }, [orderId, router]);
+  }, [orderId, router, refreshKey]);
 
   if (loadState === "loading") {
     return (
@@ -269,6 +277,16 @@ function OrderConfirmationInner() {
         <div ref={statusTrackerRef}>
           <StatusTracker order={order} />
         </div>
+
+        {/* Customer close-out: confirm receipt (or report a problem),
+            then leave an optional star review. Only renders once the
+            creator has fulfilled the order. */}
+        <OrderReceiptReview
+          orderId={order.id}
+          status={order.status}
+          receiptStatus={order.receipt_status ?? null}
+          onConfirmed={() => setRefreshKey((k) => k + 1)}
+        />
 
         {/* Order summary card */}
         <div className="glass-card p-4">
