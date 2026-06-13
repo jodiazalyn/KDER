@@ -33,11 +33,22 @@ export function CreatorReviews({
 }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  // Summary (avg + count) seeded from the denormalized creator aggregate
+  // for an instant first paint, then overwritten with the live values the
+  // reviews endpoint computes from the actual rows. The aggregate can lag
+  // (its write goes through the service-role client), so the fetched
+  // numbers are the source of truth once they land — that's what keeps the
+  // header from claiming "New / no reviews" while real reviews render below.
+  const [summary, setSummary] = useState<{
+    average: number | null;
+    count: number;
+  }>({ average: averageRating, count: reviewCount });
 
   useEffect(() => {
     if (!creatorId) {
       setState("ready");
       setReviews([]);
+      setSummary({ average: null, count: 0 });
       return;
     }
     let cancelled = false;
@@ -47,7 +58,24 @@ export function CreatorReviews({
         if (!res.ok) throw new Error("bad status");
         const json = await res.json();
         if (cancelled) return;
-        setReviews((json?.data?.reviews as Review[]) ?? []);
+        const fetched = (json?.data?.reviews as Review[]) ?? [];
+        setReviews(fetched);
+        // Prefer the endpoint's computed aggregate; fall back to deriving
+        // it from the returned rows so the summary always matches the list.
+        const count =
+          typeof json?.data?.count === "number"
+            ? json.data.count
+            : fetched.length;
+        const average =
+          typeof json?.data?.average === "number"
+            ? json.data.average
+            : fetched.length > 0
+              ? Math.round(
+                  (fetched.reduce((s, r) => s + r.rating, 0) / fetched.length) *
+                    10
+                ) / 10
+              : null;
+        setSummary({ average, count });
         setState("ready");
       } catch {
         if (!cancelled) setState("error");
@@ -64,15 +92,15 @@ export function CreatorReviews({
       <div className="flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
         <div className="text-center">
           <p className="text-3xl font-black leading-none text-white">
-            {averageRating != null ? averageRating.toFixed(1) : "—"}
+            {summary.average != null ? summary.average.toFixed(1) : "—"}
           </p>
-          <StarRow rating={Math.round(averageRating ?? 0)} size={13} />
+          <StarRow rating={Math.round(summary.average ?? 0)} size={13} />
           <p className="mt-1 text-[11px] text-white/40">
-            {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+            {summary.count} {summary.count === 1 ? "review" : "reviews"}
           </p>
         </div>
         <div className="flex-1 text-sm text-white/60">
-          {reviewCount > 0
+          {summary.count > 0
             ? "What customers say after their orders."
             : "No reviews yet — be the first to order and leave one."}
         </div>
