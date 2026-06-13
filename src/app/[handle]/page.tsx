@@ -93,10 +93,10 @@ async function loadStorefrontUncached(handle: string): Promise<{
     return { creator: null, listings: [] };
   }
 
-  // Listings + completed-orders count are independent of each other and
-  // both depend only on creatorRow.id — run them in parallel. Saves
-  // ~150-300ms per uncached storefront visit.
-  const [listingsRes, ordersRes] = await Promise.all([
+  // Listings + completed-orders count + review aggregate are independent of
+  // each other and all depend only on creatorRow.id — run them in parallel.
+  // Saves ~150-300ms per uncached storefront visit.
+  const [listingsRes, ordersRes, reviewsRes] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase as any)
       .from("listings")
@@ -114,10 +114,35 @@ async function loadStorefrontUncached(handle: string): Promise<{
       .select("*", { count: "exact", head: true })
       .eq("creator_id", creatorRow.id)
       .eq("status", "completed") as Promise<{ count: number | null }>,
+    // Rating aggregate computed live from order_reviews (indexed on
+    // creator_id). We do NOT trust creators.review_rating_avg /
+    // review_count for display — that denormalized cache is written by the
+    // service-role client and can lag, which is what left the header
+    // showing "New" while real reviews existed. The reviews list endpoint
+    // computes the same way, so header + tab stay consistent.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase as any)
+      .from("order_reviews")
+      .select("rating")
+      .eq("creator_id", creatorRow.id) as Promise<{
+      data: { rating: number }[] | null;
+    }>,
   ]);
 
   const listings = listingsRes.data ?? [];
   const completedOrdersCount = ordersRes.count;
+
+  // Live review aggregate — source of truth for the storefront display.
+  const reviewRows = reviewsRes.data ?? [];
+  const liveReviewCount = reviewRows.length;
+  const liveReviewAvg =
+    liveReviewCount > 0
+      ? Math.round(
+          (reviewRows.reduce((s, r) => s + (r.rating ?? 0), 0) /
+            liveReviewCount) *
+            10
+        ) / 10
+      : null;
 
   const creator: CreatorProfile = {
     display_name: member.display_name || "Creator",
@@ -135,12 +160,8 @@ async function loadStorefrontUncached(handle: string): Promise<{
       creatorRow.vibe_score !== null && creatorRow.vibe_score !== undefined
         ? Number(creatorRow.vibe_score)
         : null,
-    review_rating_avg:
-      creatorRow.review_rating_avg !== null &&
-      creatorRow.review_rating_avg !== undefined
-        ? Number(creatorRow.review_rating_avg)
-        : null,
-    review_count: creatorRow.review_count ?? 0,
+    review_rating_avg: liveReviewAvg,
+    review_count: liveReviewCount,
     total_orders: completedOrdersCount ?? 0,
     total_plates: listings.length,
     pickup_address: null,
