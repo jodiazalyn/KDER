@@ -185,7 +185,7 @@ export function PlateDetailSheet({
               </SheetTitle>
 
               {listing.description && (
-                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70">
+                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/70">
                   {listing.description}
                 </p>
               )}

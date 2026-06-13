@@ -145,7 +145,7 @@ export function CreatorReviews({
                 </span>
               </div>
               {r.body && (
-                <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/80">
+                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/80">
                   {r.body}
                 </p>
               )}

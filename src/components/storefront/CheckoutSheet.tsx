@@ -30,6 +30,41 @@ function formatPhone(phone: string): string {
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
+/** US state full-name → USPS abbreviation. Nominatim returns the full
+ *  state name ("Texas"), but the Uber quote API + dropoff fields want the
+ *  2-letter code. */
+const US_STATE_ABBR: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR",
+  california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE",
+  "district of columbia": "DC", florida: "FL", georgia: "GA", hawaii: "HI",
+  idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS",
+  kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS",
+  missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM",
+  "new york": "NY", "north carolina": "NC", "north dakota": "ND",
+  ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA",
+  "rhode island": "RI", "south carolina": "SC", "south dakota": "SD",
+  tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT", virginia: "VA",
+  washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY",
+};
+
+/** Resolve a 2-letter state code from Nominatim's address object, preferring
+ *  the ISO3166-2 code ("US-TX" → "TX") and falling back to the name map. */
+function resolveStateCode(addr: Record<string, unknown>): string | null {
+  const iso = addr["ISO3166-2-lvl4"];
+  if (typeof iso === "string" && iso.includes("-")) {
+    const code = iso.split("-").pop();
+    if (code && code.length === 2) return code.toUpperCase();
+  }
+  const state = addr.state;
+  if (typeof state === "string") {
+    const abbr = US_STATE_ABBR[state.toLowerCase()];
+    if (abbr) return abbr;
+  }
+  return null;
+}
+
 /** Format raw digits as the user types: "3235550123" → "(323) 555-0123". */
 function formatPhoneInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 10);
@@ -100,6 +135,10 @@ export function CheckoutSheet({
   const [dropoffCity, setDropoffCity] = useState("");
   const [dropoffState, setDropoffState] = useState("TX");
   const [dropoffZip, setDropoffZip] = useState("");
+  // True while the browser geolocation prompt + reverse-geocode is in
+  // flight, so the "Use my location" button can show a spinner and lock
+  // out double-taps.
+  const [locating, setLocating] = useState(false);
   // Live Uber Direct quote — re-fetched on (debounced) address
   // change. NULL state hides the fee/ETA line.
   const [quoteState, setQuoteState] = useState<QuoteState>({ kind: "idle" });
@@ -157,6 +196,81 @@ export function CheckoutSheet({
     } else if (parts.length >= 2) {
       setDropoffCity(parts[parts.length - 2]);
     }
+  }, []);
+
+  /** "Use my location": ask the browser for GPS, then reverse-geocode into
+   *  STRUCTURED fields. We request addressdetails so we can populate
+   *  city/state/zip directly — the old path stuffed Nominatim's verbose
+   *  `display_name` (which ends in "…, United States") into one box, so the
+   *  parser never found the zip and the quote never fired. */
+  const handleUseLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast.error("Location not supported on this device");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=jsonv2&addressdetails=1`,
+            { headers: { Accept: "application/json" } }
+          );
+          if (!res.ok) throw new Error(`geocode ${res.status}`);
+          const data = await res.json();
+          const addr = (data?.address ?? {}) as Record<string, unknown>;
+
+          const houseNumber =
+            typeof addr.house_number === "string" ? addr.house_number : "";
+          const road = typeof addr.road === "string" ? addr.road : "";
+          const street = [houseNumber, road].filter(Boolean).join(" ").trim();
+
+          const city =
+            (typeof addr.city === "string" && addr.city) ||
+            (typeof addr.town === "string" && addr.town) ||
+            (typeof addr.village === "string" && addr.village) ||
+            (typeof addr.suburb === "string" && addr.suburb) ||
+            (typeof addr.county === "string" && addr.county) ||
+            "";
+          const stateCode = resolveStateCode(addr);
+          const zip =
+            typeof addr.postcode === "string"
+              ? addr.postcode.replace(/\D/g, "").slice(0, 5)
+              : "";
+
+          // Use the clean street line as the editable address; fall back to
+          // the verbose display_name only if we couldn't build a street.
+          const streetLine =
+            street || (typeof data?.display_name === "string" ? data.display_name : "");
+          if (streetLine) setDeliveryAddress(streetLine);
+          if (city) setDropoffCity(city);
+          if (stateCode) setDropoffState(stateCode);
+          if (zip) setDropoffZip(zip);
+
+          if (zip) {
+            toast.success("Address found!");
+          } else {
+            // Got a fix but couldn't pin a zip — let them finish by hand
+            // rather than silently failing.
+            toast.message("Got your location — please add your ZIP to finish.");
+          }
+        } catch {
+          toast.error("Could not resolve location. Enter your address manually.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      (err) => {
+        setLocating(false);
+        toast.error(
+          err.code === err.PERMISSION_DENIED
+            ? "Location access denied — enable it or type your address."
+            : "Couldn't get your location. Enter your address manually."
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   }, []);
 
   // Quote-fetch debouncer. Re-runs whenever a delivery-relevant
@@ -605,34 +719,16 @@ export function CheckoutSheet({
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  if (!navigator.geolocation) {
-                    toast.error("Location not supported on this device");
-                    return;
-                  }
-                  navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                      try {
-                        const res = await fetch(
-                          `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`
-                        );
-                        const data = await res.json();
-                        if (data.display_name) {
-                          setDeliveryAddress(data.display_name);
-                          parseAddress(data.display_name);
-                          toast.success("Address found!");
-                        }
-                      } catch {
-                        toast.error("Could not resolve location");
-                      }
-                    },
-                    () => toast.error("Location access denied")
-                  );
-                }}
-                className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300"
+                onClick={handleUseLocation}
+                disabled={locating}
+                className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 disabled:opacity-60"
               >
-                <MapPin size={12} />
-                Use my location
+                {locating ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <MapPin size={12} />
+                )}
+                {locating ? "Locating…" : "Use my location"}
               </button>
 
               {/* Live Uber Direct quote — fee + ETA. Skinny
