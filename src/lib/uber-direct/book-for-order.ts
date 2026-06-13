@@ -268,6 +268,11 @@ export async function bookUberDeliveryForOrder(
       uber_fee_cents: delivery.fee,
       uber_status: delivery.status,
       uber_status_updated_at: new Date().toISOString(),
+      // Clear any prior booking failure — this attempt succeeded, so a
+      // stale error from an earlier failed attempt must not linger and
+      // keep the confirmation page in its error state.
+      uber_booking_error: null,
+      uber_booking_failed_at: null,
     })
     .eq("id", order.id);
 
