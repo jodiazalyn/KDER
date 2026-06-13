@@ -287,7 +287,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
                       })}
                     </span>
                     <span
-                      className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                      className={`max-w-[88%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
                         fromCreator
                           ? "rounded-br-md bg-[#1B5E20] text-white"
                           : "rounded-bl-md bg-white/[0.06] text-white/90"

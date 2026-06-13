@@ -94,7 +94,7 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
           @{creator.handle}
         </p>
         {creator.bio && (
-          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-white/70 line-clamp-3">
+          <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/70 line-clamp-3">
             {creator.bio}
           </p>
         )}
