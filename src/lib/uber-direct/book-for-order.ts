@@ -158,6 +158,22 @@ export async function bookUberDeliveryForOrder(
   const pickupPhone = creatorMember?.phone ?? "+10000000000"; // creator phone is required upstream
   const dropoffPhone = order.member_phone ?? "+10000000000";
 
+  // Pickup note the courier reads at the creator's door. Lead with a
+  // short order reference + the customer's name so the courier grabs the
+  // RIGHT bag when a creator has several orders going out at once, then
+  // append the creator's own pickup_instructions. Capped at Uber's
+  // 280-char pickup_notes limit.
+  const orderRef = order.id.slice(0, 8).toUpperCase();
+  const pickupCustomerName = order.member_name?.trim() || "Customer";
+  const pickupNotes =
+    [
+      `KDER order #${orderRef} for ${pickupCustomerName}`,
+      pickupListing.pickup_instructions?.trim() || "",
+    ]
+      .filter(Boolean)
+      .join(". ")
+      .slice(0, 280) || undefined;
+
   // Book the delivery. Two layers of resilience:
   //   - Idempotency: order.id passed as both idempotency_key +
   //     external_id, so concurrent webhook retries return the
@@ -177,7 +193,7 @@ export async function bookUberDeliveryForOrder(
         address: pickupAddress,
         phoneNumber: pickupPhone,
         businessName: creatorMember?.display_name ?? undefined,
-        notes: pickupListing.pickup_instructions ?? undefined,
+        notes: pickupNotes,
       },
       dropoff: {
         name: order.member_name ?? "Customer",
