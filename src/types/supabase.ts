@@ -18,9 +18,9 @@ export type Database = {
         Update: { id?: string; phone?: string; display_name?: string; handle?: string | null; photo_url?: string | null; bio?: string | null; role?: string; stripe_customer_id?: string | null; inbox_active?: boolean; last_handle_changed_at?: string | null; instagram_handle?: string | null; tiktok_handle?: string | null; website_url?: string | null; facebook_handle?: string | null; whatsapp_number?: string | null; updated_at?: string };
       };
       creators: {
-        Row: { id: string; member_id: string; legal_name: string | null; dob: string | null; stripe_connect_id: string | null; kyc_status: string; service_zip_codes: string[]; vibe_score: number | null; storefront_active: boolean; created_at: string };
-        Insert: { id?: string; member_id: string; legal_name?: string | null; dob?: string | null; stripe_connect_id?: string | null; kyc_status?: string; service_zip_codes?: string[]; vibe_score?: number | null; storefront_active?: boolean; created_at?: string };
-        Update: { member_id?: string; legal_name?: string | null; dob?: string | null; stripe_connect_id?: string | null; kyc_status?: string; service_zip_codes?: string[]; vibe_score?: number | null; storefront_active?: boolean };
+        Row: { id: string; member_id: string; legal_name: string | null; dob: string | null; stripe_connect_id: string | null; kyc_status: string; service_zip_codes: string[]; vibe_score: number | null; review_rating_avg: number | null; review_count: number; storefront_active: boolean; created_at: string };
+        Insert: { id?: string; member_id: string; legal_name?: string | null; dob?: string | null; stripe_connect_id?: string | null; kyc_status?: string; service_zip_codes?: string[]; vibe_score?: number | null; review_rating_avg?: number | null; review_count?: number; storefront_active?: boolean; created_at?: string };
+        Update: { member_id?: string; legal_name?: string | null; dob?: string | null; stripe_connect_id?: string | null; kyc_status?: string; service_zip_codes?: string[]; vibe_score?: number | null; review_rating_avg?: number | null; review_count?: number; storefront_active?: boolean };
       };
       listings: {
         Row: { id: string; creator_id: string; name: string; description: string; price: number; quantity: number; min_order: number | null; photos: string[]; video: string | null; fulfillment_type: string; status: string; category_tags: string[]; allergens: string[]; availability_windows: Json; discount_codes: Json; order_count: number; created_at: string; updated_at: string };
@@ -28,9 +28,9 @@ export type Database = {
         Update: { name?: string; description?: string; price?: number; quantity?: number; min_order?: number | null; photos?: string[]; video?: string | null; fulfillment_type?: string; status?: string; category_tags?: string[]; allergens?: string[]; availability_windows?: Json; discount_codes?: Json; order_count?: number; updated_at?: string };
       };
       orders: {
-        Row: { id: string; listing_id: string; member_id: string; creator_id: string; quantity: number; fulfillment_type: string; status: string; total_amount: number; platform_fee: number; creator_payout: number; notes: string | null; stripe_payment_intent_id: string | null; terms_accepted_at: string; auto_decline_at: string; created_at: string; updated_at: string; reminder_count: number; last_reminder_at: string | null; customer_email: string | null };
-        Insert: { id?: string; listing_id: string; member_id: string; creator_id: string; quantity?: number; fulfillment_type: string; status?: string; total_amount: number; platform_fee: number; creator_payout: number; notes?: string | null; stripe_payment_intent_id?: string | null; terms_accepted_at?: string; auto_decline_at?: string; created_at?: string; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null };
-        Update: { status?: string; notes?: string | null; stripe_payment_intent_id?: string | null; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null };
+        Row: { id: string; listing_id: string; member_id: string; creator_id: string; quantity: number; fulfillment_type: string; status: string; total_amount: number; platform_fee: number; creator_payout: number; notes: string | null; stripe_payment_intent_id: string | null; terms_accepted_at: string; auto_decline_at: string; created_at: string; updated_at: string; reminder_count: number; last_reminder_at: string | null; customer_email: string | null; received_confirmed_at: string | null; receipt_status: string | null; receipt_note: string | null };
+        Insert: { id?: string; listing_id: string; member_id: string; creator_id: string; quantity?: number; fulfillment_type: string; status?: string; total_amount: number; platform_fee: number; creator_payout: number; notes?: string | null; stripe_payment_intent_id?: string | null; terms_accepted_at?: string; auto_decline_at?: string; created_at?: string; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null; received_confirmed_at?: string | null; receipt_status?: string | null; receipt_note?: string | null };
+        Update: { status?: string; notes?: string | null; stripe_payment_intent_id?: string | null; updated_at?: string; reminder_count?: number; last_reminder_at?: string | null; customer_email?: string | null; received_confirmed_at?: string | null; receipt_status?: string | null; receipt_note?: string | null };
       };
       messages: {
         Row: { id: string; order_id: string | null; sender_id: string; recipient_id: string; body: string; read_at: string | null; created_at: string };
@@ -41,6 +41,11 @@ export type Database = {
         Row: { id: string; order_id: string; rater_id: string; ratee_id: string; ratee_role: string; hospitality: number | null; authenticity: number | null; professionalism: number | null; respect: number | null; punctuality: number | null; comment: string | null; created_at: string };
         Insert: { id?: string; order_id: string; rater_id: string; ratee_id: string; ratee_role: string; hospitality?: number | null; authenticity?: number | null; professionalism?: number | null; respect?: number | null; punctuality?: number | null; comment?: string | null; created_at?: string };
         Update: { hospitality?: number | null; authenticity?: number | null; professionalism?: number | null; respect?: number | null; punctuality?: number | null; comment?: string | null };
+      };
+      order_reviews: {
+        Row: { id: string; order_id: string; creator_id: string; member_id: string; rating: number; body: string | null; created_at: string };
+        Insert: { id?: string; order_id: string; creator_id: string; member_id: string; rating: number; body?: string | null; created_at?: string };
+        Update: { rating?: number; body?: string | null };
       };
     };
     Views: Record<string, never>;

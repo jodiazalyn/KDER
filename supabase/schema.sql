@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS creators (
   kyc_status TEXT DEFAULT 'not_started' CHECK (kyc_status IN ('not_started', 'pending', 'verified', 'failed')),
   service_zip_codes TEXT[] DEFAULT '{}',
   vibe_score NUMERIC(3,2),
+  -- Denormalized order_reviews aggregate (migration 021). Recomputed by
+  -- the review POST endpoint so the storefront header renders without
+  -- scanning order_reviews on every page load.
+  review_rating_avg NUMERIC(3,2),
+  review_count INTEGER NOT NULL DEFAULT 0,
   storefront_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -74,6 +79,11 @@ CREATE TABLE IF NOT EXISTS orders (
   stripe_payment_intent_id TEXT,
   terms_accepted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   auto_decline_at TIMESTAMPTZ NOT NULL DEFAULT (now() + interval '15 minutes'),
+  -- Customer receipt-confirmation loop (migration 021). Set after the
+  -- creator completes the order; independent of payout.
+  received_confirmed_at TIMESTAMPTZ,
+  receipt_status TEXT CHECK (receipt_status IS NULL OR receipt_status IN ('received', 'problem')),
+  receipt_note TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -106,6 +116,18 @@ CREATE TABLE IF NOT EXISTS vibe_ratings (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Order Reviews (lightweight 1-5 star review left after receipt — migration 021)
+-- Distinct from vibe_ratings (the heavier 5-dimension flow). One row per order.
+CREATE TABLE IF NOT EXISTS order_reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID REFERENCES orders(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  creator_id UUID REFERENCES creators(id) ON DELETE CASCADE NOT NULL,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE NOT NULL,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  body TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- ============================================
 -- INDEXES
 -- ============================================
@@ -121,6 +143,8 @@ CREATE INDEX IF NOT EXISTS idx_messages_recipient_unread ON messages(recipient_i
 CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(sender_id, recipient_id);
 CREATE INDEX IF NOT EXISTS idx_vibe_ratings_order ON vibe_ratings(order_id);
 CREATE INDEX IF NOT EXISTS idx_vibe_ratings_ratee ON vibe_ratings(ratee_id);
+CREATE INDEX IF NOT EXISTS idx_order_reviews_creator ON order_reviews(creator_id);
+CREATE INDEX IF NOT EXISTS idx_order_reviews_member ON order_reviews(member_id);
 
 -- ============================================
 -- ROW LEVEL SECURITY
@@ -132,6 +156,7 @@ ALTER TABLE listings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vibe_ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_reviews ENABLE ROW LEVEL SECURITY;
 
 -- Members: users can read all profiles, insert and update only their own
 CREATE POLICY "Public profiles are viewable by everyone" ON members
@@ -199,6 +224,15 @@ CREATE POLICY "Rating parties can view" ON vibe_ratings
 
 CREATE POLICY "Authenticated users can rate" ON vibe_ratings
   FOR INSERT WITH CHECK (rater_id::text = auth.uid()::text);
+
+-- Order Reviews: public read (feeds creator reputation), member inserts own.
+-- API writes normally go through the service-role client; these policies
+-- cover direct-read/insert paths as defense in depth.
+CREATE POLICY "order_reviews_select_public" ON order_reviews
+  FOR SELECT USING (true);
+
+CREATE POLICY "order_reviews_insert_own" ON order_reviews
+  FOR INSERT WITH CHECK (member_id::text = auth.uid()::text);
 
 -- ============================================
 -- REALTIME

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
 import { postToSlack } from "@/lib/slack";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { OrderStatus } from "@/types";
 
 /**
@@ -116,8 +117,23 @@ export async function PUT(
 
     const confirmedAt = new Date().toISOString();
 
+    // The orders UPDATE RLS policy is creator-only ("Creator can update
+    // own orders"), so the customer's session cannot stamp these
+    // receipt columns — a user-session update would silently affect 0
+    // rows. We already proved ownership above (order.member_id ===
+    // user.id), so the route is the integrity layer: write through the
+    // service-role client, which bypasses RLS. If the service key isn't
+    // configured we fail loudly (503) rather than pretend it persisted.
+    const service = createServiceClient();
+    if (!service) {
+      console.error(
+        "[orders/received] SUPABASE_SERVICE_ROLE_KEY not set — cannot persist receipt (orders UPDATE is creator-only under RLS)"
+      );
+      return apiError("Receipt confirmation is temporarily unavailable.", 503);
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await (service as any)
       .from("orders")
       .update({
         receipt_status: status,
