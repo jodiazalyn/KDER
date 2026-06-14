@@ -100,6 +100,11 @@ export async function GET(
       // honest without a serializer round-trip.
       uber_tracking_url: row.uber_tracking_url ?? null,
       uber_status: row.uber_status ?? null,
+      // Booking-failure state (migration 022). When the courier booking
+      // throws in the Stripe webhook, the reason is persisted here so the
+      // confirmation page can show a real error instead of an indefinite
+      // "Booking your courier…" spinner. NULL once a booking succeeds.
+      uber_booking_error: row.uber_booking_error ?? null,
       // Customer receipt-confirmation state (migration 021). Drives the
       // "did you receive your order?" + review prompt on the
       // confirmation page. Pass-through off the orders row.

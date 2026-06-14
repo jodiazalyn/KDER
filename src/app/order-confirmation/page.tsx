@@ -50,6 +50,11 @@ interface OrderResponse {
     | "canceled"
     | "returned"
     | null;
+  /** Booking-failure reason (migration 022). Set when the Stripe
+   *  webhook's courier-booking call threw. Lets the page show a real
+   *  error instead of an indefinite "Booking your courier…" spinner.
+   *  Cleared to null once a booking succeeds. */
+  uber_booking_error?: string | null;
   listing_name: string;
   listing_photo: string | null;
   creator_member_id: string | null;
@@ -372,37 +377,53 @@ function OrderConfirmationInner() {
               payment success and the createDelivery call) we
               show a neutral "booking your courier" hint instead
               of nothing. */}
-          {order.fulfillment_type === "delivery" && (
-            <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] p-3">
-              {order.uber_tracking_url ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
-                      Live tracking
-                    </p>
-                    {order.uber_status && (
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 ring-1 ring-inset ring-emerald-400/30">
-                        {formatUberStatus(order.uber_status)}
-                      </span>
-                    )}
-                  </div>
-                  <a
-                    href={order.uber_tracking_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex h-10 w-full items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-transform"
-                  >
-                    Track your delivery →
-                  </a>
-                </>
-              ) : (
+          {order.fulfillment_type === "delivery" &&
+            (order.uber_tracking_url ? (
+              <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+                    Live tracking
+                  </p>
+                  {order.uber_status && (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 ring-1 ring-inset ring-emerald-400/30">
+                      {formatUberStatus(order.uber_status)}
+                    </span>
+                  )}
+                </div>
+                <a
+                  href={order.uber_tracking_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 flex h-10 w-full items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-[0_0_14px_rgba(16,185,129,0.4)] active:scale-95 transition-transform"
+                >
+                  Track your delivery →
+                </a>
+              </div>
+            ) : order.uber_booking_error ? (
+              // Booking failed (migration 022). Show a real error state
+              // instead of an indefinite spinner so the customer knows the
+              // courier didn't dispatch and can reach out. Payment already
+              // succeeded — the creator + KDER ops are on the hook to
+              // resolve, so we frame it as "we're on it," not a dead end.
+              <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-900/[0.18] p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-200">
+                  Courier booking delayed
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-amber-100/80">
+                  We hit a snag dispatching your courier. Your payment went
+                  through and {order.creator_display_name ?? "the creator"} has
+                  been notified — message them below and our team will get your
+                  delivery sorted.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] p-3">
                 <p className="text-xs text-emerald-200/80">
                   Booking your courier… your tracking link will
                   appear here in a moment.
                 </p>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
         </div>
 
         {/* Message thread — only renders when we have the auth user's id and

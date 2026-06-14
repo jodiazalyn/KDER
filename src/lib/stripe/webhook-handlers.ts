@@ -68,10 +68,29 @@ export async function handleCheckoutCompleted(
   try {
     await bookUberDeliveryForOrder(supabase, orderId);
   } catch (err) {
-    console.error(
-      "[webhook] Uber book-for-order failed for", orderId,
-      err instanceof Error ? err.message : String(err)
-    );
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("[webhook] Uber book-for-order failed for", orderId, reason);
+    // Persist the failure reason onto the order so it's debuggable from
+    // the row itself instead of a silent NULL uber_delivery_id. The
+    // order-confirmation page reads this to show a real error state
+    // rather than an indefinite "Booking your courier…" spinner. A later
+    // successful booking clears these back to NULL (see book-for-order).
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("orders")
+        .update({
+          uber_booking_error: reason.slice(0, 500),
+          uber_booking_failed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", orderId);
+    } catch (persistErr) {
+      console.error(
+        "[webhook] failed to persist Uber booking error for", orderId,
+        persistErr instanceof Error ? persistErr.message : String(persistErr)
+      );
+    }
   }
 
   const ctx = await fetchOrderForNotification(supabase, orderId);
