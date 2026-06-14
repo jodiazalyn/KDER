@@ -92,27 +92,90 @@ export async function requireUser(): Promise<UserContext> {
 /**
  * Admin / cofounder gate for the internal Super Dashboard (`/super`).
  *
- * Authorization is an env-driven email allowlist rather than a DB role,
- * on purpose:
+ * Authorization is an env-driven allowlist rather than a DB role, on
+ * purpose:
  *   - There are only a handful of cofounders, so an allowlist is the
  *     least-surface, lowest-risk option (no migration, no RLS change,
  *     no risk of a mis-set `role` column escalating a normal user).
  *   - Revoking access is a one-line env edit + redeploy, not a data fix.
  *
- * Set ADMIN_EMAILS to a comma-separated list of the cofounders' login
- * emails (the email on their Supabase auth user), e.g.
- *   ADMIN_EMAILS="jodi@kder.club,cofounder@kder.club"
- * Matching is case-insensitive and trims whitespace.
+ * A cofounder matches if ANY of these identifies them — set whichever is
+ * easiest, you don't need all three:
+ *   - ADMIN_EMAILS   — their Supabase AUTH login email (not the
+ *                      members.email contact field, which can differ /
+ *                      be empty for phone-only logins)
+ *   - ADMIN_IDS      — their auth user UUID (the most precise; never
+ *                      changes regardless of how they log in)
+ *   - ADMIN_HANDLES  — their @handle from the members table (most
+ *                      human-friendly; a leading "@" is optional)
+ * Each is a comma-separated list; matching is case-insensitive +
+ * whitespace-trimmed.
  *
  * On failure we redirect to "/" (not /signup) and never reveal that the
  * route exists — a logged-in non-admin and a logged-out visitor both
  * just land on the home page.
- *
- * Returns the cofounder's auth identity plus a SERVICE-ROLE client. The
- * dashboard reads across every creator/member/order, which RLS is
- * designed to forbid for a normal session — so once the caller is proven
- * to be an admin, we hand back the service client to do the cross-tenant
- * aggregate reads. Never expose that client to the browser.
+ */
+
+function parseAllowlist(raw: string | undefined): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export interface AdminCheck {
+  isAdmin: boolean;
+  userId: string | null;
+  email: string | null;
+}
+
+/**
+ * Non-redirecting admin evaluation backing requireAdmin (the route gate).
+ * Does the cheap checks (email, UUID) first and only hits the DB for the
+ * handle lookup if a handle allowlist is configured and nothing has
+ * matched yet.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function evaluateAdmin(supabase: SupabaseClient<any>): Promise<AdminCheck> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { isAdmin: false, userId: null, email: null };
+
+  const email = user.email?.trim().toLowerCase() ?? "";
+  const emails = parseAllowlist(process.env.ADMIN_EMAILS);
+  const ids = parseAllowlist(process.env.ADMIN_IDS);
+  const handles = parseAllowlist(process.env.ADMIN_HANDLES).map((h) =>
+    h.replace(/^@/, "")
+  );
+
+  let isAdmin =
+    (email.length > 0 && emails.includes(email)) ||
+    ids.includes(user.id.toLowerCase());
+
+  if (!isAdmin && handles.length > 0) {
+    const { data: member } = await supabase
+      .from("members")
+      .select("handle")
+      .eq("id", user.id)
+      .maybeSingle();
+    const handle = (member?.handle ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/^@/, "");
+    if (handle && handles.includes(handle)) isAdmin = true;
+  }
+
+  return { isAdmin, userId: user.id, email: email || null };
+}
+
+/**
+ * Hard gate for the dashboard route. Returns the cofounder's auth
+ * identity plus a SERVICE-ROLE client. The dashboard reads across every
+ * creator/member/order, which RLS is designed to forbid for a normal
+ * session — so once the caller is proven an admin, we hand back the
+ * service client to do the cross-tenant aggregate reads. Never expose
+ * that client to the browser.
  */
 export interface AdminContext {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,19 +186,9 @@ export interface AdminContext {
 export async function requireAdmin(): Promise<AdminContext> {
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    redirect("/");
-  }
 
-  const allowlist = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  const email = user.email?.trim().toLowerCase() ?? "";
-  if (!email || allowlist.length === 0 || !allowlist.includes(email)) {
+  const { isAdmin, userId, email } = await evaluateAdmin(supabase);
+  if (!isAdmin || !userId) {
     redirect("/");
   }
 
@@ -147,5 +200,5 @@ export async function requireAdmin(): Promise<AdminContext> {
     redirect("/");
   }
 
-  return { service, user: { id: user.id, email } };
+  return { service, user: { id: userId, email: email ?? "" } };
 }

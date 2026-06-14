@@ -1,7 +1,23 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
+  // Convenience: cofounders can reach the Super Dashboard by appending
+  // "/super" to ANY path (e.g. /listings/super, /earnings/super,
+  // /catering/calendar/super) — not just the bare /super. Any path that
+  // ends in a "/super" segment (other than the canonical /super itself)
+  // is redirected to the top-level /super route, which then enforces the
+  // admin allowlist gate. This keeps a single source of truth for the
+  // dashboard while making it muscle-memory-easy to open from wherever
+  // you happen to be in the app. Non-admins still bounce to "/" from the
+  // /super page itself, so this exposes nothing.
+  const { pathname } = request.nextUrl;
+  if (pathname !== "/super" && /\/super\/?$/.test(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/super";
+    return NextResponse.redirect(url);
+  }
+
   return await updateSession(request);
 }
 
