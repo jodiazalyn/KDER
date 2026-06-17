@@ -60,6 +60,59 @@ export interface Bucket {
   amount?: number; // dollars, optional
 }
 
+/* ── Row-level detail rows for card drill-downs ───────────────────
+ * Slim, presentation-ready projections of the underlying rows so a
+ * cofounder can click a headline KPI and see the actual records behind
+ * the number. Lists are capped (most-recent-first / most-relevant-first)
+ * to bound the payload — KDER is early-stage so the caps are generous. */
+export interface OrderDetail {
+  id: string;
+  createdAt: string;
+  status: string | null;
+  fulfillment: string | null;
+  total: number; // dollars
+  platformFee: number; // dollars
+  paid: boolean;
+  paidAt: string | null;
+  uberStatus: string | null;
+  city: string | null;
+}
+export interface MemberDetail {
+  name: string | null;
+  role: string | null;
+  email: string | null;
+  createdAt: string;
+}
+export interface CreatorDetail {
+  name: string;
+  handle: string | null;
+  createdAt: string;
+  kyc: string | null;
+  payoutsEnabled: boolean;
+  storefrontActive: boolean;
+  rating: number | null;
+  reviews: number;
+  zips: number;
+  listings: number;
+  orders: number;
+  gmv: number; // dollars
+  /**
+   * Where this creator is stuck in the onboarding→selling journey, so
+   * cofounders can see at a glance who needs a nudge. One of:
+   * "Needs Stripe", "Needs payouts", "Storefront off", "No listings",
+   * "No orders yet", "Active".
+   */
+  stage: string;
+}
+export interface ListingDetail {
+  name: string;
+  kind: string | null;
+  status: string | null;
+  fulfillment: string | null;
+  price: number; // dollars
+  orders: number;
+}
+
 export interface SuperMetrics {
   generatedAt: string;
 
@@ -98,6 +151,13 @@ export interface SuperMetrics {
     withReviews: number;
     avgRating: number | null;
     topByRating: { name: string; rating: number; count: number }[];
+    // Recruitment + activation: how the creator pipeline is filling and
+    // where creators drop off, so cofounders know where to spend effort.
+    new7d: number;
+    new30d: number;
+    newTrend: TimePoint[]; // new creators per day, last 30d
+    funnel: Bucket[]; // onboarding→selling funnel (ordered stages)
+    needsAttention: number; // creators not yet "Active"
   };
 
   // ── Listings / plates ──────────────────────────────────────────
@@ -172,15 +232,32 @@ export interface SuperMetrics {
     average: number | null;
     distribution: Bucket[]; // 5★ → 1★
   };
+
+  // ── Row-level detail (for clicking into a headline card) ───────
+  details: {
+    orders: OrderDetail[];
+    members: MemberDetail[];
+    creators: CreatorDetail[];
+    listings: ListingDetail[];
+  };
 }
 
 // Lightweight row shapes (we only select these columns).
-type MemberRow = { role: string | null; email: string | null; created_at: string };
+type MemberRow = {
+  role: string | null;
+  email: string | null;
+  created_at: string;
+  display_name: string | null;
+  handle: string | null;
+};
 type MemberEmbed = { display_name: string | null; handle: string | null };
 type CreatorRow = {
+  id: string;
+  created_at: string;
   kyc_status: string | null;
   payouts_enabled: boolean | null;
   storefront_active: boolean | null;
+  stripe_connect_id: string | null;
   service_zip_codes: string[] | null;
   review_count: number | null;
   review_rating_avg: number | null;
@@ -196,6 +273,7 @@ function embed(m: MemberEmbed | MemberEmbed[] | null): MemberEmbed | null {
   return Array.isArray(m) ? (m[0] ?? null) : m;
 }
 type ListingRow = {
+  creator_id: string | null;
   name: string | null;
   kind: string | null;
   status: string | null;
@@ -205,6 +283,8 @@ type ListingRow = {
   category_tags: string[] | null;
 };
 type OrderRow = {
+  id: string;
+  creator_id: string | null;
   status: string | null;
   fulfillment_type: string | null;
   total_amount: number | null;
@@ -250,6 +330,26 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Parse the "City, ST" label out of an order's dropoff_instructions JSON. */
+function parseDropoffCity(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { city?: string; state?: string };
+    const city = (parsed.city ?? "").trim();
+    if (!city) return null;
+    return parsed.state ? `${city}, ${parsed.state}` : city;
+  } catch {
+    return null;
+  }
+}
+
+/** Newest-first comparator on an ISO created_at string. */
+function byCreatedDesc(a: { created_at: string }, b: { created_at: string }): number {
+  return b.created_at.localeCompare(a.created_at);
+}
+
+const DETAIL_CAP = 250;
+
 export async function loadSuperMetrics(service: DB): Promise<SuperMetrics> {
   // Fetch slim projections from every domain in parallel.
   const [
@@ -264,19 +364,19 @@ export async function loadSuperMetrics(service: DB): Promise<SuperMetrics> {
     disputesRes,
     reviewsRes,
   ] = await Promise.all([
-    service.from("members").select("role, email, created_at"),
+    service.from("members").select("role, email, created_at, display_name, handle"),
     service
       .from("creators")
       .select(
-        "kyc_status, payouts_enabled, storefront_active, service_zip_codes, review_count, review_rating_avg, legal_name, member:members(display_name, handle)"
+        "id, created_at, kyc_status, payouts_enabled, storefront_active, stripe_connect_id, service_zip_codes, review_count, review_rating_avg, legal_name, member:members(display_name, handle)"
       ),
     service
       .from("listings")
-      .select("name, kind, status, fulfillment_type, price, order_count, category_tags"),
+      .select("creator_id, name, kind, status, fulfillment_type, price, order_count, category_tags"),
     service
       .from("orders")
       .select(
-        "status, fulfillment_type, total_amount, platform_fee, creator_payout, paid_at, created_at, uber_status, uber_delivery_id, uber_fee_cents, uber_booking_error, dropoff_instructions, receipt_status"
+        "id, creator_id, status, fulfillment_type, total_amount, platform_fee, creator_payout, paid_at, created_at, uber_status, uber_delivery_id, uber_fee_cents, uber_booking_error, dropoff_instructions, receipt_status"
       ),
     service.from("catering_inquiries").select("status"),
     service.from("catering_quotes").select("status"),
@@ -482,6 +582,116 @@ export async function loadSuperMetrics(service: DB): Promise<SuperMetrics> {
   ).length;
   const quotesAccepted = quotes.filter((q) => q.status === "accepted").length;
 
+  // ── Row-level detail projections (for card drill-downs) ─────────
+  const orderDetails: OrderDetail[] = [...orders]
+    .sort(byCreatedDesc)
+    .slice(0, DETAIL_CAP)
+    .map((o) => ({
+      id: o.id,
+      createdAt: o.created_at,
+      status: o.status,
+      fulfillment: o.fulfillment_type,
+      total: round2(o.total_amount ?? 0),
+      platformFee: round2(o.platform_fee ?? 0),
+      paid: Boolean(o.paid_at) || PAID_STATUSES.has(o.status ?? ""),
+      paidAt: o.paid_at,
+      uberStatus: o.uber_status,
+      city: parseDropoffCity(o.dropoff_instructions),
+    }));
+
+  const memberDetails: MemberDetail[] = [...members]
+    .sort(byCreatedDesc)
+    .slice(0, DETAIL_CAP)
+    .map((mem) => ({
+      name: mem.display_name || mem.handle || null,
+      role: mem.role,
+      email: mem.email,
+      createdAt: mem.created_at,
+    }));
+
+  // Per-creator order + listing rollups so each creator row can show how
+  // much they're actually selling (the signal for who needs help).
+  const ordersByCreator = new Map<string, { orders: number; gmv: number }>();
+  for (const o of orders) {
+    if (!o.creator_id) continue;
+    const cur = ordersByCreator.get(o.creator_id) ?? { orders: 0, gmv: 0 };
+    cur.orders += 1;
+    if (o.paid_at || PAID_STATUSES.has(o.status ?? "")) cur.gmv += o.total_amount ?? 0;
+    ordersByCreator.set(o.creator_id, cur);
+  }
+  const listingsByCreator = new Map<string, number>();
+  for (const l of listings) {
+    if (l.creator_id) listingsByCreator.set(l.creator_id, (listingsByCreator.get(l.creator_id) ?? 0) + 1);
+  }
+
+  const creatorDetails: CreatorDetail[] = creators
+    .map((c) => {
+      const mem = embed(c.member);
+      const oc = ordersByCreator.get(c.id) ?? { orders: 0, gmv: 0 };
+      const lc = listingsByCreator.get(c.id) ?? 0;
+      const payouts = Boolean(c.payouts_enabled);
+      const storefront = Boolean(c.storefront_active);
+      let stage: string;
+      if (!c.stripe_connect_id) stage = "Needs Stripe";
+      else if (!payouts) stage = "Needs payouts";
+      else if (!storefront) stage = "Storefront off";
+      else if (lc === 0) stage = "No listings";
+      else if (oc.orders === 0) stage = "No orders yet";
+      else stage = "Active";
+      return {
+        name: mem?.display_name || mem?.handle || c.legal_name || "Creator",
+        handle: mem?.handle ?? null,
+        createdAt: c.created_at,
+        kyc: c.kyc_status,
+        payoutsEnabled: payouts,
+        storefrontActive: storefront,
+        rating: c.review_rating_avg,
+        reviews: c.review_count ?? 0,
+        zips: (c.service_zip_codes ?? []).length,
+        listings: lc,
+        orders: oc.orders,
+        gmv: round2(oc.gmv),
+        stage,
+      };
+    })
+    // Highest-GMV creators first; the ones who "Need …" / "No …" bubble
+    // up by being clearly labeled, and the client can re-sort.
+    .sort((a, b) => b.gmv - a.gmv || b.orders - a.orders);
+
+  // Creator recruitment + activation funnel.
+  const creatorsNewBuckets = new Map<string, number>();
+  for (const c of creators) {
+    if (isAfter(c.created_at, ms30)) {
+      const k = dayKey(c.created_at);
+      creatorsNewBuckets.set(k, (creatorsNewBuckets.get(k) ?? 0) + 1);
+    }
+  }
+  const creatorsNewTrend: TimePoint[] = lastNDayKeys(30).map((day) => ({
+    day,
+    value: creatorsNewBuckets.get(day) ?? 0,
+  }));
+  const creatorFunnel: Bucket[] = [
+    { label: "Signed up", count: creators.length },
+    { label: "Stripe connected", count: creators.filter((c) => c.stripe_connect_id).length },
+    { label: "Payouts enabled", count: creators.filter((c) => c.payouts_enabled).length },
+    { label: "Storefront active", count: creators.filter((c) => c.storefront_active).length },
+    { label: "Has listings", count: listingsByCreator.size },
+    { label: "Has orders", count: ordersByCreator.size },
+  ];
+  const creatorsNeedAttention = creatorDetails.filter((c) => c.stage !== "Active").length;
+
+  const listingDetails: ListingDetail[] = [...listings]
+    .sort((a, b) => (b.order_count ?? 0) - (a.order_count ?? 0))
+    .slice(0, DETAIL_CAP)
+    .map((l) => ({
+      name: l.name ?? "Untitled",
+      kind: l.kind,
+      status: l.status,
+      fulfillment: l.fulfillment_type,
+      price: round2(l.price ?? 0),
+      orders: l.order_count ?? 0,
+    }));
+
   return {
     generatedAt: new Date().toISOString(),
 
@@ -517,6 +727,11 @@ export async function loadSuperMetrics(service: DB): Promise<SuperMetrics> {
       withReviews: creators.filter((c) => (c.review_count ?? 0) > 0).length,
       avgRating: creatorAvgRating,
       topByRating,
+      new7d: creators.filter((c) => isAfter(c.created_at, ms7)).length,
+      new30d: creators.filter((c) => isAfter(c.created_at, ms30)).length,
+      newTrend: creatorsNewTrend,
+      funnel: creatorFunnel,
+      needsAttention: creatorsNeedAttention,
     },
 
     listings: {
@@ -587,6 +802,13 @@ export async function loadSuperMetrics(service: DB): Promise<SuperMetrics> {
       total: ratedReviews.length,
       average: reviewAvg,
       distribution,
+    },
+
+    details: {
+      orders: orderDetails,
+      members: memberDetails,
+      creators: creatorDetails,
+      listings: listingDetails,
     },
   };
 }
