@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   Store,
@@ -14,16 +14,31 @@ import {
   Download,
   TrendingUp,
   AlertTriangle,
+  X,
+  ChevronRight,
 } from "lucide-react";
-import type { SuperMetrics, Bucket, TimePoint } from "@/lib/admin/metrics";
+import type {
+  SuperMetrics,
+  Bucket,
+  TimePoint,
+  OrderDetail,
+  MemberDetail,
+  CreatorDetail,
+  ListingDetail,
+} from "@/lib/admin/metrics";
 
 /* ────────────────────────────────────────────────────────────────
  * KDER Super Dashboard — cofounder control room.
  *
  * One scrollable page of sections: headline KPIs, then per-domain
  * panels (users, money, orders, plates, delivery, catering, locations,
- * reviews). Everything is computed server-side and passed in; this
- * component is pure presentation + a CSV export of the snapshot.
+ * reviews). Everything is computed server-side and passed in.
+ *
+ * Each headline KPI is now clickable → opens a drill-down modal with
+ * the row-level records behind the number (the actual orders, members,
+ * creators, listings) plus the relevant breakdowns. The creators
+ * drill-down doubles as the recruitment/activation view: handles, where
+ * each creator is stuck, and how the pipeline is filling over time.
  * ──────────────────────────────────────────────────────────────── */
 
 const money = (n: number) =>
@@ -31,6 +46,25 @@ const money = (n: number) =>
 const moneyExact = (n: number) =>
   `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const num = (n: number) => n.toLocaleString("en-US");
+const shortDate = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "2-digit",
+      })
+    : "—";
+
+/** Which headline card's drill-down is open. */
+type DrillKey =
+  | "gmv"
+  | "platform"
+  | "orders"
+  | "members"
+  | "creators"
+  | "plates"
+  | "catering"
+  | "delivery";
 
 export function SuperDashboardClient({
   metrics,
@@ -48,6 +82,7 @@ export function SuperDashboardClient({
     [metrics.generatedAt]
   );
 
+  const [drill, setDrill] = useState<DrillKey | null>(null);
   const handleExport = () => downloadCsv(metrics);
 
   const m = metrics;
@@ -76,14 +111,19 @@ export function SuperDashboardClient({
           </button>
         </div>
 
-        {/* ── Headline KPIs ──────────────────────────────────── */}
-        <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <p className="mt-4 text-[11px] text-white/35">
+          Tip: tap any card below to drill into the underlying records.
+        </p>
+
+        {/* ── Headline KPIs (clickable) ──────────────────────── */}
+        <section className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           <Kpi
             icon={<DollarSign size={16} />}
             label="GMV (all-time)"
             value={money(m.kpis.gmv)}
             sub={`${money(m.kpis.gmv30d)} last 30d`}
             accent="emerald"
+            onClick={() => setDrill("gmv")}
           />
           <Kpi
             icon={<TrendingUp size={16} />}
@@ -95,40 +135,52 @@ export function SuperDashboardClient({
                 : "—"
             }
             accent="emerald"
+            onClick={() => setDrill("platform")}
           />
           <Kpi
             icon={<ShoppingBag size={16} />}
             label="Orders"
             value={num(m.kpis.ordersTotal)}
             sub={`${num(m.kpis.ordersPaid)} paid · ${num(m.kpis.orders30d)} in 30d`}
+            onClick={() => setDrill("orders")}
           />
           <Kpi
             icon={<Users size={16} />}
             label="Members"
             value={num(m.kpis.members)}
             sub={`${num(m.kpis.signups30d)} new in 30d`}
+            onClick={() => setDrill("members")}
           />
           <Kpi
             icon={<Store size={16} />}
             label="Creators"
             value={num(m.kpis.creators)}
+            sub={
+              m.creators.needsAttention > 0
+                ? `${num(m.creators.needsAttention)} need attention`
+                : "all active"
+            }
+            onClick={() => setDrill("creators")}
           />
           <Kpi
             icon={<UtensilsCrossed size={16} />}
             label="Active plates"
             value={num(m.kpis.activeListings)}
+            onClick={() => setDrill("plates")}
           />
           <Kpi
             icon={<PartyPopper size={16} />}
             label="Catering revenue"
             value={money(m.catering.confirmedRevenue)}
             sub={`${num(m.catering.bookings)} bookings`}
+            onClick={() => setDrill("catering")}
           />
           <Kpi
             icon={<Truck size={16} />}
             label="Delivery fees"
             value={money(m.money.deliveryFees)}
             sub={`${num(m.delivery.delivered)} delivered`}
+            onClick={() => setDrill("delivery")}
           />
         </section>
 
@@ -309,8 +361,456 @@ export function SuperDashboardClient({
           Internal tool · figures reflect live data at load time · not indexed
         </p>
       </div>
+
+      {/* ── Drill-down modal ─────────────────────────────────── */}
+      {drill && (
+        <DrillModal title={drillTitle(drill)} onClose={() => setDrill(null)}>
+          <DrillBody drill={drill} m={m} />
+        </DrillModal>
+      )}
     </main>
   );
+}
+
+/* ── Drill-down content ─────────────────────────────────────────── */
+
+function drillTitle(drill: DrillKey): string {
+  switch (drill) {
+    case "gmv":
+      return "GMV — orders behind the number";
+    case "platform":
+      return "Platform revenue — fees by order";
+    case "orders":
+      return "Orders";
+    case "members":
+      return "Members";
+    case "creators":
+      return "Creators — activation & recruitment";
+    case "plates":
+      return "Plates & listings";
+    case "catering":
+      return "Catering pipeline";
+    case "delivery":
+      return "Delivery (Uber Direct)";
+  }
+}
+
+function DrillBody({ drill, m }: { drill: DrillKey; m: SuperMetrics }) {
+  switch (drill) {
+    case "gmv":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="GMV (all-time)" value={moneyExact(m.money.gmv)} />
+            <Mini label="GMV (30d)" value={moneyExact(m.kpis.gmv30d)} />
+            <Mini label="Avg order value" value={m.orders.avgOrderValue != null ? moneyExact(m.orders.avgOrderValue) : "—"} />
+            <Mini label="Paid orders" value={num(m.kpis.ordersPaid)} />
+          </MiniRow>
+          <Sparkline points={m.orders.revenueTrend} format={(v) => money(v)} color="#34d399" />
+          <OrdersTable orders={m.details.orders} />
+        </>
+      );
+    case "platform":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Platform revenue" value={moneyExact(m.money.platformRevenue)} />
+            <Mini label="Take rate" value={m.kpis.takeRatePct != null ? `${m.kpis.takeRatePct}%` : "—"} />
+            <Mini label="Creator payouts (accrued)" value={moneyExact(m.money.creatorPayouts)} />
+          </MiniRow>
+          <OrdersTable orders={m.details.orders} />
+        </>
+      );
+    case "orders":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Total" value={num(m.orders.total)} />
+            <Mini label="Paid" value={num(m.orders.paid)} />
+            <Mini label="In 30d" value={num(m.kpis.orders30d)} />
+            <Mini label="Receipt problems" value={num(m.orders.receiptProblems)} warn={m.orders.receiptProblems > 0} />
+          </MiniRow>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <BarList title="By status" buckets={m.orders.byStatus} />
+            <BarList title="By fulfillment" buckets={m.orders.byFulfillment} />
+          </div>
+          <OrdersTable orders={m.details.orders} />
+        </>
+      );
+    case "members":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Total members" value={num(m.users.total)} />
+            <Mini label="Customers" value={num(m.users.customers)} />
+            <Mini label="Creators" value={num(m.users.creators)} />
+            <Mini label="New · 7d" value={num(m.users.new7d)} />
+            <Mini label="New · 30d" value={num(m.users.new30d)} />
+            <Mini label="With email" value={num(m.users.withEmail)} />
+          </MiniRow>
+          <Section title="Signups · last 30 days" icon={<Users size={15} />}>
+            <Sparkline points={m.users.signupsTrend} format={(v) => num(v)} color="#60a5fa" />
+          </Section>
+          <MembersTable members={m.details.members} />
+        </>
+      );
+    case "creators":
+      return <CreatorsDrill m={m} />;
+    case "plates":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Total listings" value={num(m.listings.total)} />
+            <Mini label="Plates" value={num(m.listings.plates)} />
+            <Mini label="Active plates" value={num(m.listings.activePlates)} />
+            <Mini label="Catering listings" value={num(m.listings.catering)} />
+          </MiniRow>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <BarList title="By status" buckets={m.listings.byStatus} />
+            <BarList title="By fulfillment" buckets={m.listings.byFulfillment} />
+          </div>
+          {m.listings.topCategories.length > 0 && (
+            <BarList title="Top categories" buckets={m.listings.topCategories} />
+          )}
+          <ListingsTable listings={m.details.listings} />
+        </>
+      );
+    case "catering":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Inquiries" value={num(m.catering.inquiries)} />
+            <Mini label="Quotes sent" value={num(m.catering.quotesSent)} />
+            <Mini label="Quote accept rate" value={m.catering.quoteAcceptRatePct != null ? `${m.catering.quoteAcceptRatePct}%` : "—"} />
+            <Mini label="Bookings" value={num(m.catering.bookings)} />
+            <Mini label="Confirmed revenue" value={moneyExact(m.catering.confirmedRevenue)} />
+            <Mini label="Deposits collected" value={moneyExact(m.catering.depositsCollected)} />
+            <Mini label="Upcoming events" value={num(m.catering.upcomingEvents)} />
+          </MiniRow>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <BarList title="Inquiries by status" buckets={m.catering.inquiriesByStatus} />
+            <BarList title="Bookings by status" buckets={m.catering.bookingsByStatus} />
+          </div>
+        </>
+      );
+    case "delivery":
+      return (
+        <>
+          <MiniRow>
+            <Mini label="Delivery orders" value={num(m.delivery.deliveryOrders)} />
+            <Mini label="Booked" value={num(m.delivery.booked)} />
+            <Mini label="Delivered" value={num(m.delivery.delivered)} />
+            <Mini label="In progress" value={num(m.delivery.inProgress)} />
+            <Mini label="Booking failures" value={num(m.delivery.bookingFailures)} warn={m.delivery.bookingFailures > 0} />
+            <Mini label="Delivery fees" value={moneyExact(m.money.deliveryFees)} />
+          </MiniRow>
+          {m.delivery.byStatus.length > 0 && (
+            <BarList title="By Uber status" buckets={m.delivery.byStatus} />
+          )}
+          <OrdersTable
+            orders={m.details.orders.filter(
+              (o) => o.fulfillment === "delivery" || o.fulfillment === "both"
+            )}
+          />
+        </>
+      );
+  }
+}
+
+/**
+ * Creators drill-down = the recruitment + activation cockpit. Funnel
+ * shows where the pipeline narrows; the table shows each creator's
+ * handle, where they're stuck, and what they're actually selling so
+ * cofounders know who to help. A toggle isolates the ones needing a nudge.
+ */
+function CreatorsDrill({ m }: { m: SuperMetrics }) {
+  const [attentionOnly, setAttentionOnly] = useState(false);
+  const rows = attentionOnly
+    ? m.details.creators.filter((c) => c.stage !== "Active")
+    : m.details.creators;
+
+  return (
+    <>
+      <MiniRow>
+        <Mini label="Total creators" value={num(m.creators.total)} />
+        <Mini label="New · 7d" value={num(m.creators.new7d)} />
+        <Mini label="New · 30d" value={num(m.creators.new30d)} />
+        <Mini
+          label="Need attention"
+          value={num(m.creators.needsAttention)}
+          warn={m.creators.needsAttention > 0}
+        />
+        <Mini label="Storefront active" value={num(m.creators.storefrontActive)} />
+        <Mini label="Avg rating" value={m.creators.avgRating != null ? `${m.creators.avgRating}★` : "—"} />
+      </MiniRow>
+
+      <Section title="New creators · last 30 days" icon={<TrendingUp size={15} />}>
+        <Sparkline points={m.creators.newTrend} format={(v) => num(v)} color="#a78bfa" />
+      </Section>
+
+      <Section title="Onboarding → selling funnel" icon={<Store size={15} />}>
+        <BarList buckets={m.creators.funnel} />
+        <p className="mt-2 text-[11px] text-white/35">
+          Each step is where creators drop off — the biggest gap is where to focus.
+        </p>
+      </Section>
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-white/40">
+          Creators ({num(rows.length)})
+        </p>
+        <button
+          type="button"
+          onClick={() => setAttentionOnly((v) => !v)}
+          className={
+            "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors " +
+            (attentionOnly
+              ? "bg-amber-500/20 text-amber-200"
+              : "bg-white/[0.06] text-white/60 hover:bg-white/[0.10]")
+          }
+        >
+          {attentionOnly ? "Showing: needs attention" : "Show needs attention only"}
+        </button>
+      </div>
+      <CreatorsTable creators={rows} />
+    </>
+  );
+}
+
+/* ── Tables ──────────────────────────────────────────────────────── */
+
+function TableShell({
+  head,
+  children,
+  empty,
+  rowCount,
+}: {
+  head: React.ReactNode;
+  children: React.ReactNode;
+  empty: string;
+  rowCount: number;
+}) {
+  if (rowCount === 0) return <Empty>{empty}</Empty>;
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-white/[0.06]">
+      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wider text-white/40">
+            {head}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+const Th = ({ children, right }: { children: React.ReactNode; right?: boolean }) => (
+  <th className={"px-3 py-2 font-semibold " + (right ? "text-right" : "")}>{children}</th>
+);
+const Td = ({ children, right, dim }: { children: React.ReactNode; right?: boolean; dim?: boolean }) => (
+  <td className={"px-3 py-2 " + (right ? "text-right tabular-nums " : "") + (dim ? "text-white/50" : "text-white/80")}>
+    {children}
+  </td>
+);
+
+function OrdersTable({ orders }: { orders: OrderDetail[] }) {
+  return (
+    <TableShell
+      rowCount={orders.length}
+      empty="No orders yet."
+      head={
+        <>
+          <Th>Date</Th>
+          <Th>Status</Th>
+          <Th>Type</Th>
+          <Th right>Total</Th>
+          <Th right>Fee</Th>
+          <Th>Paid</Th>
+          <Th>Courier</Th>
+          <Th>City</Th>
+        </>
+      }
+    >
+      {orders.map((o) => (
+        <tr key={o.id} className="border-b border-white/[0.04] last:border-0">
+          <Td dim>{shortDate(o.createdAt)}</Td>
+          <Td><span className="capitalize">{(o.status ?? "—").replace(/_/g, " ")}</span></Td>
+          <Td dim><span className="capitalize">{(o.fulfillment ?? "—").replace(/_/g, " ")}</span></Td>
+          <Td right>{moneyExact(o.total)}</Td>
+          <Td right dim>{moneyExact(o.platformFee)}</Td>
+          <Td>{o.paid ? <span className="text-emerald-300">✓</span> : <span className="text-white/30">—</span>}</Td>
+          <Td dim><span className="capitalize">{(o.uberStatus ?? "—").replace(/_/g, " ")}</span></Td>
+          <Td dim>{o.city ?? "—"}</Td>
+        </tr>
+      ))}
+    </TableShell>
+  );
+}
+
+function MembersTable({ members }: { members: MemberDetail[] }) {
+  return (
+    <TableShell
+      rowCount={members.length}
+      empty="No members yet."
+      head={
+        <>
+          <Th>Joined</Th>
+          <Th>Name</Th>
+          <Th>Role</Th>
+          <Th>Email</Th>
+        </>
+      }
+    >
+      {members.map((mem, i) => (
+        <tr key={`${mem.email ?? mem.name ?? "m"}-${i}`} className="border-b border-white/[0.04] last:border-0">
+          <Td dim>{shortDate(mem.createdAt)}</Td>
+          <Td>{mem.name ?? "—"}</Td>
+          <Td dim><span className="capitalize">{mem.role ?? "customer"}</span></Td>
+          <Td dim>{mem.email ?? "—"}</Td>
+        </tr>
+      ))}
+    </TableShell>
+  );
+}
+
+function CreatorsTable({ creators }: { creators: CreatorDetail[] }) {
+  return (
+    <TableShell
+      rowCount={creators.length}
+      empty="No creators match."
+      head={
+        <>
+          <Th>Creator</Th>
+          <Th>Stage</Th>
+          <Th right>GMV</Th>
+          <Th right>Orders</Th>
+          <Th right>Plates</Th>
+          <Th right>Rating</Th>
+          <Th>Joined</Th>
+        </>
+      }
+    >
+      {creators.map((c, i) => (
+        <tr key={`${c.handle ?? c.name}-${i}`} className="border-b border-white/[0.04] last:border-0">
+          <Td>
+            <div className="font-medium text-white/90">{c.name}</div>
+            {c.handle && <div className="text-[11px] text-white/40">@{c.handle}</div>}
+          </Td>
+          <Td><StageChip stage={c.stage} /></Td>
+          <Td right>{moneyExact(c.gmv)}</Td>
+          <Td right dim>{num(c.orders)}</Td>
+          <Td right dim>{num(c.listings)}</Td>
+          <Td right dim>{c.rating != null ? `${c.rating}★ (${num(c.reviews)})` : "—"}</Td>
+          <Td dim>{shortDate(c.createdAt)}</Td>
+        </tr>
+      ))}
+    </TableShell>
+  );
+}
+
+function ListingsTable({ listings }: { listings: ListingDetail[] }) {
+  return (
+    <TableShell
+      rowCount={listings.length}
+      empty="No listings yet."
+      head={
+        <>
+          <Th>Plate</Th>
+          <Th>Kind</Th>
+          <Th>Status</Th>
+          <Th>Type</Th>
+          <Th right>Price</Th>
+          <Th right>Orders</Th>
+        </>
+      }
+    >
+      {listings.map((l, i) => (
+        <tr key={`${l.name}-${i}`} className="border-b border-white/[0.04] last:border-0">
+          <Td>{l.name}</Td>
+          <Td dim><span className="capitalize">{l.kind ?? "plate"}</span></Td>
+          <Td dim><span className="capitalize">{(l.status ?? "—").replace(/_/g, " ")}</span></Td>
+          <Td dim><span className="capitalize">{(l.fulfillment ?? "—").replace(/_/g, " ")}</span></Td>
+          <Td right>{moneyExact(l.price)}</Td>
+          <Td right dim>{num(l.orders)}</Td>
+        </tr>
+      ))}
+    </TableShell>
+  );
+}
+
+function StageChip({ stage }: { stage: string }) {
+  const tone =
+    stage === "Active"
+      ? "bg-emerald-500/20 text-emerald-200"
+      : stage === "No orders yet"
+        ? "bg-sky-500/20 text-sky-200"
+        : stage === "No listings" || stage === "Storefront off"
+          ? "bg-amber-500/20 text-amber-200"
+          : stage === "Needs payouts"
+            ? "bg-orange-500/20 text-orange-200"
+            : "bg-rose-500/20 text-rose-200"; // Needs Stripe
+  return (
+    <span className={"inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold " + tone}>
+      {stage}
+    </span>
+  );
+}
+
+/* ── Modal shell ─────────────────────────────────────────────────── */
+
+function DrillModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:p-8"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div
+        className="glass-card my-2 w-full max-w-4xl rounded-glass-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 rounded-t-glass-lg border-b border-white/10 bg-[#0D1A0D]/90 px-5 py-4 backdrop-blur">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white/80">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.06] text-white/60 transition-colors hover:bg-white/[0.12] hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-4 p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function MiniRow({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{children}</div>;
 }
 
 /* ── Presentational primitives ──────────────────────────────────── */
@@ -321,32 +821,50 @@ function Kpi({
   value,
   sub,
   accent,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
   accent?: "emerald";
+  onClick?: () => void;
 }) {
-  return (
-    <div className="glass-card rounded-glass-lg p-4">
-      <div
-        className={
-          "flex h-8 w-8 items-center justify-center rounded-full " +
-          (accent === "emerald"
-            ? "bg-emerald-500/20 text-emerald-300"
-            : "bg-white/[0.08] text-white/70")
-        }
-      >
-        {icon}
+  const inner = (
+    <>
+      <div className="flex items-start justify-between">
+        <div
+          className={
+            "flex h-8 w-8 items-center justify-center rounded-full " +
+            (accent === "emerald"
+              ? "bg-emerald-500/20 text-emerald-300"
+              : "bg-white/[0.08] text-white/70")
+          }
+        >
+          {icon}
+        </div>
+        {onClick && <ChevronRight size={15} className="text-white/25 transition-colors group-hover:text-white/60" />}
       </div>
       <p className="mt-3 text-2xl font-black leading-none">{value}</p>
       <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-white/45">
         {label}
       </p>
       {sub && <p className="mt-1 text-[11px] text-white/35">{sub}</p>}
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="group glass-card rounded-glass-lg p-4 text-left transition-all hover:bg-white/[0.06] hover:ring-1 hover:ring-emerald-400/30 active:scale-[0.99]"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className="glass-card rounded-glass-lg p-4">{inner}</div>;
 }
 
 function Section({
@@ -520,6 +1038,9 @@ function downloadCsv(m: SuperMetrics) {
     ["Creators storefront active", m.creators.storefrontActive],
     ["Creators with reviews", m.creators.withReviews],
     ["Creators avg rating", m.creators.avgRating ?? ""],
+    ["Creators new (7d)", m.creators.new7d],
+    ["Creators new (30d)", m.creators.new30d],
+    ["Creators need attention", m.creators.needsAttention],
     ["", ""],
     ["Creator payouts accrued", m.money.creatorPayouts],
     ["Payouts paid (Stripe)", m.money.payoutsPaid],
@@ -554,6 +1075,7 @@ function downloadCsv(m: SuperMetrics) {
     ["Orders by status", m.orders.byStatus],
     ["Orders by fulfillment", m.orders.byFulfillment],
     ["Creators by KYC", m.creators.byKyc],
+    ["Creator funnel", m.creators.funnel],
     ["Listings by status", m.listings.byStatus],
     ["Top categories", m.listings.topCategories],
     ["Catering inquiries by status", m.catering.inquiriesByStatus],
@@ -566,6 +1088,16 @@ function downloadCsv(m: SuperMetrics) {
     rows.push(["", ""]);
     rows.push([title, "count"]);
     for (const b of buckets) rows.push([b.label, b.count]);
+  }
+
+  // Per-creator detail — the recruitment/activation worksheet.
+  rows.push(["", ""]);
+  rows.push(["Creator", "handle | stage | gmv | orders | plates | rating | reviews | joined"]);
+  for (const c of m.details.creators) {
+    rows.push([
+      c.name,
+      `${c.handle ? "@" + c.handle : "—"} | ${c.stage} | ${c.gmv} | ${c.orders} | ${c.listings} | ${c.rating ?? "—"} | ${c.reviews} | ${c.createdAt.slice(0, 10)}`,
+    ]);
   }
 
   const esc = (v: string | number) => {
