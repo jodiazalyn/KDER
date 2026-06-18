@@ -109,7 +109,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
 
   return (
     <main className="px-4 pb-4 pt-6">
-      <h1 className="text-3xl font-black text-white">Earnings</h1>
+      <h1 className="text-3xl font-black text-foreground">Earnings</h1>
 
       <div className="mt-4 space-y-4">
         <KycBanner
@@ -169,15 +169,15 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
           <button
             type="button"
             onClick={() => setShowScheduleSheet(true)}
-            className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-white/[0.18] transition-colors"
+            className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-muted/60 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <CalendarClock size={18} className="text-white/60" />
+              <CalendarClock size={18} className="text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-foreground">
                   Payout schedule
                 </p>
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-muted-foreground">
                   {account.schedule.interval === "manual"
                     ? "Manual — pull on demand"
                     : account.schedule.interval === "weekly"
@@ -186,7 +186,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
                 </p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-white/40" />
+            <ChevronRight size={16} className="text-muted-foreground/60" />
           </button>
         )}
 
@@ -214,10 +214,10 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 pt-12">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-                <DollarSign size={28} className="text-white/20" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
+                <DollarSign size={28} className="text-muted-foreground/40" />
               </div>
-              <p className="text-center text-sm text-white/50">
+              <p className="text-center text-sm text-muted-foreground">
                 No earnings yet. Complete your first order to see your balance
                 here.
               </p>
@@ -235,7 +235,7 @@ function EarningsViewContent({ initial }: EarningsViewProps) {
               restoreAllSections();
               setDismissedCount(0);
             }}
-            className="mt-2 w-full text-center text-xs text-white/40 underline-offset-2 hover:text-white/60 hover:underline"
+            className="mt-2 w-full text-center text-xs text-muted-foreground/60 underline-offset-2 hover:text-muted-foreground hover:underline"
           >
             Show {dismissedCount} hidden{" "}
             {dismissedCount === 1 ? "section" : "sections"}

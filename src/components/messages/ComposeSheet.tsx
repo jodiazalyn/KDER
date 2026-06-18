@@ -123,10 +123,10 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="max-h-[85vh] overflow-hidden rounded-t-3xl border-white/[0.22] text-white"
+        className="max-h-[85vh] overflow-hidden rounded-t-3xl border-border text-foreground"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">New message</SheetTitle>
+          <SheetTitle className="text-foreground">New message</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 flex h-[70vh] flex-col pb-[env(safe-area-inset-bottom)]">
@@ -135,37 +135,37 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
               instead of `glass-input` because that utility is built
               for bare <input> elements (width:100% + padding) rather
               than icon+input wrappers like this one. */}
-          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.06] px-4 backdrop-blur-[16px] backdrop-saturate-[180%] focus-within:border-green-400/40">
-            <Search size={16} className="text-white/40" />
+          <div className="mb-3 flex h-11 items-center gap-2 rounded-full border border-border bg-muted/40 px-4 backdrop-blur-[16px] backdrop-saturate-[180%] focus-within:border-primary/40">
+            <Search size={16} className="text-muted-foreground" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Your customers & conversations"
-              className="flex-1 bg-transparent text-base text-white placeholder:text-white/30 focus:outline-none"
+              className="flex-1 bg-transparent text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
               aria-label="Filter conversations"
             />
           </div>
 
           {loading ? (
             <div className="flex flex-1 items-center justify-center">
-              <Loader2 size={20} className="animate-spin text-white/40" />
+              <Loader2 size={20} className="animate-spin text-muted-foreground" />
             </div>
           ) : recipients.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
-                <MessageCircleMore size={24} className="text-white/30" />
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/40">
+                <MessageCircleMore size={24} className="text-muted-foreground/60" />
               </div>
-              <p className="text-sm text-white/50">No customers yet.</p>
-              <p className="text-xs text-white/30 max-w-[240px]">
+              <p className="text-sm text-muted-foreground">No customers yet.</p>
+              <p className="text-xs text-muted-foreground/60 max-w-[240px]">
                 Once someone orders from your storefront, you&apos;ll be able
                 to message them here.
               </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-              <p className="text-sm text-white/50">No matches.</p>
-              <p className="text-xs text-white/30">
+              <p className="text-sm text-muted-foreground">No matches.</p>
+              <p className="text-xs text-muted-foreground/60">
                 Try a different name or message.
               </p>
             </div>
@@ -177,9 +177,9 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
                     type="button"
                     onClick={() => openThread(r.id)}
                     aria-label={`Message ${r.name}`}
-                    className="glass-card flex w-full items-center gap-3 px-3 py-3 text-left transition-all hover:bg-white/[0.10] active:scale-[0.99]"
+                    className="glass-card flex w-full items-center gap-3 px-3 py-3 text-left transition-all hover:bg-muted/60 active:scale-[0.99]"
                   >
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-green-900/50 to-green-700/30 text-white/80 ring-1 ring-white/10 overflow-hidden">
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/10 text-foreground/80 ring-1 ring-border overflow-hidden">
                       {r.photoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -190,7 +190,7 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
                       ) : (
                         <span className="text-sm font-bold">
                           {r.name.charAt(0).toUpperCase() || (
-                            <User2 size={16} className="text-white/50" />
+                            <User2 size={16} className="text-muted-foreground" />
                           )}
                         </span>
                       )}
@@ -198,16 +198,16 @@ export function ComposeSheet({ open, onOpenChange }: ComposeSheetProps) {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm font-semibold text-white">
+                        <span className="truncate text-sm font-semibold text-foreground">
                           {r.name}
                         </span>
                         {r.hasExistingThread && (
-                          <span className="rounded-full bg-green-900/40 px-2 py-0.5 text-[10px] font-medium text-green-300">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                             Active chat
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-xs text-white/50">
+                      <p className="truncate text-xs text-muted-foreground">
                         {r.lastMessagePreview ?? "Past customer"}
                       </p>
                     </div>

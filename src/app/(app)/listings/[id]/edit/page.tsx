@@ -50,7 +50,7 @@ export default function EditListingPage({
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <KderSpinner size={64} />
       </div>
     );

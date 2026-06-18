@@ -87,7 +87,7 @@ export function BookingActions({ bookingId, status }: Props) {
     // to render behind the z-50 nav and were effectively invisible on
     // mobile. The nav owns its own safe-area padding, so we use a
     // flat py-3 here.
-    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+    <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border bg-background/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
       <div className="mx-auto flex max-w-lg gap-2">
         {status === "balance_due" && (
           <button
@@ -119,8 +119,8 @@ export function BookingActions({ bookingId, status }: Props) {
             className={cn(
               "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-bold text-white transition-all active:scale-95",
               busy === "complete"
-                ? "cursor-wait bg-[#1B5E20]/60"
-                : "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                ? "cursor-wait bg-gradient-to-r from-[#22C55E] to-[#16A34A] opacity-60"
+                : "bg-gradient-to-r from-[#22C55E] to-[#16A34A] shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
             )}
           >
             {busy === "complete" ? (

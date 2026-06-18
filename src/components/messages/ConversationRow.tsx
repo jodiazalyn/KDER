@@ -48,7 +48,7 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
       className="glass-card flex items-center gap-3 p-4 active:scale-[0.98] transition-transform"
     >
       {/* Avatar */}
-      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-white/[0.1]">
+      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted/40">
         {partnerPhoto ? (
           <Image
             src={partnerPhoto}
@@ -57,7 +57,7 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-lg font-bold text-white/40">
+          <div className="flex h-full w-full items-center justify-center text-lg font-bold text-muted-foreground">
             {partnerName.charAt(0)}
           </div>
         )}
@@ -69,8 +69,8 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
           <h3
             className={
               unreadCount > 0
-                ? "truncate text-sm font-bold text-white"
-                : "truncate text-sm font-medium text-white/80"
+                ? "truncate text-sm font-bold text-foreground"
+                : "truncate text-sm font-medium text-foreground/80"
             }
           >
             {partnerName}
@@ -81,11 +81,11 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
               Order rows are already labeled "Order · " below;
               catering rows now get an equivalent badge. */}
           {isCatering && (
-            <span className="shrink-0 rounded-full bg-amber-900/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-200 ring-1 ring-inset ring-amber-400/30">
+            <span className="shrink-0 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:bg-orange-900/50 dark:text-orange-300 ring-1 ring-inset ring-amber-400/30">
               Catering
             </span>
           )}
-          <span className="ml-auto shrink-0 text-[10px] text-white/30">
+          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/60">
             {timeAgo}
           </span>
         </div>
@@ -94,12 +94,12 @@ export function ConversationRow({ conversation }: ConversationRowProps) {
           <p
             className={
               unreadCount > 0
-                ? "text-xs text-white/70 truncate font-medium"
-                : "text-xs text-white/40 truncate"
+                ? "text-xs text-foreground/80 truncate font-medium"
+                : "text-xs text-muted-foreground truncate"
             }
           >
             {orderId && (
-              <span className="text-green-400/60 mr-1">Order ·</span>
+              <span className="text-primary/60 mr-1">Order ·</span>
             )}
             {preview}
           </p>

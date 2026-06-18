@@ -360,22 +360,22 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
     // BottomNav (5rem) + the sticky send-quote bar (~5rem) +
     // breathing room. Without this the "Customer will see" preview
     // block ends up tucked behind the send bar.
-    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(10rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-[100dvh] flex-col bg-background pb-[calc(10rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
           aria-label="Go back"
-          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-white">
+          <h1 className="truncate text-lg font-bold text-foreground">
             Build quote
           </h1>
-          <p className="truncate text-xs text-white/50">
+          <p className="truncate text-xs text-muted-foreground">
             {customerName} · {eventDateLabel} · {inquiry.guest_count} guests
           </p>
         </div>
@@ -386,17 +386,17 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
           {/* Line items */}
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-white/70">
+              <h2 className="text-sm font-semibold text-foreground/80">
                 Line items
               </h2>
               <button
                 type="button"
                 onClick={() => setShowMenu((o) => !o)}
                 className={cn(
-                  "flex h-9 items-center gap-1 rounded-full border border-white/[0.10] px-3 text-xs font-medium transition-all active:scale-95",
+                  "flex h-9 items-center gap-1 rounded-full border border-border px-3 text-xs font-medium transition-all active:scale-95",
                   showMenu
-                    ? "bg-green-900/40 text-green-300"
-                    : "text-white/70 hover:bg-white/[0.06]"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted/60"
                 )}
               >
                 <Sparkles size={12} />
@@ -406,9 +406,9 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
 
             {/* Inline "from menu" picker */}
             {showMenu && (
-              <div className="mb-3 space-y-1.5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-2">
+              <div className="mb-3 space-y-1.5 rounded-2xl border border-border bg-muted/30 p-2">
                 {menuListings.length === 0 ? (
-                  <p className="p-3 text-center text-xs text-white/40">
+                  <p className="p-3 text-center text-xs text-muted-foreground">
                     No catering menu items yet. Publish some first.
                   </p>
                 ) : (
@@ -417,10 +417,10 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                       key={l.id}
                       type="button"
                       onClick={() => addFromMenu(l)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.04] active:scale-[0.99]"
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-muted/40 active:scale-[0.99]"
                     >
-                      <span className="truncate text-white/90">{l.name}</span>
-                      <span className="shrink-0 text-xs text-white/50">
+                      <span className="truncate text-foreground/90">{l.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         ${l.price.toFixed(0)}
                         {l.catering_pricing_mode === "per_head"
                           ? "/guest"
@@ -435,7 +435,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
             {/* Items list */}
             <ul className="space-y-2">
               {items.length === 0 && (
-                <li className="rounded-2xl border border-dashed border-white/[0.12] py-6 text-center text-xs text-white/40">
+                <li className="rounded-2xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
                   No items yet. Add from menu or a custom line.
                 </li>
               )}
@@ -452,7 +452,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
             <button
               type="button"
               onClick={addBlankItem}
-              className="mt-2 flex h-11 w-full items-center justify-center gap-1 rounded-full border border-dashed border-white/[0.15] text-sm font-medium text-white/60 transition-colors hover:border-white/[0.30] hover:text-white/80 active:scale-95"
+              className="mt-2 flex h-11 w-full items-center justify-center gap-1 rounded-full border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-border/60 hover:text-foreground/80 active:scale-95"
             >
               <Plus size={16} />
               Add custom line item
@@ -466,9 +466,9 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
               explanation. */}
           <section>
             <div className="mb-2 flex items-center">
-              <h2 className="text-sm font-semibold text-white/70">
+              <h2 className="text-sm font-semibold text-foreground/80">
                 Fees{" "}
-                <span className="text-xs font-normal text-white/40">
+                <span className="text-xs font-normal text-muted-foreground">
                   (not in deposit)
                 </span>
               </h2>
@@ -476,10 +476,10 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                 {COACHMARK_COPY["creator-catering-quote-fees"]}
               </InfoTip>
             </div>
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+            <div className="rounded-2xl border border-border bg-muted/30 p-3 space-y-2">
               {/* Existing fee rows */}
               {feeItems.length === 0 ? (
-                <p className="px-1 py-2 text-center text-xs text-white/40">
+                <p className="px-1 py-2 text-center text-xs text-muted-foreground">
                   No fees yet. Tap a category below to add one.
                 </p>
               ) : (
@@ -505,12 +505,12 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                       key={tag}
                       type="button"
                       onClick={() => addFee(tag)}
-                      className="flex items-center gap-1 rounded-full border border-white/[0.10] px-2.5 py-1.5 text-[11px] font-medium text-white/70 hover:border-green-400/40 hover:bg-green-900/20 hover:text-green-200 active:scale-95"
+                      className="flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-primary active:scale-95"
                     >
                       <Plus size={11} />
                       {cat.title}
                       {cat.suggested > 0 && (
-                        <span className="text-white/40">
+                        <span className="text-muted-foreground/60">
                           · ${cat.suggested}
                         </span>
                       )}
@@ -520,7 +520,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
               </div>
               {/* Mode-specific helper text */}
               {inquiry.service_style === "drop_off" && (
-                <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-[11px] leading-relaxed text-white/55">
+                <p className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
                   Drop-off: food is freshly prepared and delivered
                   with no staff on site. Add a Warming fee if you&apos;ll
                   bring burners + come back to collect them.
@@ -531,9 +531,9 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
 
           {/* Tax — whole-dollar input, matches the line-item pattern. */}
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-white/70">Tax</h2>
+            <h2 className="mb-2 text-sm font-semibold text-foreground/80">Tax</h2>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                 $
               </span>
               <input
@@ -541,7 +541,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                 inputMode="numeric"
                 value={taxCents === 0 ? "" : String(Math.round(taxCents / 100))}
                 onChange={(e) => setTaxCents(wholeDollarsToCents(e.target.value))}
-                className="glass-input h-11 w-full px-3 pl-7 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input h-11 w-full px-3 pl-7 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 placeholder="0"
               />
             </div>
@@ -549,7 +549,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
 
           {/* Notes */}
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-white/70">
+            <h2 className="mb-2 text-sm font-semibold text-foreground/80">
               Notes for the customer
             </h2>
             <textarea
@@ -557,14 +557,14 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
               onChange={(e) => setNotes(e.target.value.slice(0, 2000))}
               placeholder="Anything they should know about this quote — setup time, what's included, your cancellation terms…"
               rows={3}
-              className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 resize-none"
+              className="glass-input w-full px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-none"
             />
           </section>
 
           {/* Expiration */}
           <section>
             <div className="mb-2 flex items-center">
-              <h2 className="text-sm font-semibold text-white/70">
+              <h2 className="text-sm font-semibold text-foreground/80">
                 Quote expires in
               </h2>
               <InfoTip label="Which to pick?">
@@ -580,8 +580,8 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                   className={cn(
                     "h-10 flex-1 rounded-full border text-sm transition-all active:scale-95",
                     expiresDays === d
-                      ? "border-green-400/40 bg-green-900/40 text-green-300"
-                      : "border-white/[0.10] text-white/60 hover:text-white/80"
+                      ? "border-primary/40 bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:text-foreground/80"
                   )}
                 >
                   {d} days
@@ -591,8 +591,8 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
           </section>
 
           {/* Totals preview */}
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/40">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Customer will see
             </h2>
             <ul className="space-y-1.5 text-sm">
@@ -615,7 +615,7 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
                 );
               })}
               {taxCents > 0 && <Row label="Tax" value={money(taxCents)} />}
-              <li className="my-2 h-px bg-white/[0.06]" />
+              <li className="my-2 h-px bg-border" />
               <Row label="Total" value={money(totalCents)} bold />
               <Row
                 label={`Due now (deposit, ${DEPOSIT_PERCENT}%)`}
@@ -636,17 +636,17 @@ export function QuoteBuilderClient({ inquiry, menuListings }: Props) {
           InquiryActions/BookingActions (commit 87228df). The nav
           handles iOS safe-area below us, so we use a flat py-3
           here (the old `pb-[calc(0.75rem+safe)]` was double-padding). */}
-      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border bg-background/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto max-w-lg">
           <button
             type="button"
             onClick={handleSend}
             disabled={!canSend || sending}
             className={cn(
-              "flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-bold text-white transition-all active:scale-95",
+              "flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-bold transition-all active:scale-95",
               canSend && !sending
-                ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                : "cursor-not-allowed bg-white/[0.08] text-white/40"
+                ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                : "cursor-not-allowed bg-muted text-muted-foreground"
             )}
           >
             {sending ? (
@@ -682,10 +682,10 @@ function Row({
       <span
         className={cn(
           "text-sm",
-          bold && "font-bold text-white",
-          accent && "text-green-300",
-          muted && "text-white/50",
-          !bold && !accent && !muted && "text-white/70"
+          bold && "font-bold text-foreground",
+          accent && "text-primary",
+          muted && "text-muted-foreground",
+          !bold && !accent && !muted && "text-foreground/80"
         )}
       >
         {label}
@@ -693,10 +693,10 @@ function Row({
       <span
         className={cn(
           "shrink-0 tabular-nums",
-          bold && "text-base font-bold text-white",
-          accent && "text-sm font-bold text-green-300",
-          muted && "text-sm text-white/60",
-          !bold && !accent && !muted && "text-sm text-white/90"
+          bold && "text-base font-bold text-foreground",
+          accent && "text-sm font-bold text-primary",
+          muted && "text-sm text-muted-foreground/60",
+          !bold && !accent && !muted && "text-sm text-foreground/90"
         )}
       >
         {value}
@@ -739,7 +739,7 @@ function LineItemRow({
   );
 
   return (
-    <li className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+    <li className="rounded-2xl border border-border bg-muted/30 p-3">
       <div className="flex items-start gap-2">
         <input
           type="text"
@@ -750,20 +750,20 @@ function LineItemRow({
             onUpdate({ name: v });
           }}
           placeholder="Item name"
-          className="glass-input h-11 flex-1 px-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+          className="glass-input h-11 flex-1 px-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         />
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove line item"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-300 active:scale-90"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 active:scale-90"
         >
           <X size={16} />
         </button>
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <label>
-          <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
+          <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
             Qty
           </span>
           <input
@@ -786,15 +786,15 @@ function LineItemRow({
               setQtyDraft(String(clamped));
               onUpdate({ qty: clamped });
             }}
-            className="glass-input h-11 w-full px-3 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="glass-input h-11 w-full px-3 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         </label>
         <label>
-          <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
+          <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
             Unit price
           </span>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base text-white/40">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
               $
             </span>
             <input
@@ -812,14 +812,14 @@ function LineItemRow({
                 });
               }}
               placeholder="0"
-              className="glass-input h-11 w-full px-3 pl-7 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+              className="glass-input h-11 w-full px-3 pl-7 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             />
           </div>
         </label>
       </div>
-      <p className="mt-2 text-right text-xs text-white/50">
+      <p className="mt-2 text-right text-xs text-muted-foreground">
         Line total:{" "}
-        <span className="font-semibold text-white/80">
+        <span className="font-semibold text-foreground/80">
           {money(item.qty * item.unit_price_cents)}
         </span>
       </p>
@@ -853,16 +853,20 @@ function FeeItemRow({
   );
 
   return (
-    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-2.5">
+    <div className="rounded-xl border border-border bg-muted/30 p-2.5">
       <div className="flex items-center gap-2">
         <span
           className={cn(
             "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
-            fee.tag === "server" && "bg-purple-900/40 text-purple-200",
-            fee.tag === "delivery" && "bg-blue-900/40 text-blue-200",
-            fee.tag === "setup" && "bg-amber-900/40 text-amber-200",
-            fee.tag === "warming" && "bg-orange-900/40 text-orange-200",
-            fee.tag === "custom" && "bg-white/[0.10] text-white/70"
+            fee.tag === "server" &&
+              "bg-purple-500/10 text-purple-700 dark:bg-purple-900/40 dark:text-purple-200",
+            fee.tag === "delivery" &&
+              "bg-blue-500/10 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200",
+            fee.tag === "setup" &&
+              "bg-amber-500/10 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200",
+            fee.tag === "warming" &&
+              "bg-orange-500/10 text-orange-700 dark:bg-orange-900/40 dark:text-orange-200",
+            fee.tag === "custom" && "bg-muted text-muted-foreground"
           )}
         >
           {cat.title}
@@ -878,15 +882,15 @@ function FeeItemRow({
               onUpdate({ label: e.target.value.slice(0, 60) })
             }
             placeholder="What's this fee for?"
-            className="glass-input h-10 flex-1 px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="glass-input h-10 flex-1 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         ) : (
-          <span className="flex-1 text-sm text-white/75">
+          <span className="flex-1 text-sm text-foreground/75">
             {cat.description}
           </span>
         )}
         <div className="relative w-24 shrink-0">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-white/40">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
             $
           </span>
           <input
@@ -901,14 +905,14 @@ function FeeItemRow({
               });
             }}
             placeholder="0"
-            className="glass-input h-10 w-full px-2 pl-6 text-right text-sm font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+            className="glass-input h-10 w-full px-2 pl-6 text-right text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         </div>
         <button
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${cat.title} fee`}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-300 active:scale-90"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 active:scale-90"
         >
           <X size={14} />
         </button>
@@ -924,7 +928,7 @@ function FeeItemRow({
       {fee.tag === "server" && (
         <div className="mt-2.5 grid grid-cols-2 gap-2">
           <div>
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
               Starts
             </span>
             <TimePicker12h
@@ -934,7 +938,7 @@ function FeeItemRow({
             />
           </div>
           <div>
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-white/40">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
               Ends
             </span>
             <TimePicker12h

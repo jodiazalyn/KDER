@@ -135,13 +135,13 @@ export function ListingsClient({ initialListings }: Props) {
 
   return (
     <main className="relative px-4 pb-4 pt-6">
-      <h1 className="text-3xl font-black text-white">Plates</h1>
+      <h1 className="text-3xl font-black text-foreground">Plates</h1>
 
       <Link
         href="/listings/new"
         // glass-btn-pill with KDER green tint + glow. h-12 w-12 = 48px,
         // exceeds Apple HIG 44px tap target.
-        className="glass-btn-pill fixed right-4 top-4 z-40 flex h-12 w-12 items-center justify-center border-emerald-400/30 bg-emerald-500/15 text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-90 transition-transform"
+        className="glass-btn-pill fixed right-4 top-4 z-40 flex h-12 w-12 items-center justify-center border-emerald-400/30 bg-emerald-500/15 text-foreground shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-90 transition-transform"
         aria-label="Add new plate"
       >
         <Plus size={22} />
@@ -149,16 +149,16 @@ export function ListingsClient({ initialListings }: Props) {
 
       {isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-4 pt-32">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.06]">
-            <UtensilsCrossed size={36} className="text-white/20" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted/40">
+            <UtensilsCrossed size={36} className="text-muted-foreground/60" />
           </div>
-          <h2 className="text-lg font-bold text-white">No plates yet</h2>
-          <p className="text-center text-sm text-white/50">
+          <h2 className="text-lg font-bold text-foreground">No plates yet</h2>
+          <p className="text-center text-sm text-muted-foreground">
             Add your first plate and start earning.
           </p>
           <Link
             href="/listings/new"
-            className="mt-2 flex h-12 items-center justify-center rounded-full bg-[#1B5E20] px-8 text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform"
+            className="mt-2 flex h-12 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-8 text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
           >
             Add Plate
           </Link>
@@ -175,8 +175,8 @@ export function ListingsClient({ initialListings }: Props) {
                   className={cn(
                     "glass-segment-item flex-1 py-2 text-xs font-medium",
                     activeTab === tab.key
-                      ? "glass-segment-item-active text-white"
-                      : "text-white/40 hover:text-white/60"
+                      ? "glass-segment-item-active text-foreground"
+                      : "text-muted-foreground hover:text-foreground/80"
                   )}
                 >
                   {tab.label}
@@ -202,7 +202,7 @@ export function ListingsClient({ initialListings }: Props) {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-2 pt-20">
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-muted-foreground">
                 No {activeTab} plates.
               </p>
             </div>
@@ -218,10 +218,10 @@ export function ListingsClient({ initialListings }: Props) {
       >
         <SheetContent
           side="bottom"
-          className="rounded-t-glass-lg text-white"
+          className="rounded-t-glass-lg text-foreground"
         >
           <SheetHeader>
-            <SheetTitle className="text-white">
+            <SheetTitle className="text-foreground">
               {menuListing?.name}
             </SheetTitle>
           </SheetHeader>
@@ -281,8 +281,8 @@ function MenuButton({
       className={cn(
         "w-full rounded-xl px-4 py-3 text-left text-base font-medium transition-colors active:scale-[0.98]",
         destructive
-          ? "text-red-400 hover:bg-red-500/10"
-          : "text-white hover:bg-white/[0.06]"
+          ? "text-red-600 dark:text-red-400 hover:bg-red-500/10"
+          : "text-foreground hover:bg-muted/40"
       )}
     >
       {children}

@@ -148,21 +148,21 @@ export default async function InquiryDetailPage({ params }: PageProps) {
   return (
     // pb-[10rem+safe] reserves room for the stacked footer:
     // BottomNav (5rem) + InquiryActions bar (~5rem) + breathing room.
-    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(10rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-[100dvh] bg-background pb-[calc(10rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <Link
           href="/catering/inquiries"
           aria-label="Back to inquiries"
-          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90"
         >
           <ArrowLeft size={20} />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-white">
+          <h1 className="truncate text-lg font-bold text-foreground">
             {customerName}
           </h1>
-          <p className="truncate text-xs text-white/50">
+          <p className="truncate text-xs text-muted-foreground">
             {eventDateLabel}
             {eventTimeLabel ? ` · ${eventTimeLabel}` : ""}
           </p>
@@ -170,10 +170,10 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${
             inq.status === "open"
-              ? "bg-amber-900/40 text-amber-300"
+              ? "bg-amber-500/10 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
               : inq.status === "quoted"
-                ? "bg-blue-900/40 text-blue-300"
-                : "bg-white/10 text-white/60"
+                ? "bg-blue-500/10 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                : "bg-muted text-muted-foreground"
           }`}
         >
           {inq.status}
@@ -188,24 +188,24 @@ export default async function InquiryDetailPage({ params }: PageProps) {
             action bar — even if it's clipped on an odd device, this
             in-content prompt makes the next step obvious. */}
         {needsCreatorResponse && (
-          <section className="rounded-2xl border border-amber-400/[0.30] bg-amber-900/[0.20] p-4">
-            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+          <section className="rounded-2xl border border-amber-400/[0.30] bg-amber-500/10 p-4 dark:bg-amber-900/[0.20]">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200">
               <Clock size={12} />
               {customerName} is waiting on you
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-amber-50">
+            <p className="mt-1.5 text-sm leading-relaxed text-amber-900 dark:text-amber-50">
               Send a quick message to introduce yourself, or build them
               a quote. Use the{" "}
-              <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.10] px-1.5 py-0.5 text-[11px] font-bold text-white">
+              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-bold text-foreground">
                 <MessageCircle size={11} /> Message
               </span>{" "}
               or{" "}
-              <span className="inline-flex items-center gap-1 rounded-md bg-[#1B5E20] px-1.5 py-0.5 text-[11px] font-bold text-white">
+              <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-1.5 py-0.5 text-[11px] font-bold text-white">
                 ✨ Build quote
               </span>{" "}
               buttons at the bottom of this page.
             </p>
-            <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-amber-200/80">
+            <p className="mt-2 flex items-center gap-1 text-[11px] font-medium text-amber-700/80 dark:text-amber-200/80">
               <ArrowDown size={11} className="animate-bounce" />
               Scroll down if you don&apos;t see them yet
             </p>
@@ -217,9 +217,9 @@ export default async function InquiryDetailPage({ params }: PageProps) {
             creator can see what's already been said before they reply.
             Hidden when there's nothing in the thread. */}
         {recentMessages.length > 0 && customer?.id && (
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40">
+              <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 Recent messages
               </h2>
               <Link
@@ -229,7 +229,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 // on an empty thread — this was the "blank chat page"
                 // bug the user hit.
                 href={`/messages/general_${customer.id}`}
-                className="flex items-center gap-1 text-[11px] font-semibold text-green-300 hover:text-green-200"
+                className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80"
               >
                 Open chat
                 <MessageCircle size={11} />
@@ -245,7 +245,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                       fromCreator ? "items-end" : "items-start"
                     }`}
                   >
-                    <span className="text-[10px] uppercase tracking-wider text-white/40">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                       {fromCreator ? "You" : customerName} ·{" "}
                       {new Date(m.created_at).toLocaleString("en-US", {
                         month: "short",
@@ -257,8 +257,8 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                     <span
                       className={`max-w-[88%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${
                         fromCreator
-                          ? "rounded-br-md bg-[#1B5E20] text-white"
-                          : "rounded-bl-md bg-white/[0.06] text-white/90"
+                          ? "rounded-br-md bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                          : "rounded-bl-md bg-muted/40 text-foreground/90"
                       }`}
                     >
                       {m.body}
@@ -271,8 +271,8 @@ export default async function InquiryDetailPage({ params }: PageProps) {
         )}
 
         {/* Event facts grid */}
-        <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-          <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">
+        <section className="rounded-2xl border border-border bg-muted/30 p-4">
+          <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Event details
           </h2>
           <ul className="space-y-2.5 text-sm">
@@ -315,11 +315,11 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
         {/* Setup / logistics */}
         {(inq.needs_server || inq.needs_setup || inq.kitchen_available !== null) && (
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
+            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Logistics
             </h2>
-            <ul className="space-y-1.5 text-sm text-white/80">
+            <ul className="space-y-1.5 text-sm text-foreground/80">
               {inq.needs_server && <li>• Server requested for the event</li>}
               {inq.needs_setup && (
                 <li>
@@ -341,19 +341,19 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
         {/* Allergies */}
         {inq.allergies && (
-          <section className="rounded-2xl border border-amber-400/[0.20] bg-amber-900/[0.10] p-4">
-            <h2 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-200">
+          <section className="rounded-2xl border border-amber-400/[0.20] bg-amber-500/10 p-4 dark:bg-amber-900/[0.10]">
+            <h2 className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200">
               <AlertTriangle size={12} />
               Allergies / restrictions
             </h2>
-            <p className="text-sm text-white/90">{inq.allergies}</p>
+            <p className="text-sm text-foreground/90">{inq.allergies}</p>
           </section>
         )}
 
         {/* Pre-selected items */}
         {selectedListings.length > 0 && (
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-white/40">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
+            <h2 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Items they&apos;re interested in
             </h2>
             <ul className="space-y-2 text-sm">
@@ -365,16 +365,16 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                   .map(([group, items]) => `${group}: ${items[0]}`)
                   .join(" · ");
                 return (
-                  <li key={l.id} className="text-white/80">
+                  <li key={l.id} className="text-foreground/80">
                     <div className="flex items-center justify-between">
                       <span className="truncate">{l.name}</span>
-                      <span className="shrink-0 text-white/60">
+                      <span className="shrink-0 text-muted-foreground">
                         ${l.price.toFixed(0)}
                         {l.catering_pricing_mode === "per_head" ? "/guest" : ""}
                       </span>
                     </div>
                     {summary && (
-                      <p className="mt-0.5 truncate text-[11px] text-white/40">
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                         {summary}
                       </p>
                     )}
@@ -382,7 +382,7 @@ export default async function InquiryDetailPage({ params }: PageProps) {
                 );
               })}
             </ul>
-            <p className="mt-2 text-[11px] text-white/40">
+            <p className="mt-2 text-[11px] text-muted-foreground">
               These get auto-added to the quote when you start building it.
             </p>
           </section>
@@ -390,11 +390,11 @@ export default async function InquiryDetailPage({ params }: PageProps) {
 
         {/* Customer notes */}
         {inq.notes && (
-          <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
-            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/40">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Notes from {customerName}
             </h2>
-            <p className="whitespace-pre-wrap text-sm text-white/80">{inq.notes}</p>
+            <p className="whitespace-pre-wrap text-sm text-foreground/80">{inq.notes}</p>
           </section>
         )}
       </div>
@@ -424,12 +424,12 @@ function FactRow({
 }) {
   return (
     <li className="flex items-start gap-3">
-      <Icon size={16} className="mt-0.5 shrink-0 text-white/40" />
+      <Icon size={16} className="mt-0.5 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] uppercase tracking-wider text-white/40">
+        <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <p className="text-white">{value}</p>
+        <p className="text-foreground">{value}</p>
       </div>
     </li>
   );

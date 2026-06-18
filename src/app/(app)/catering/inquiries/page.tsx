@@ -67,12 +67,12 @@ export default async function CateringInquiriesPage({
         : allRows;
 
   return (
-    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-[100dvh] bg-background pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 border-b border-border bg-background/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto max-w-lg">
-          <h1 className="text-xl font-bold text-white">Catering inquiries</h1>
-          <p className="text-xs text-white/50">
+          <h1 className="text-xl font-bold text-foreground">Catering inquiries</h1>
+          <p className="text-xs text-muted-foreground">
             {allRows.length === 0
               ? "No active requests."
               : `${openCount} need a quote · ${quotedCount} waiting on deposit`}
@@ -111,10 +111,10 @@ export default async function CateringInquiriesPage({
       <div className="mx-auto max-w-lg px-4 pt-4">
         {rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 pt-20">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-              <Inbox size={28} className="text-white/30" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
+              <Inbox size={28} className="text-muted-foreground/60" />
             </div>
-            <p className="text-center text-sm text-white/50">
+            <p className="text-center text-sm text-muted-foreground">
               {filter === "quoted"
                 ? "No quotes waiting on a deposit right now."
                 : filter === "open"
@@ -122,7 +122,7 @@ export default async function CateringInquiriesPage({
                   : "Catering requests from customers will show up here."}
             </p>
             {filter === "all" && (
-              <p className="text-center text-xs text-white/30">
+              <p className="text-center text-xs text-muted-foreground/60">
                 Make sure you&apos;ve published at least one catering listing.
               </p>
             )}
@@ -149,14 +149,14 @@ export default async function CateringInquiriesPage({
                 <li key={inq.id}>
                   <Link
                     href={`/catering/inquiries/${inq.id}`}
-                    className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 transition-all hover:border-white/[0.18] active:scale-[0.99]"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3 transition-all hover:border-border/60 active:scale-[0.99]"
                   >
                     {/* Status indicator */}
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase ${
                         inq.status === "open"
-                          ? "bg-amber-900/40 text-amber-300"
-                          : "bg-blue-900/40 text-blue-300"
+                          ? "bg-amber-500/10 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                          : "bg-blue-500/10 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
                       }`}
                       aria-label={`Status: ${inq.status}`}
                     >
@@ -165,15 +165,15 @@ export default async function CateringInquiriesPage({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-sm font-semibold text-foreground">
                           {inq.member?.display_name ?? "Customer"}
                         </p>
-                        <p className="shrink-0 text-[11px] text-white/40">
+                        <p className="shrink-0 text-[11px] text-muted-foreground">
                           {eventDateLabel}
                           {timeLabel ? ` · ${timeLabel}` : ""}
                         </p>
                       </div>
-                      <div className="mt-0.5 flex items-center gap-3 text-[11px] text-white/50">
+                      <div className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Users size={11} />
                           {inq.guest_count}
@@ -212,12 +212,12 @@ function TabLink({
   tone?: "amber" | "blue";
 }) {
   const countTone = active
-    ? "text-white/80"
+    ? "text-foreground/80"
     : tone === "amber"
-      ? "text-amber-300/80"
+      ? "text-amber-700/80 dark:text-amber-300/80"
       : tone === "blue"
-        ? "text-blue-300/80"
-        : "text-white/40";
+        ? "text-blue-700/80 dark:text-blue-300/80"
+        : "text-muted-foreground";
   return (
     <Link
       href={href}
@@ -226,8 +226,8 @@ function TabLink({
       // full reload, which is fine.
       className={`glass-segment-item flex-1 py-2 text-center text-xs font-medium transition-all ${
         active
-          ? "glass-segment-item-active text-white"
-          : "text-white/55 hover:text-white/80"
+          ? "glass-segment-item-active text-foreground"
+          : "text-muted-foreground hover:text-foreground/80"
       }`}
       aria-current={active ? "page" : undefined}
     >

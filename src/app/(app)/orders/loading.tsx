@@ -27,7 +27,7 @@ export default function OrdersLoading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-start gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3"
+            className="flex items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3"
           >
             <Skeleton className="h-11 w-11 shrink-0 rounded-full" />
             <div className="flex-1 space-y-2">

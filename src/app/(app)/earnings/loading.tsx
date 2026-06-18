@@ -16,7 +16,7 @@ export default function EarningsLoading() {
       <Skeleton className="h-7 w-24" />
 
       {/* Balance hero card — big, top of page */}
-      <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+      <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-6">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="mt-3 h-10 w-44" />
         <Skeleton className="mt-2 h-3 w-32" />
@@ -35,7 +35,7 @@ export default function EarningsLoading() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center justify-between rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3"
+            className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-3"
           >
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-1/2" />

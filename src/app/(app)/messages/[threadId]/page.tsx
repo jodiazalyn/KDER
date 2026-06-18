@@ -58,25 +58,25 @@ export default function MessageThreadPage({
   }, [partnerId]);
 
   return (
-    <main className="fixed inset-0 z-[60] flex flex-col bg-[#0A0A0A]">
+    <main className="fixed inset-0 z-[60] flex flex-col bg-background">
       {/* Header — translucent sticky chrome via raw backdrop-filter
           (the plugin's `glass-nav` forces `position: fixed; top: 0`
           which would detach this from its scroll container). */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
-          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-base font-bold text-white">
+          <h1 className="text-base font-bold text-foreground">
             {partnerName || "…"}
           </h1>
           {orderId && (
-            <p className="text-[10px] text-green-400/60">Order thread</p>
+            <p className="text-[10px] text-primary/60">Order thread</p>
           )}
         </div>
       </div>

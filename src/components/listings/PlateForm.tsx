@@ -652,21 +652,21 @@ export function PlateForm({ listing }: PlateFormProps) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(9rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-[100dvh] flex-col bg-background pb-[calc(9rem+env(safe-area-inset-bottom))]">
       {/* Header — translucent sticky chrome via raw backdrop-filter
           (the plugin's `glass-nav` forces `position: fixed; top: 0`
           which would detach the header from this scroll container).
           Back button is 44px (h-11 w-11) per Apple HIG tap target. */}
-      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <button
           type="button"
           onClick={() => router.back()}
-          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
+          className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-transform"
           aria-label="Go back"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-white">
+        <h1 className="text-lg font-bold text-foreground">
           {isEditing ? "Edit Plate" : "Create Plate"}
         </h1>
 
@@ -675,13 +675,13 @@ export function PlateForm({ listing }: PlateFormProps) {
           <div className="ml-auto flex items-center gap-1.5 text-xs">
             {autoSaved ? (
               <>
-                <Cloud size={14} className="text-green-400" />
-                <span className="text-green-400">Saved</span>
+                <Cloud size={14} className="text-primary" />
+                <span className="text-primary">Saved</span>
               </>
             ) : restored ? (
               <>
-                <Cloud size={14} className="text-white/30" />
-                <span className="text-white/30">Draft restored</span>
+                <Cloud size={14} className="text-muted-foreground/60" />
+                <span className="text-muted-foreground/60">Draft restored</span>
               </>
             ) : null}
           </div>
@@ -698,7 +698,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             <div className="mb-2 flex items-center">
               <span
                 id="kind-label"
-                className="text-sm font-medium text-white/60"
+                className="text-sm font-medium text-muted-foreground"
               >
                 Listing type
               </span>
@@ -729,14 +729,14 @@ export function PlateForm({ listing }: PlateFormProps) {
                     className={cn(
                       "glass-segment-item flex-1 flex flex-col items-center justify-center py-2.5 transition-all active:scale-[0.98]",
                       active
-                        ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-                        : "text-white/60 hover:text-white/80"
+                        ? "bg-primary/10 text-primary border border-primary/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                        : "text-muted-foreground hover:text-foreground/80"
                     )}
                   >
                     <span className="text-sm font-semibold leading-none">
                       {opt.label}
                     </span>
-                    <span className="mt-0.5 text-[10px] leading-none text-white/40">
+                    <span className="mt-0.5 text-[10px] leading-none text-muted-foreground/60">
                       {opt.hint}
                     </span>
                   </button>
@@ -744,7 +744,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               })}
             </div>
             {kind === "catering" && (
-              <p className="mt-2 text-xs text-white/50">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Customers send you an inquiry, you reply with a quote, they
                 pay a 30% deposit to lock in the date. Balance auto-charges
                 a few days before the event.
@@ -764,7 +764,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               <div className="mb-2 flex items-center">
                 <span
                   id="plate-mode-label"
-                  className="text-sm font-medium text-white/60"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   Availability
                 </span>
@@ -805,14 +805,14 @@ export function PlateForm({ listing }: PlateFormProps) {
                       className={cn(
                         "glass-segment-item flex-1 flex flex-col items-center justify-center py-2.5 transition-all active:scale-[0.98]",
                         active
-                          ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-                          : "text-white/60 hover:text-white/80"
+                          ? "bg-primary/10 text-primary border border-primary/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                          : "text-muted-foreground hover:text-foreground/80"
                       )}
                     >
                       <span className="text-sm font-semibold leading-none">
                         {opt.label}
                       </span>
-                      <span className="mt-0.5 text-[10px] leading-none text-white/40">
+                      <span className="mt-0.5 text-[10px] leading-none text-muted-foreground/60">
                         {opt.hint}
                       </span>
                     </button>
@@ -823,7 +823,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                 <div className="mt-2">
                   <label
                     htmlFor="pre-order-date"
-                    className="mb-1.5 block text-xs text-white/55"
+                    className="mb-1.5 block text-xs text-muted-foreground"
                   >
                     When will this plate be ready?
                   </label>
@@ -841,9 +841,9 @@ export function PlateForm({ listing }: PlateFormProps) {
                       return `${y}-${m}-${day}`;
                     })()}
                     onChange={(e) => setPreOrderDate(e.target.value)}
-                    className="glass-input h-12 w-full px-4 text-base text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                    className="glass-input h-12 w-full px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   />
-                  <p className="mt-1.5 text-[11px] text-white/40">
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
                     Customers will see a PRE-ORDER badge on the photo
                     and an &ldquo;Available {preOrderDate ? formatPreOrderDateShort(preOrderDate) : "{date}"}&rdquo; line under the plate.
                   </p>
@@ -854,7 +854,7 @@ export function PlateForm({ listing }: PlateFormProps) {
 
           {/* Media */}
           <section>
-            <label className="mb-2 block text-sm font-medium text-white/60">
+            <label className="mb-2 block text-sm font-medium text-muted-foreground">
               Photos &amp; Video
             </label>
             <div ref={photosCoachRef}>
@@ -871,7 +871,7 @@ export function PlateForm({ listing }: PlateFormProps) {
           <section>
             <label
               htmlFor="plate-name"
-              className="mb-2 block text-sm font-medium text-white/60"
+              className="mb-2 block text-sm font-medium text-muted-foreground"
             >
               Plate name *
             </label>
@@ -882,9 +882,9 @@ export function PlateForm({ listing }: PlateFormProps) {
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, NAME_MAX))}
               placeholder="e.g., Smoked Brisket Plate"
-              className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+              className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
             />
-            <p className="mt-1 text-right text-xs text-white/30">
+            <p className="mt-1 text-right text-xs text-muted-foreground/60">
               {name.length}/{NAME_MAX}
             </p>
           </section>
@@ -894,7 +894,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             <div className="mb-2 flex items-center justify-between gap-2">
               <label
                 htmlFor="plate-desc"
-                className="block text-sm font-medium text-white/60"
+                className="block text-sm font-medium text-muted-foreground"
               >
                 Description
               </label>
@@ -927,9 +927,9 @@ export function PlateForm({ listing }: PlateFormProps) {
               }
               placeholder="What makes this plate special?"
               rows={3}
-              className="glass-input w-full px-4 py-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors resize-none"
+              className="glass-input w-full px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors resize-none"
             />
-            <p className="mt-1 text-right text-xs text-white/30">
+            <p className="mt-1 text-right text-xs text-muted-foreground/60">
               {description.length}/{DESC_MAX}
             </p>
           </section>
@@ -939,12 +939,12 @@ export function PlateForm({ listing }: PlateFormProps) {
             <section>
               <label
                 htmlFor="plate-price"
-                className="mb-2 block text-sm font-medium text-white/60"
+                className="mb-2 block text-sm font-medium text-muted-foreground"
               >
                 Price *
               </label>
               <div ref={priceCoachRef} className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-primary">
                   $
                 </span>
                 <input
@@ -957,7 +957,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                     if (val.split(".").length <= 2) setPrice(val);
                   }}
                   placeholder="0.00"
-                  className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  className="glass-input h-12 w-full pl-10 pr-4 text-lg font-bold text-primary placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                 />
               </div>
               {/* Inline trigger — opens Mia pre-filled with the
@@ -980,7 +980,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               <div className="mb-2 flex items-center">
                 <span
                   id="catering-pricing-label"
-                  className="text-sm font-medium text-white/60"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   Pricing *
                 </span>
@@ -1011,8 +1011,8 @@ export function PlateForm({ listing }: PlateFormProps) {
                       className={cn(
                         "glass-segment-item flex-1 py-2.5 text-sm font-medium transition-all active:scale-[0.98]",
                         active
-                          ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-                          : "text-white/60 hover:text-white/80"
+                          ? "bg-primary/10 text-primary border border-primary/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+                          : "text-muted-foreground hover:text-foreground/80"
                       )}
                     >
                       {opt.label}
@@ -1022,7 +1022,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               </div>
               {/* Price input — same control either way, label changes */}
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-green-300">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-primary">
                   $
                 </span>
                 <input
@@ -1040,13 +1040,13 @@ export function PlateForm({ listing }: PlateFormProps) {
                       ? "Price per guest"
                       : "Flat package price"
                   }
-                  className="glass-input h-12 w-full pl-10 pr-24 text-lg font-bold text-green-300 placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  className="glass-input h-12 w-full pl-10 pr-24 text-lg font-bold text-primary placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-white/40">
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
                   {cateringPricingMode === "per_head" ? "/ guest" : "flat"}
                 </span>
               </div>
-              <p className="mt-1.5 text-xs text-white/40">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 {cateringPricingMode === "per_head"
                   ? "Customer's quote total = guest count × price. Add fees like delivery or labor on the quote itself."
                   : "Single package price. Add fees like delivery or labor on the quote itself."}
@@ -1072,7 +1072,7 @@ export function PlateForm({ listing }: PlateFormProps) {
           {/* Quantity (plate) OR Guest range (catering) */}
           {kind === "plate" ? (
             <section>
-              <label className="mb-2 block text-sm font-medium text-white/60">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Quantity available *
               </label>
               <QuantityStepper value={quantity} onChange={setQuantity} />
@@ -1081,13 +1081,13 @@ export function PlateForm({ listing }: PlateFormProps) {
             <section aria-labelledby="catering-guests-label">
               <span
                 id="catering-guests-label"
-                className="mb-2 block text-sm font-medium text-white/60"
+                className="mb-2 block text-sm font-medium text-muted-foreground"
               >
                 Guest range *
               </span>
               <div className="flex gap-3">
                 <label className="flex-1">
-                  <span className="mb-1 block text-xs text-white/50">
+                  <span className="mb-1 block text-xs text-muted-foreground">
                     Min guests
                   </span>
                   <input
@@ -1099,11 +1099,11 @@ export function PlateForm({ listing }: PlateFormProps) {
                       setCateringMinGuests(e.target.value.replace(/\D/g, ""))
                     }
                     placeholder="10"
-                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                    className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   />
                 </label>
                 <label className="flex-1">
-                  <span className="mb-1 block text-xs text-white/50">
+                  <span className="mb-1 block text-xs text-muted-foreground">
                     Max guests (optional)
                   </span>
                   <input
@@ -1115,11 +1115,11 @@ export function PlateForm({ listing }: PlateFormProps) {
                       setCateringMaxGuests(e.target.value.replace(/\D/g, ""))
                     }
                     placeholder="—"
-                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                    className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   />
                 </label>
               </div>
-              <p className="mt-1.5 text-xs text-white/40">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 Customers can&apos;t inquire for fewer than the minimum.
                 Leave max blank for no upper limit.
               </p>
@@ -1132,7 +1132,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               <div className="mb-2 flex items-center">
                 <span
                   id="catering-lead-label"
-                  className="text-sm font-medium text-white/60"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   Minimum lead time *
                 </span>
@@ -1142,7 +1142,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               </div>
               <div className="flex gap-3">
                 <label className="flex-1">
-                  <span className="mb-1 block text-xs text-white/50">Days</span>
+                  <span className="mb-1 block text-xs text-muted-foreground">Days</span>
                   <input
                     type="number"
                     inputMode="numeric"
@@ -1152,11 +1152,11 @@ export function PlateForm({ listing }: PlateFormProps) {
                       setCateringLeadDays(e.target.value.replace(/\D/g, ""))
                     }
                     placeholder="2"
-                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                    className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   />
                 </label>
                 <label className="flex-1">
-                  <span className="mb-1 block text-xs text-white/50">Hours</span>
+                  <span className="mb-1 block text-xs text-muted-foreground">Hours</span>
                   <input
                     type="number"
                     inputMode="numeric"
@@ -1167,11 +1167,11 @@ export function PlateForm({ listing }: PlateFormProps) {
                       setCateringLeadHoursPart(e.target.value.replace(/\D/g, ""))
                     }
                     placeholder="0"
-                    className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                    className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   />
                 </label>
               </div>
-              <p className="mt-1.5 text-xs text-white/40">
+              <p className="mt-1.5 text-xs text-muted-foreground">
                 How far in advance customers must book this. The date picker
                 on their inquiry form will gray out anything inside this
                 window.
@@ -1182,7 +1182,7 @@ export function PlateForm({ listing }: PlateFormProps) {
           {/* Fulfillment (plate single-select) OR Fulfillment (catering multi) */}
           {kind === "plate" ? (
             <section>
-              <label className="mb-2 block text-sm font-medium text-white/60">
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">
                 Fulfillment
               </label>
               <FulfillmentPicker value={fulfillment} onChange={setFulfillment} />
@@ -1195,11 +1195,11 @@ export function PlateForm({ listing }: PlateFormProps) {
                   enabled (migration 019 + listings POST/PATCH
                   validation). */}
               {(fulfillment === "delivery" || fulfillment === "both") && (
-                <div className="mt-4 space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                <div className="mt-4 space-y-3 rounded-2xl border border-border bg-muted/30 p-4">
                   <div className="space-y-2">
                     <label
                       htmlFor="pickup-street"
-                      className="block text-xs font-semibold uppercase tracking-wider text-white/55"
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                     >
                       Pickup address
                     </label>
@@ -1212,7 +1212,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                       }
                       placeholder="Street address — e.g. 1234 Almeda Rd"
                       autoComplete="street-address"
-                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                      className="glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                     <input
                       id="pickup-city"
@@ -1223,7 +1223,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                       }
                       placeholder="City"
                       autoComplete="address-level2"
-                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                      className="glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -1237,7 +1237,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                         }
                         placeholder="State — e.g. TX"
                         autoComplete="address-level1"
-                        className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                        className="glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       />
                       <input
                         id="pickup-zip"
@@ -1251,10 +1251,10 @@ export function PlateForm({ listing }: PlateFormProps) {
                         }
                         placeholder="ZIP — e.g. 77004"
                         autoComplete="postal-code"
-                        className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                        className="glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                       />
                     </div>
-                    <p className="text-[11px] text-white/40">
+                    <p className="text-[11px] text-muted-foreground">
                       Where the courier picks up. We send this to Uber
                       on every delivery order for this plate.
                     </p>
@@ -1262,7 +1262,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                   <div>
                     <label
                       htmlFor="pickup-instructions"
-                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/55"
+                      className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                     >
                       Notes for the courier (optional)
                     </label>
@@ -1274,9 +1274,9 @@ export function PlateForm({ listing }: PlateFormProps) {
                         setPickupInstructions(e.target.value.slice(0, 280))
                       }
                       placeholder="Ring the side gate, not the front door"
-                      className="glass-input h-11 w-full px-3 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                      className="glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                     />
-                    <p className="mt-1 text-[11px] text-white/40">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {pickupInstructions.length}/280
                     </p>
                   </div>
@@ -1288,7 +1288,7 @@ export function PlateForm({ listing }: PlateFormProps) {
               <div className="mb-2 flex items-center">
                 <span
                   id="catering-fulfillment-label"
-                  className="text-sm font-medium text-white/60"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   Fulfillment (pick all that apply)
                 </span>
@@ -1321,8 +1321,8 @@ export function PlateForm({ listing }: PlateFormProps) {
                       className={cn(
                         "glass-card flex h-12 items-center justify-center rounded-xl border text-sm font-medium transition-all active:scale-[0.98]",
                         active
-                          ? "border-green-400/40 bg-green-900/40 text-green-300 shadow-[0_0_10px_rgba(27,94,32,0.30)]"
-                          : "border-white/10 text-white/60 hover:text-white/80"
+                          ? "border-primary/40 bg-primary/10 text-primary shadow-[0_0_10px_rgba(27,94,32,0.30)]"
+                          : "border-border text-muted-foreground hover:text-foreground/80"
                       )}
                     >
                       {opt.label}
@@ -1341,7 +1341,7 @@ export function PlateForm({ listing }: PlateFormProps) {
           {kind === "catering" && (
             <section>
               <div className="mb-2 flex items-center">
-                <label className="text-sm font-medium text-white/60">
+                <label className="text-sm font-medium text-muted-foreground">
                   What&apos;s included
                 </label>
                 <InfoTip label="How does this work?">
@@ -1357,8 +1357,8 @@ export function PlateForm({ listing }: PlateFormProps) {
                   touch it. Kept so older listings still surface their
                   copy in the edit form. */}
               {(cateringInclusions || "").trim().length > 0 && (
-                <details className="mt-3 text-xs text-white/40">
-                  <summary className="cursor-pointer hover:text-white/60">
+                <details className="mt-3 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer hover:text-foreground/80">
                     Legacy free-text inclusions
                   </summary>
                   <textarea
@@ -1367,7 +1367,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                       setCateringInclusions(e.target.value.slice(0, 500))
                     }
                     rows={2}
-                    className="glass-input mt-2 w-full px-4 py-2 text-sm text-white/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 resize-none"
+                    className="glass-input mt-2 w-full px-4 py-2 text-sm text-foreground/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-none"
                   />
                 </details>
               )}
@@ -1385,15 +1385,15 @@ export function PlateForm({ listing }: PlateFormProps) {
               <div className="mb-2 flex items-center justify-between">
                 <span
                   id="extras-label"
-                  className="text-sm font-medium text-white/60"
+                  className="text-sm font-medium text-muted-foreground"
                 >
                   Extras
-                  <span className="ml-1.5 text-[11px] font-normal text-white/40">
+                  <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/60">
                     (optional add-ons)
                   </span>
                 </span>
               </div>
-              <p className="mb-2 text-[11px] leading-relaxed text-white/45">
+              <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
                 Things customers can add to this plate at checkout —
                 drinks, desserts, extra sauce. Set a price or leave at
                 $0 for free options.
@@ -1437,7 +1437,7 @@ export function PlateForm({ listing }: PlateFormProps) {
             onToggle={() => setShowMinOrder(!showMinOrder)}
           >
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/40">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                 $
               </span>
               <input
@@ -1449,7 +1449,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                   if (val.split(".").length <= 2) setMinOrder(val);
                 }}
                 placeholder="No minimum"
-                className="glass-input h-12 w-full pl-10 pr-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                className="glass-input h-12 w-full pl-10 pr-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
               />
             </div>
           </CollapsibleSection>
@@ -1463,11 +1463,11 @@ export function PlateForm({ listing }: PlateFormProps) {
               and we know they can't publish because of Connect
               (not because of the baseline form validation). */}
           {connectVerified === false && baseCanPublish && (
-            <p className="text-center text-xs text-orange-300">
+            <p className="text-center text-xs text-amber-600 dark:text-orange-300">
               Set up payouts to publish plates.{" "}
               <Link
                 href="/earnings"
-                className="font-semibold underline underline-offset-2 hover:text-orange-200"
+                className="font-semibold underline underline-offset-2 hover:text-amber-700 dark:hover:text-orange-200"
               >
                 Go to Earnings →
               </Link>
@@ -1482,8 +1482,8 @@ export function PlateForm({ listing }: PlateFormProps) {
               className={cn(
                 "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold transition-transform active:scale-95",
                 canDraft && !saving
-                  ? "glass-btn-secondary text-white"
-                  : "border border-white/10 text-white/30 cursor-not-allowed"
+                  ? "glass-btn-secondary text-foreground"
+                  : "border border-border text-muted-foreground/60 cursor-not-allowed"
               )}
             >
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Save as Draft"}
@@ -1494,10 +1494,10 @@ export function PlateForm({ listing }: PlateFormProps) {
               onClick={() => handleSave(LISTING_STATUS.ACTIVE)}
               disabled={!canPublish || saving}
               className={cn(
-                "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
+                "flex h-12 flex-1 items-center justify-center rounded-full text-sm font-bold transition-all active:scale-95",
                 canPublish && !saving
-                  ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                  : "bg-white/10 cursor-not-allowed opacity-50"
+                  ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                  : "bg-muted text-muted-foreground/50 cursor-not-allowed opacity-50"
               )}
             >
               {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : "Publish"}
@@ -1572,11 +1572,11 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/[0.08]">
+    <section className="rounded-2xl border border-border">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-white/60 hover:text-white/80"
+        className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground/80"
         aria-expanded={open}
       >
         {title}

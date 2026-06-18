@@ -179,7 +179,7 @@ export function OrdersClient({
   return (
     <PullToRefresh onRefresh={async () => refresh()}>
       <main className="px-4 pb-4 pt-6">
-        <h1 className="text-3xl font-black text-white">Orders</h1>
+        <h1 className="text-3xl font-black text-foreground">Orders</h1>
 
         {/* Catering "in-flight" surface — covers the gap between
             an inquiry landing and a booking being confirmed.
@@ -200,8 +200,8 @@ export function OrdersClient({
                 className={cn(
                   "glass-segment-item flex-1 py-2 text-xs font-medium",
                   activeTab === tab.key
-                    ? "glass-segment-item-active text-white"
-                    : "text-white/40 hover:text-white/60"
+                    ? "glass-segment-item-active text-foreground"
+                    : "text-muted-foreground hover:text-foreground/60"
                 )}
               >
                 {tab.label}
@@ -209,7 +209,9 @@ export function OrdersClient({
                   <span
                     className={cn(
                       "ml-1 text-[10px]",
-                      tab.key === "active" ? "text-orange-300" : "opacity-60"
+                      tab.key === "active"
+                        ? "text-amber-600 dark:text-orange-300"
+                        : "opacity-60"
                     )}
                   >
                     {count}
@@ -244,25 +246,25 @@ export function OrdersClient({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-4 pt-24">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-              <Bell size={28} className="text-white/20" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <Bell size={28} className="text-muted-foreground/40" />
             </div>
             {activeTab === "active" && (
               <>
-                <p className="text-center text-sm text-white/50">
+                <p className="text-center text-sm text-muted-foreground">
                   No pending orders. Share your link to get your first order.
                 </p>
                 <CopyLinkButton handle={handle} variant="compact" />
               </>
             )}
             {activeTab === "completed" && (
-              <p className="text-center text-sm text-white/50">
+              <p className="text-center text-sm text-muted-foreground">
                 No completed orders yet. They&apos;ll show up here after your
                 first sale.
               </p>
             )}
             {activeTab === "declined" && (
-              <p className="text-center text-sm text-white/50">
+              <p className="text-center text-sm text-muted-foreground">
                 No declined orders.
               </p>
             )}

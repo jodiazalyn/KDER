@@ -30,7 +30,7 @@ export default function ListingsLoading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3"
+            className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3"
           >
             <Skeleton className="h-16 w-16 shrink-0 rounded-xl" />
             <div className="flex-1 space-y-2">

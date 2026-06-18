@@ -176,7 +176,7 @@ export function InquiryActions({
           bar directly under the z-50 nav — invisible on mobile, an
           early-tester reported the Message + Build quote buttons as
           "no buttons at all." */}
-      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-white/[0.08] bg-[#0A0A0A]/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-border bg-background/85 px-4 py-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto flex max-w-lg gap-2">
           {/* Pending acceptance: Accept + Decline. Quote stays read-only. */}
           {booking?.status === "pending_acceptance" ? (
@@ -186,7 +186,7 @@ export function InquiryActions({
                 onClick={decline}
                 disabled={!!busy}
                 className={cn(
-                  "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-red-400/[0.30] text-sm font-semibold text-red-200 transition-colors active:scale-95 disabled:opacity-50",
+                  "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-red-400/[0.30] text-sm font-semibold text-red-600 transition-colors active:scale-95 disabled:opacity-50 dark:text-red-200",
                   busy === "decline" ? "" : "hover:bg-red-500/10"
                 )}
               >
@@ -206,8 +206,8 @@ export function InquiryActions({
                 className={cn(
                   "flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-bold text-white transition-all active:scale-95",
                   busy === "accept"
-                    ? "cursor-wait bg-[#1B5E20]/60"
-                    : "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                    ? "cursor-wait bg-gradient-to-r from-[#22C55E] to-[#16A34A] opacity-60"
+                    : "bg-gradient-to-r from-[#22C55E] to-[#16A34A] shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
                 )}
               >
                 {busy === "accept" ? (
@@ -229,14 +229,14 @@ export function InquiryActions({
                     ? `/messages/general_${customerMemberId}`
                     : "/messages"
                 }
-                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-95"
+                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-border text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted/60 active:scale-95"
               >
                 <MessageCircle size={16} />
                 Message
               </Link>
               <Link
                 href="/catering/calendar"
-                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.06] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.10] active:scale-95"
+                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-muted text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted/60 active:scale-95"
               >
                 Open Calendar
               </Link>
@@ -250,14 +250,14 @@ export function InquiryActions({
                     ? `/messages/general_${customerMemberId}`
                     : "/messages"
                 }
-                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-semibold text-white/80 transition-colors hover:bg-white/[0.06] active:scale-95"
+                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full border border-border text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted/60 active:scale-95"
               >
                 <MessageCircle size={16} />
                 Message
               </Link>
               <Link
                 href={`/catering/inquiries/${inquiryId}/quote`}
-                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95"
+                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95"
               >
                 <Sparkles size={16} />
                 {quote?.status === "sent"
@@ -285,12 +285,12 @@ function Banner({
 }) {
   const styles: Record<typeof tone, string> = {
     amber:
-      "border-amber-400/[0.30] bg-amber-900/[0.20] text-amber-100",
+      "border-amber-400/[0.30] bg-amber-500/10 text-amber-700 dark:bg-amber-900/[0.20] dark:text-amber-100",
     green:
-      "border-green-400/[0.30] bg-green-900/[0.25] text-green-100",
-    blue: "border-blue-400/[0.20] bg-blue-900/[0.20] text-blue-100",
-    red: "border-red-400/[0.30] bg-red-900/[0.25] text-red-100",
-    muted: "border-white/[0.10] bg-white/[0.04] text-white/70",
+      "border-emerald-400/[0.30] bg-emerald-500/10 text-emerald-700 dark:bg-emerald-900/[0.25] dark:text-emerald-100",
+    blue: "border-blue-400/[0.20] bg-blue-500/10 text-blue-700 dark:bg-blue-900/[0.20] dark:text-blue-100",
+    red: "border-red-400/[0.30] bg-red-500/10 text-red-700 dark:bg-red-900/[0.25] dark:text-red-100",
+    muted: "border-border bg-muted/40 text-muted-foreground",
   };
   return (
     <div className={cn("rounded-2xl border p-4", styles[tone])}>
