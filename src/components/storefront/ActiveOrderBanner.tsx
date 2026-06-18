@@ -32,20 +32,20 @@ export function ActiveOrderBanner({ order }: { order: ActiveOrderSummary }) {
   return (
     <Link
       href={orderUrl}
-      className="glass-card flex items-center gap-3 border-green-400/[0.30] bg-green-900/[0.25] px-4 py-3 active:scale-[0.99] transition-transform"
+      className="glass-card flex items-center gap-3 border-primary/30 bg-primary/10 px-4 py-3 active:scale-[0.99] transition-transform"
     >
-      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-green-400/[0.15]">
-        <Receipt size={16} className="text-green-300" />
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/15">
+        <Receipt size={16} className="text-primary" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-white">
+        <p className="text-sm font-semibold text-foreground">
           Your order is live
         </p>
-        <p className="text-xs text-white/60 truncate">
+        <p className="text-xs text-muted-foreground truncate">
           #{shortId} · {STATUS_COPY[order.status]}
         </p>
       </div>
-      <span className="flex items-center gap-1 text-xs font-bold text-green-300">
+      <span className="flex items-center gap-1 text-xs font-bold text-primary">
         View
         <ArrowRight size={12} />
       </span>

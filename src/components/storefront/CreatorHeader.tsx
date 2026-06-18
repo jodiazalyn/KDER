@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Globe, MessageCircle, Share2 } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface CreatorHeaderProps {
   creator: CreatorProfile;
@@ -20,8 +21,8 @@ interface CreatorHeaderProps {
  *   - Display name (bold), @handle (muted green), bio (two-line clamp).
  *   - CTA row: [Message] [Share] side-by-side.
  *
- * No hero banner, no gradient band. Plain dark background — the app shell
- * already provides the #0A0A0A page bg.
+ * No hero banner, no gradient band. Sits on the page background — colours come
+ * from theme tokens so the header tracks the active (light/dark) theme.
  */
 export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
   const handleShare = useCallback(async () => {
@@ -59,11 +60,11 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
             alt={creator.display_name}
             width={80}
             height={80}
-            className="h-20 w-20 flex-shrink-0 rounded-full border border-white/10 object-cover"
+            className="h-20 w-20 flex-shrink-0 rounded-full border border-border object-cover"
             priority
           />
         ) : (
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-green-900/40 text-3xl font-bold text-green-300">
+          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-border bg-primary/15 text-3xl font-bold text-primary">
             {creator.display_name.charAt(0).toUpperCase()}
           </div>
         )}
@@ -87,14 +88,14 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
 
       {/* Name + handle + bio */}
       <div className="mt-4">
-        <h1 className="text-lg font-bold leading-tight text-white">
+        <h1 className="truncate text-lg font-bold leading-tight text-foreground">
           {creator.display_name}
         </h1>
-        <p className="text-sm font-medium text-green-300/80">
+        <p className="truncate text-sm font-medium text-primary">
           @{creator.handle}
         </p>
         {creator.bio && (
-          <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/70 line-clamp-3">
+          <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground line-clamp-3">
             {creator.bio}
           </p>
         )}
@@ -107,10 +108,10 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
                 href={`https://instagram.com/${creator.instagram_handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <InstagramIcon className="h-4 w-4 flex-shrink-0" />
-                <span>@{creator.instagram_handle}</span>
+                <span className="truncate max-w-[160px]">@{creator.instagram_handle}</span>
               </a>
             )}
             {creator.tiktok_handle && (
@@ -118,10 +119,10 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
                 href={`https://tiktok.com/@${creator.tiktok_handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <TikTokIcon className="h-4 w-4 flex-shrink-0" />
-                <span>@{creator.tiktok_handle}</span>
+                <span className="truncate max-w-[160px]">@{creator.tiktok_handle}</span>
               </a>
             )}
             {creator.website_url && (
@@ -129,7 +130,7 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
                 href={creator.website_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Globe size={16} className="flex-shrink-0" />
                 <span className="truncate max-w-[160px]">{displayUrl(creator.website_url)}</span>
@@ -140,10 +141,10 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
                 href={`https://facebook.com/${creator.facebook_handle}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <FacebookIcon className="h-4 w-4 flex-shrink-0" />
-                <span>@{creator.facebook_handle}</span>
+                <span className="truncate max-w-[160px]">@{creator.facebook_handle}</span>
               </a>
             )}
             {creator.whatsapp_number && (
@@ -151,7 +152,7 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
                 href={`https://wa.me/${creator.whatsapp_number.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-white/60 transition-colors hover:text-white"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 <WhatsAppIcon className="h-4 w-4 flex-shrink-0" />
                 <span>WhatsApp</span>
@@ -161,13 +162,14 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
         )}
       </div>
 
-      {/* CTA row — Message + Share side-by-side. Bumped 40→44px (Apple HIG)
-          and migrated to glass-btn-pill for the iOS Liquid Glass material. */}
-      <div className="mt-4 flex gap-2">
+      {/* CTA row — Message + Share + theme toggle. Bumped 40→44px (Apple HIG)
+          and migrated to glass-btn-pill for the iOS Liquid Glass material
+          (now theme-aware: frosted-white on light, dark glass on dark). */}
+      <div className="mt-4 flex items-center gap-2">
         <button
           type="button"
           onClick={onMessageClick}
-          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-foreground transition-all active:scale-[0.98]"
         >
           <MessageCircle size={15} />
           Message
@@ -175,12 +177,13 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
         <button
           type="button"
           onClick={handleShare}
-          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-foreground transition-all active:scale-[0.98]"
           aria-label="Share profile"
         >
           <Share2 size={15} />
           Share
         </button>
+        <ThemeToggle className="h-11 w-11 flex-shrink-0 text-foreground" />
       </div>
     </header>
   );
@@ -225,10 +228,10 @@ function WhatsAppIcon({ className }: { className?: string }) {
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-xl font-bold leading-tight text-white">
+      <span className="text-xl font-bold leading-tight text-foreground">
         {value}
       </span>
-      <span className="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">
+      <span className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
       {/* Subtle KDER flourish under each stat so the column doesn't feel bare.

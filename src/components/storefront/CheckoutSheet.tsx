@@ -528,14 +528,14 @@ export function CheckoutSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] text-white"
+          className="rounded-t-3xl border-border text-foreground"
         >
           <div className="flex flex-col items-center justify-center gap-4 py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-900/40">
-              <CheckCircle2 size={32} className="text-green-400" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
+              <CheckCircle2 size={32} className="text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-white">Order Placed!</h2>
-            <p className="text-center text-sm text-white/50">
+            <h2 className="text-xl font-bold text-foreground">Order Placed!</h2>
+            <p className="text-center text-sm text-muted-foreground">
               Your order has been sent to {creatorName}. They&apos;ll confirm it shortly.
             </p>
             <button
@@ -544,7 +544,7 @@ export function CheckoutSheet({
                 setSuccess(false);
                 onOpenChange(false);
               }}
-              className="mt-4 flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform"
+              className="mt-4 flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
             >
               Done
             </button>
@@ -558,10 +558,10 @@ export function CheckoutSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] text-white max-h-[85vh]"
+        className="rounded-t-3xl border-border text-foreground max-h-[85vh]"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">Order from {creatorName}</SheetTitle>
+          <SheetTitle className="text-foreground">Order from {creatorName}</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 space-y-4 overflow-y-auto max-h-[60vh] pb-4">
@@ -572,19 +572,19 @@ export function CheckoutSheet({
                 the order's member_name/member_phone. */}
           {currentUser ? (
             <div className="glass-card px-4 py-3">
-              <p className="text-xs text-white/50">Ordering as</p>
-              <p className="mt-0.5 text-sm font-medium text-white">
+              <p className="text-xs text-muted-foreground">Ordering as</p>
+              <p className="mt-0.5 text-sm font-medium text-foreground">
                 {currentUser.display_name}
               </p>
               {currentUser.phone && (
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   {formatPhone(currentUser.phone)}
                 </p>
               )}
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-white/50">
+              <p className="text-xs font-medium text-muted-foreground">
                 Your contact info
               </p>
               <input
@@ -596,7 +596,7 @@ export function CheckoutSheet({
                 placeholder="Your name"
                 autoFocus
                 autoComplete="name"
-                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               <input
                 type="tel"
@@ -611,7 +611,7 @@ export function CheckoutSheet({
                     : "Phone (for SMS updates)"
                 }
                 autoComplete="tel"
-                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               <input
                 type="email"
@@ -624,9 +624,9 @@ export function CheckoutSheet({
                 }
                 autoComplete="email"
                 inputMode="email"
-                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
-              <p className="text-xs text-white/35">
+              <p className="text-xs text-muted-foreground">
                 {fulfillment === "delivery"
                   ? "The courier and creator will reach you via phone."
                   : "Pick one — we'll send order updates there."}
@@ -646,14 +646,14 @@ export function CheckoutSheet({
                 placeholder="Email (optional, for receipt)"
                 autoComplete="email"
                 inputMode="email"
-                className="glass-input h-12 w-full rounded-xl px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
             </div>
           )}
 
           {/* Fulfillment */}
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/50">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
               How do you want it?
             </label>
             <div className="glass-segment flex gap-1 p-1">
@@ -665,8 +665,8 @@ export function CheckoutSheet({
                   className={cn(
                     "glass-segment-item flex-1 py-2.5 text-sm font-medium transition-all active:scale-95",
                     fulfillment === opt.value
-                      ? "bg-green-900/50 text-green-300 border border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-                      : "text-white/50"
+                      ? "!bg-primary/15 text-primary !border-primary/30 border"
+                      : "text-muted-foreground"
                   )}
                 >
                   {opt.label}
@@ -679,7 +679,7 @@ export function CheckoutSheet({
           {/* Delivery address or Pickup note */}
           {fulfillment === "delivery" ? (
             <div className="space-y-2">
-              <label className="mb-1.5 block text-xs font-medium text-white/50">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Delivery address *
               </label>
               <input
@@ -690,7 +690,7 @@ export function CheckoutSheet({
                   parseAddress(e.target.value);
                 }}
                 placeholder="123 Main St, Houston, TX 77001"
-                className="glass-input w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                className="glass-input w-full rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               {/* Structured fields — auto-populated by the parser
                   above, but the customer can also fix them
@@ -702,7 +702,7 @@ export function CheckoutSheet({
                   value={dropoffCity}
                   onChange={(e) => setDropoffCity(e.target.value)}
                   placeholder="City"
-                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
                 <input
                   type="text"
@@ -711,7 +711,7 @@ export function CheckoutSheet({
                     setDropoffState(e.target.value.slice(0, 2).toUpperCase())
                   }
                   placeholder="ST"
-                  className="glass-input rounded-xl px-3 py-2.5 text-xs uppercase text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs uppercase text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
                 <input
                   type="text"
@@ -721,14 +721,14 @@ export function CheckoutSheet({
                     setDropoffZip(e.target.value.replace(/\D/g, "").slice(0, 5))
                   }
                   placeholder="ZIP"
-                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+                  className="glass-input rounded-xl px-3 py-2.5 text-xs text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleUseLocation}
                 disabled={locating}
-                className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 disabled:opacity-60"
+                className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 disabled:opacity-60"
               >
                 {locating ? (
                   <Loader2 size={12} className="animate-spin" />
@@ -742,37 +742,37 @@ export function CheckoutSheet({
                   status row that morphs between loading / OK /
                   soft-fail states. */}
               {quoteState.kind === "loading" && (
-                <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-2.5 text-xs text-white/55">
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground">
                   <Loader2 size={12} className="animate-spin" />
                   Checking delivery availability…
                 </div>
               )}
               {quoteState.kind === "ok" && (
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-900/[0.18] px-3 py-2.5">
-                  <Truck size={14} className="shrink-0 text-emerald-300" />
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
+                  <Truck size={14} className="shrink-0 text-emerald-600 dark:text-emerald-300" />
                   <div className="flex-1 text-xs">
-                    <p className="font-semibold text-emerald-200">
+                    <p className="font-semibold text-emerald-700 dark:text-emerald-200">
                       Delivery available
                     </p>
-                    <p className="text-emerald-300/80">
+                    <p className="text-emerald-600/80 dark:text-emerald-300/80">
                       Arrives in ~{quoteState.quote.duration_minutes} min
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-200">
+                  <p className="shrink-0 text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-200">
                     ${(quoteState.quote.fee_cents / 100).toFixed(2)}
                   </p>
                 </div>
               )}
               {quoteState.kind === "error" && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-400/30 bg-amber-900/[0.18] px-3 py-2.5">
-                  <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-300" />
-                  <div className="flex-1 text-xs text-amber-100/90">
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
+                  <div className="flex-1 text-xs text-amber-700 dark:text-amber-100/90">
                     {quoteState.message}
                     {" "}
                     <button
                       type="button"
                       onClick={() => setFulfillment("pickup")}
-                      className="ml-1 underline-offset-2 hover:underline font-semibold text-amber-100"
+                      className="ml-1 underline-offset-2 hover:underline font-semibold text-amber-700 dark:text-amber-100"
                     >
                       Switch to pickup
                     </button>
@@ -782,14 +782,14 @@ export function CheckoutSheet({
             </div>
           ) : (
             <div className="glass-card p-3">
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-muted-foreground">
                 The creator&apos;s pickup address will be sent to your phone via SMS after they confirm your order.
               </p>
             </div>
           )}
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-white/50">
+            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
               Special instructions (optional)
             </label>
             <textarea
@@ -797,7 +797,7 @@ export function CheckoutSheet({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Extra sauce, no onions, etc."
               rows={2}
-              className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 resize-none"
+              className="glass-input w-full px-4 py-3 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 resize-none"
             />
           </div>
 
@@ -810,23 +810,23 @@ export function CheckoutSheet({
               const extras = item.selected_extras ?? [];
               return (
                 <div key={item.listing.id} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-white/60">
+                  <div className="flex justify-between gap-2 text-xs">
+                    <span className="min-w-0 truncate text-muted-foreground">
                       {item.listing.name} × {item.quantity}
                     </span>
-                    <span className="text-white">
+                    <span className="shrink-0 text-foreground">
                       ${(item.listing.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                   {extras.map((ex) => (
                     <div
                       key={ex.name}
-                      className="flex justify-between pl-3 text-[11px]"
+                      className="flex justify-between gap-2 pl-3 text-[11px]"
                     >
-                      <span className="text-white/45">
+                      <span className="min-w-0 truncate text-muted-foreground">
                         + {ex.qty} {ex.name}
                       </span>
-                      <span className="text-white/65">
+                      <span className="shrink-0 text-foreground/80">
                         ${((ex.price_cents / 100) * ex.qty).toFixed(2)}
                       </span>
                     </div>
@@ -839,19 +839,16 @@ export function CheckoutSheet({
                 sees the breakdown, not just a higher final number. */}
             {quoteState.kind === "ok" && (
               <div className="flex justify-between text-xs">
-                <span className="text-white/60">Delivery (Uber)</span>
-                <span className="text-white">
+                <span className="text-muted-foreground">Delivery (Uber)</span>
+                <span className="text-foreground">
                   ${deliveryFeeDollars.toFixed(2)}
                 </span>
               </div>
             )}
-            <div className="h-px bg-white/[0.08]" />
+            <div className="h-px bg-border" />
             <div className="flex justify-between">
-              <span className="text-sm font-bold text-white">Total</span>
-              <span
-                className="text-lg font-bold text-green-300"
-                style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-              >
+              <span className="text-sm font-bold text-foreground">Total</span>
+              <span className="text-lg font-bold text-primary">
                 ${(total + deliveryFeeDollars).toFixed(2)}
               </span>
             </div>
@@ -859,7 +856,7 @@ export function CheckoutSheet({
         </div>
 
         {/* Place Order */}
-        <div className="border-t border-white/[0.08] pt-4 pb-6">
+        <div className="border-t border-border pt-4 pb-6">
           <button
             type="button"
             onClick={handlePlace}
@@ -867,7 +864,7 @@ export function CheckoutSheet({
             className={cn(
               "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold text-white transition-all active:scale-95",
               canPlace && !placing
-                ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
+                ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
                 : "glass-btn-pill cursor-not-allowed opacity-50"
             )}
           >

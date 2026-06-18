@@ -40,7 +40,7 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
       type="button"
       onClick={() => onClick(listing)}
       className={cn(
-        "group relative aspect-square w-full overflow-hidden bg-white/[0.04] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400",
+        "group relative aspect-square w-full overflow-hidden bg-muted transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
         soldOut && "opacity-60"
       )}
       aria-label={`View ${listing.name}`}
@@ -55,8 +55,8 @@ export function PlateTile({ listing, onClick, priority = false }: PlateTileProps
           className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-white/[0.04]">
-          <ImageOff size={24} className="text-white/20" />
+        <div className="flex h-full w-full items-center justify-center bg-muted">
+          <ImageOff size={24} className="text-muted-foreground/40" />
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Inter, Poppins } from "next/font/google";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 // Geist via next/font/google. We expose it as a CSS variable so
@@ -13,6 +14,23 @@ const geist = Geist({
   subsets: ["latin"],
   weight: ["400", "600", "700", "800"],
   variable: "--font-geist",
+  display: "swap",
+});
+
+// Inter (body) + Poppins (display/headings) — the type system of the new
+// light aesthetic. Exposed as CSS variables consumed by globals.css (body /
+// h1-h6) and Tailwind's font-sans / font-display.
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -65,7 +83,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#0A0A0A",
+  // Light is the default; advertise the matching browser-chrome colour for
+  // each scheme so the address bar / status bar tracks the active theme.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0A0A0A" },
+  ],
   // Required for env(safe-area-inset-*) to take real values on iPhones
   // with notches / Dynamic Island / home indicators. Without this,
   // those env vars resolve to 0 and bottom nav / floating action bars
@@ -79,18 +102,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${geist.variable}`}>
-      <body className="min-h-screen bg-[#0A0A0A] text-white antialiased">
-        {children}
-        <Toaster
-          position="bottom-center"
-          toastOptions={{
-            // Liquid Glass treatment via the plugin's glass-modal
-            // utility — matches the Sheet/Dialog substrate so toasts
-            // feel like part of the same material system.
-            className: "glass-modal text-white",
-          }}
-        />
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geist.variable} ${inter.variable} ${poppins.variable}`}
+    >
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <ThemeProvider>
+          {children}
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              // Liquid Glass treatment via the plugin's glass-modal
+              // utility — matches the Sheet/Dialog substrate so toasts
+              // feel like part of the same material system. Now theme-aware
+              // (frosted-white on light, dark glass on dark).
+              className: "glass-modal",
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

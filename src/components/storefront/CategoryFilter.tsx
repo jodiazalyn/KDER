@@ -93,8 +93,8 @@ function Pill({
       className={cn(
         "glass-btn-pill flex-shrink-0 px-4 py-2 text-xs font-semibold transition-all active:scale-95",
         active
-          ? "bg-green-900/50 text-green-300 border-green-400/30 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-          : "text-white/50 hover:text-white/70"
+          ? "!bg-primary !border-transparent text-primary-foreground shadow-[0_4px_14px_rgba(127,201,60,0.30)]"
+          : "text-muted-foreground hover:text-foreground"
       )}
     >
       {label}
@@ -118,8 +118,8 @@ function TagPill({
       className={cn(
         "glass-btn-pill flex-shrink-0 px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95",
         active
-          ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
-          : "bg-white/[0.06] text-white/50 border border-white/[0.08] hover:text-white/70"
+          ? "!border-primary/30 !bg-primary/15 text-primary"
+          : "text-muted-foreground hover:text-foreground"
       )}
     >
       {label}
