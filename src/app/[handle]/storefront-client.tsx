@@ -520,17 +520,32 @@ export function StorefrontClient({
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
 
+  // A floating action bar is pinned to the bottom only in two cases: the
+  // Plates tab with a non-empty cart, or the Catering tab with ≥1 selection.
+  // We reserve bottom padding to clear that bar ONLY when it's actually
+  // showing — otherwise the page would carry ~7rem of dead whitespace under
+  // every short screen (Reviews, empty states, etc.).
+  const hasFloatingBar =
+    (activeTab === "plates" && cartCount > 0) ||
+    (activeTab === "catering" && selectedCateringIds.size > 0);
+
   if (!creator) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-[#0A0A0A] px-4">
-        <h1 className="text-2xl font-bold text-white">Store not found</h1>
-        <p className="mt-2 text-white/50">This creator doesn&apos;t exist.</p>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+        <h1 className="text-2xl font-bold text-foreground">Store not found</h1>
+        <p className="mt-2 text-muted-foreground">This creator doesn&apos;t exist.</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(7rem+env(safe-area-inset-bottom))]">
+    <main
+      className={`min-h-[100dvh] bg-background ${
+        hasFloatingBar
+          ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
+          : "pb-[calc(2rem+env(safe-area-inset-bottom))]"
+      }`}
+    >
       <div className="mx-auto max-w-[640px]">
         {/* Active-order CTA — only when the visitor has an in-flight order
             with this creator. Inbound link to their order page that
@@ -546,8 +561,8 @@ export function StorefrontClient({
 
         {/* Storefront paused banner */}
         {!creator.storefront_active && (
-          <div className="glass-card mx-4 mb-4 border-orange-400/[0.30] bg-orange-900/[0.25] p-3 text-center">
-            <p className="text-sm text-orange-300">
+          <div className="glass-card mx-4 mb-4 border-amber-500/30 bg-amber-500/10 p-3 text-center">
+            <p className="text-sm text-amber-600 dark:text-amber-300">
               This storefront is currently paused.
             </p>
           </div>
@@ -559,7 +574,7 @@ export function StorefrontClient({
         <div
           role="tablist"
           aria-label="Storefront sections"
-          className="flex items-stretch border-y border-white/[0.08]"
+          className="flex items-stretch border-y border-border"
         >
           {storefrontTabs.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -575,8 +590,8 @@ export function StorefrontClient({
                 className={cn(
                   "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
                   isActive
-                    ? "border-b-2 border-green-400 text-white"
-                    : "border-b-2 border-transparent text-white/40 hover:text-white/70"
+                    ? "border-b-2 border-primary text-foreground"
+                    : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
                 )}
               >
                 <Icon size={14} />
@@ -597,7 +612,7 @@ export function StorefrontClient({
 
         {/* Catering tab content — wide cards in a single column */}
         {activeTab === "catering" && (
-          <div className="space-y-2 px-4 py-3">
+          <div className="space-y-2 px-4 py-4">
             {cateringListings.length > 0 ? (
               cateringListings.map((listing) => (
                 <CateringMenuCard
@@ -608,11 +623,11 @@ export function StorefrontClient({
                 />
               ))
             ) : (
-              <p className="py-12 text-center text-sm text-white/50">
+              <p className="py-12 text-center text-sm text-muted-foreground">
                 No catering options right now.
               </p>
             )}
-            <p className="pt-2 text-center text-[11px] text-white/40">
+            <p className="pt-2 text-center text-[11px] text-muted-foreground">
               Tap items you&apos;re interested in, then request a quote.
             </p>
           </div>
@@ -646,10 +661,10 @@ export function StorefrontClient({
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 pt-16">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-                <UtensilsCrossed size={28} className="text-white/20" />
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <UtensilsCrossed size={28} className="text-muted-foreground/40" />
               </div>
-              <p className="text-center text-sm text-white/50">
+              <p className="text-center text-sm text-muted-foreground">
                 {selectedTag
                   ? `No plates tagged "${selectedTag}" right now.`
                   : "No plates available right now. Check back soon!"}
@@ -689,7 +704,7 @@ export function StorefrontClient({
             setHasOpenedCart(true);
             setCartOpen(true);
           }}
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
         >
           <ShoppingCart size={18} />
           View Cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}
@@ -709,7 +724,7 @@ export function StorefrontClient({
               `/${encodeURIComponent(handle)}/catering/inquire?items=${ids}`
             );
           }}
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_24px_rgba(27,94,32,0.6)] active:scale-95 transition-transform"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
         >
           <CalendarRange size={18} />
           Request Catering ({selectedCateringIds.size}{" "}
@@ -759,10 +774,10 @@ export function StorefrontClient({
       <Sheet open={messageOpen} onOpenChange={setMessageOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl border-white/[0.22] text-white max-h-[80vh] flex flex-col"
+          className="rounded-t-3xl border-border text-foreground max-h-[80vh] flex flex-col"
         >
           <SheetHeader>
-            <SheetTitle className="text-white">
+            <SheetTitle className="text-foreground">
               Message {creator.display_name}
             </SheetTitle>
           </SheetHeader>
@@ -771,7 +786,7 @@ export function StorefrontClient({
             /* Anon-auth gate — same friction as the checkout name/phone
                step. Once submitted, the sheet swaps to the chat thread. */
             <div className="mt-4 space-y-4 pb-6">
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-muted-foreground">
                 Tell {creator.display_name} who you are. Your name + phone
                 lets them reach back if they need to confirm details about
                 your message.
@@ -783,7 +798,7 @@ export function StorefrontClient({
                   onChange={(e) => setGateName(e.target.value)}
                   placeholder="Your name"
                   autoComplete="name"
-                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  className="glass-input h-12 w-full px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   aria-label="Your name"
                 />
                 <input
@@ -793,10 +808,10 @@ export function StorefrontClient({
                   placeholder="Phone number"
                   autoComplete="tel"
                   inputMode="tel"
-                  className="glass-input h-12 w-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                  className="glass-input h-12 w-full px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
                   aria-label="Phone number"
                 />
-                <p className="text-[11px] text-white/40">
+                <p className="text-[11px] text-muted-foreground">
                   We won&apos;t text you anything you didn&apos;t ask for.
                 </p>
               </div>
@@ -807,8 +822,8 @@ export function StorefrontClient({
                 className={cn(
                   "flex h-12 w-full items-center justify-center rounded-full text-sm font-bold transition-all active:scale-95",
                   gateValid && !gateSubmitting
-                    ? "bg-[#1B5E20] text-white shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-                    : "glass-btn-pill text-white/30 cursor-not-allowed"
+                    ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                    : "glass-btn-pill text-muted-foreground cursor-not-allowed"
                 )}
               >
                 {gateSubmitting
@@ -821,7 +836,7 @@ export function StorefrontClient({
           {/* Chat history */}
           <div className="mt-3 flex-1 overflow-y-auto space-y-2 min-h-[120px] max-h-[45vh] px-1">
             {chatMessages.length === 0 ? (
-              <p className="text-center text-xs text-white/30 py-8">
+              <p className="text-center text-xs text-muted-foreground py-8">
                 No messages yet. Say hello to {creator.display_name}!
               </p>
             ) : (
@@ -836,14 +851,14 @@ export function StorefrontClient({
                       className={cn(
                         "max-w-[75%] rounded-2xl px-3.5 py-2.5 text-sm",
                         isMine
-                          ? "border border-green-400/[0.22] bg-green-900/[0.45] text-white backdrop-blur-[24px] backdrop-saturate-[200%] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.30)]"
-                          : "border border-white/[0.12] bg-white/[0.08] text-white/90 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
+                          ? "border border-primary/30 bg-primary/15 text-foreground backdrop-blur-[24px] backdrop-saturate-[200%]"
+                          : "glass-card !rounded-2xl text-foreground"
                       )}
                     >
                       <p>{msg.body}</p>
                       <div className={cn(
                         "mt-1 flex items-center gap-1 text-[10px]",
-                        isMine ? "text-green-300/50 justify-end" : "text-white/30"
+                        isMine ? "text-primary/70 justify-end" : "text-muted-foreground"
                       )}>
                         <span>
                           {new Date(msg.created_at).toLocaleTimeString([], {
@@ -852,13 +867,13 @@ export function StorefrontClient({
                           })}
                         </span>
                         {isMine && !msg.read_at && (
-                          <span className="flex items-center gap-0.5 text-orange-300/60">
+                          <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-300/60">
                             <Clock size={9} />
                             Pending
                           </span>
                         )}
                         {isMine && msg.read_at && (
-                          <span className="text-green-400/60">✓ Read</span>
+                          <span className="text-primary">✓ Read</span>
                         )}
                       </div>
                     </div>
@@ -883,7 +898,7 @@ export function StorefrontClient({
               }}
               placeholder={`Message ${creator.display_name}...`}
               disabled={sending}
-              className="glass-input h-11 flex-1 rounded-full px-4 text-sm text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors disabled:opacity-50"
+              className="glass-input h-11 flex-1 rounded-full px-4 text-sm text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors disabled:opacity-50"
             />
             <button
               type="button"
@@ -892,8 +907,8 @@ export function StorefrontClient({
               className={cn(
                 "flex h-11 w-11 items-center justify-center rounded-full transition-all active:scale-90",
                 messageText.trim() && !sending
-                  ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
-                  : "glass-btn-pill text-white/30 cursor-not-allowed"
+                  ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                  : "glass-btn-pill text-muted-foreground cursor-not-allowed"
               )}
               aria-label="Send message"
             >

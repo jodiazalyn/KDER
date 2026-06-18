@@ -3,7 +3,59 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * LIGHT THEME (default).
+   * Derived from the Visily light mockups: white surfaces, warm near-black
+   * ink (#21231F), KDER green (#7FC93C), warm-gray muted text (#91978C),
+   * hairline borders (#E0E2DF), red (#DD3C57). Values are HSL channels so
+   * Tailwind's hsl(var(--*)) mapping keeps working unchanged.
+   */
   :root {
+    color-scheme: light;
+
+    --background: 0 0% 100%;
+    --foreground: 80 6% 13%;          /* #21231F */
+    --card: 0 0% 100%;
+    --card-foreground: 80 6% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 80 6% 13%;
+    --primary: 92 56% 51%;            /* #7FC93C */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 96 60% 97%;          /* #F7FCF3 tinted green surface */
+    --secondary-foreground: 80 6% 13%;
+    --muted: 80 8% 96%;               /* #F5F6F4 */
+    --muted-foreground: 88 5% 57%;    /* #91978C */
+    --accent: 96 60% 97%;             /* #F7FCF3 */
+    --accent-foreground: 92 56% 38%;
+    --destructive: 349 68% 55%;       /* #DD3C57 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 90 5% 88%;              /* #E0E2DF */
+    --input: 90 5% 88%;
+    --ring: 92 56% 51%;
+    --radius: 1rem;
+
+    /* Liquid-glass material — frosted white on light backgrounds. */
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-bg-strong: rgba(255, 255, 255, 0.85);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(17, 24, 39, 0.08);
+    --glass-border-strong: rgba(17, 24, 39, 0.14);
+    --glass-shadow: 0 8px 32px rgba(17, 24, 39, 0.08);
+    --glass-shadow-lg: 0 16px 48px rgba(17, 24, 39, 0.12);
+    --glass-placeholder: rgba(33, 35, 31, 0.45);
+    --glass-solid: rgba(255, 255, 255, 0.96);
+    --shimmer-base: rgba(17, 24, 39, 0.04);
+    --shimmer-peak: rgba(17, 24, 39, 0.1);
+  }
+
+  /*
+   * DARK THEME — the original "Liquid Glass" look, preserved verbatim.
+   * Activated by the `.dark` class on <html> (next-themes) or by pinning a
+   * not-yet-restyled surface with `className="dark"`.
+   */
+  .dark {
+    color-scheme: dark;
+
     --background: 0 0% 4%;
     --foreground: 0 0% 100%;
     --card: 0 0% 6%;
@@ -24,6 +76,19 @@
     --input: 0 0% 18%;
     --ring: 128 56% 24%;
     --radius: 1rem;
+
+    /* Liquid-glass material — white-overlay tints on dark backgrounds. */
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-bg-strong: rgba(255, 255, 255, 0.12);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-border-strong: rgba(255, 255, 255, 0.2);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+    --glass-placeholder: rgba(255, 255, 255, 0.5);
+    --glass-solid: rgba(15, 30, 15, 0.95);
+    --shimmer-base: rgba(255, 255, 255, 0.04);
+    --shimmer-peak: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -33,7 +98,67 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
+      'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-poppins), "Poppins", var(--font-inter), system-ui,
+      sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+/*
+ * Theme-aware liquid-glass material.
+ *
+ * The `liquidglass-tailwind` plugin bakes its glass colours
+ * (rgba(255,255,255,*) white overlays) into the generated CSS at build
+ * time, so they can't flip between light and dark by class alone. We
+ * re-point the plugin's component classes at the theme-scoped CSS vars
+ * (--glass-bg / --glass-border / --glass-shadow, defined per theme above)
+ * so the SAME `glass-*` utilities render frosted-white on light and the
+ * original dark glass on dark — with no per-component changes. The leading
+ * `html` selector bumps specificity above the plugin's bare `.glass-*`.
+ */
+@layer components {
+  html .glass-card,
+  html .glass-modal {
+    background-color: var(--glass-bg);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  html .glass-card-elevated {
+    background-color: var(--glass-bg-strong);
+    border-color: var(--glass-border-strong);
+    box-shadow: var(--glass-shadow-lg);
+  }
+  html .glass-btn {
+    background-color: var(--glass-bg);
+    border-color: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  html .glass-btn-secondary,
+  html .glass-btn-pill,
+  html .glass-input,
+  html .glass-segment {
+    background-color: var(--glass-bg-subtle);
+    border-color: var(--glass-border);
+  }
+  html .glass-nav {
+    background-color: var(--glass-bg-strong);
+    border-color: var(--glass-border);
+  }
+  html .glass-input::placeholder {
+    color: var(--glass-placeholder);
+  }
+  html .glass-input:focus {
+    border-color: var(--glass-border-strong);
+    background-color: var(--glass-bg);
+  }
+  html .glass-segment-item-active {
+    background-color: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
   }
 }
 
@@ -44,7 +169,7 @@
   .glass-surface-lg,
   .glass-surface-xl,
   .glass-green {
-    background: rgba(15, 30, 15, 0.92);
+    background: var(--glass-solid);
   }
 }
 
@@ -55,7 +180,7 @@
   .glass-surface-lg,
   .glass-surface-xl,
   .glass-green {
-    background: rgba(15, 30, 15, 0.95) !important;
+    background: var(--glass-solid) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -96,9 +221,9 @@
   .animate-glass-shimmer {
     background-image: linear-gradient(
       110deg,
-      rgba(255, 255, 255, 0.04) 8%,
-      rgba(255, 255, 255, 0.12) 22%,
-      rgba(255, 255, 255, 0.04) 36%
+      var(--shimmer-base) 8%,
+      var(--shimmer-peak) 22%,
+      var(--shimmer-base) 36%
     );
     background-size: 200% 100%;
     animation: glass-shimmer 1.6s linear infinite;

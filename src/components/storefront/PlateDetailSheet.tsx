@@ -124,7 +124,7 @@ export function PlateDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex h-[90vh] max-h-[90vh] flex-col rounded-t-3xl border-white/[0.22] p-0 text-white"
+        className="flex max-h-[90vh] flex-col rounded-t-3xl border-border p-0 text-foreground"
       >
         {/* Scrollable background — the full plate details */}
         <div className="flex-1 overflow-y-auto px-4 pt-4">
@@ -144,8 +144,8 @@ export function PlateDetailSheet({
                   priority
                 />
               ) : (
-                <div className="flex aspect-[16/10] items-center justify-center bg-white/[0.04]">
-                  <ImageOff size={48} className="text-white/20" />
+                <div className="flex aspect-[16/10] items-center justify-center bg-muted">
+                  <ImageOff size={48} className="text-muted-foreground/40" />
                 </div>
               )}
               {soldOut && (
@@ -172,28 +172,25 @@ export function PlateDetailSheet({
                   else. Calendar icon makes the date scan as a
                   schedule signal. */}
               {preOrderDateLong && (
-                <div className="mb-3 flex items-center gap-2 rounded-xl border border-green-400/[0.25] bg-green-900/[0.20] px-3 py-2">
-                  <Calendar size={14} className="text-green-300" />
-                  <span className="text-xs font-semibold text-green-100">
+                <div className="mb-3 flex items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 py-2">
+                  <Calendar size={14} className="text-primary" />
+                  <span className="text-xs font-semibold text-primary">
                     Pre-order · available {preOrderDateLong}
                   </span>
                 </div>
               )}
 
-              <SheetTitle className="text-xl font-bold leading-tight text-white">
+              <SheetTitle className="text-xl font-bold leading-tight text-foreground">
                 {listing.name}
               </SheetTitle>
 
               {listing.description && (
-                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/70">
+                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground">
                   {listing.description}
                 </p>
               )}
 
-              <p
-                className="mt-3 text-2xl font-bold text-green-300"
-                style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-              >
+              <p className="mt-3 text-2xl font-bold text-primary">
                 ${listing.price.toFixed(2)}
               </p>
 
@@ -206,8 +203,8 @@ export function PlateDetailSheet({
                   led a creator's customers to think things like
                   "extra spice" came on the plate by default.) */}
               {!soldOut && (listing.extras ?? []).length > 0 && (
-                <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
-                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/40">
+                <div className="mt-4 rounded-2xl border border-border bg-muted/40 p-3">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                     Add extras
                   </p>
                   <ul className="space-y-1.5">
@@ -220,14 +217,14 @@ export function PlateDetailSheet({
                           className="flex items-center gap-2"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm text-white/90">
+                            <p className="truncate text-sm text-foreground">
                               {ex.name}
                             </p>
                             <p
                               className={
                                 isFree
-                                  ? "text-[11px] font-semibold uppercase tracking-wider text-emerald-300/80"
-                                  : "text-[11px] text-white/45"
+                                  ? "text-[11px] font-semibold uppercase tracking-wider text-primary"
+                                  : "text-[11px] text-muted-foreground"
                               }
                             >
                               {isFree
@@ -251,11 +248,11 @@ export function PlateDetailSheet({
                               }
                               disabled={exQty <= 0}
                               aria-label={`Decrease ${ex.name}`}
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 disabled:text-white/15 active:scale-90 transition-transform"
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40 active:scale-90 transition-transform"
                             >
                               <Minus size={14} />
                             </button>
-                            <span className="w-6 text-center text-sm font-semibold text-white">
+                            <span className="w-6 text-center text-sm font-semibold text-foreground">
                               {exQty}
                             </span>
                             <button
@@ -271,7 +268,7 @@ export function PlateDetailSheet({
                               }
                               disabled={exQty >= 99}
                               aria-label={`Increase ${ex.name}`}
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 disabled:text-white/15 active:scale-90 transition-transform"
+                              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40 active:scale-90 transition-transform"
                             >
                               <Plus size={14} />
                             </button>
@@ -281,9 +278,9 @@ export function PlateDetailSheet({
                     })}
                   </ul>
                   {extrasSubtotalCents > 0 && (
-                    <p className="mt-2 text-right text-[11px] text-white/55">
+                    <p className="mt-2 text-right text-[11px] text-muted-foreground">
                       Extras subtotal:{" "}
-                      <span className="font-semibold text-white/80">
+                      <span className="font-semibold text-foreground">
                         ${(extrasSubtotalCents / 100).toFixed(
                           extrasSubtotalCents % 100 === 0 ? 0 : 2
                         )}
@@ -295,13 +292,13 @@ export function PlateDetailSheet({
 
               {/* Tags */}
               <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70">
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                   {fulfillmentLabel}
                 </span>
                 {listing.category_tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-green-900/50 px-2.5 py-1 text-[11px] font-medium text-green-300"
+                    className="rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary"
                   >
                     {tag}
                   </span>
@@ -309,7 +306,7 @@ export function PlateDetailSheet({
                 {listing.allergens.map((allergen) => (
                   <span
                     key={allergen}
-                    className="rounded-full border border-orange-400/20 bg-orange-900/40 px-2.5 py-1 text-[11px] font-medium text-orange-300"
+                    className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-300"
                   >
                     {allergen}
                   </span>
@@ -325,11 +322,11 @@ export function PlateDetailSheet({
                       onClick={() => setQty(Math.max(1, qty - 1))}
                       disabled={qty <= 1}
                       aria-label="Decrease quantity"
-                      className="flex h-11 w-11 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
+                      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40 active:scale-90 transition-transform"
                     >
                       <Minus size={16} />
                     </button>
-                    <span className="w-7 text-center text-base font-semibold text-white">
+                    <span className="w-7 text-center text-base font-semibold text-foreground">
                       {qty}
                     </span>
                     <button
@@ -337,7 +334,7 @@ export function PlateDetailSheet({
                       onClick={() => setQty(Math.min(maxQty, qty + 1))}
                       disabled={qty >= maxQty}
                       aria-label="Increase quantity"
-                      className="flex h-11 w-11 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
+                      className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground disabled:opacity-40 active:scale-90 transition-transform"
                     >
                       <Plus size={16} />
                     </button>
@@ -353,10 +350,10 @@ export function PlateDetailSheet({
                       );
                     }}
                     className={cn(
-                      "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-bold text-white transition-all active:scale-95",
+                      "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-bold transition-all active:scale-95",
                       cartQty > 0
-                        ? "border-green-400/30 bg-green-800/40"
-                        : "border-white/20 bg-white/[0.06] hover:bg-white/[0.10]"
+                        ? "!border-primary/30 !bg-primary/15 text-primary"
+                        : "border-border bg-muted text-foreground hover:bg-muted/70"
                     )}
                   >
                     <ShoppingCart size={15} />
@@ -366,26 +363,26 @@ export function PlateDetailSheet({
               )}
 
               {/* Creator credit */}
-              <div className="mt-4 flex items-center gap-2 border-t border-white/[0.06] pt-3 text-xs text-white/50">
+              <div className="mt-4 flex items-center gap-2 border-t border-border pt-3 text-xs text-muted-foreground">
                 {creator.photo_url ? (
                   <Image
                     src={creator.photo_url}
                     alt=""
                     width={20}
                     height={20}
-                    className="h-5 w-5 flex-shrink-0 rounded-full border border-white/10 object-cover"
+                    className="h-5 w-5 flex-shrink-0 rounded-full border border-border object-cover"
                   />
                 ) : (
-                  <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-green-900/40 text-[10px] font-bold text-green-300">
+                  <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border border-border bg-primary/15 text-[10px] font-bold text-primary">
                     {creator.display_name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <span>
                   From{" "}
-                  <span className="font-semibold text-white/80">
+                  <span className="font-semibold text-foreground">
                     {creator.display_name}
                   </span>{" "}
-                  <span className="text-green-300/70">@{creator.handle}</span>
+                  <span className="text-primary">@{creator.handle}</span>
                 </span>
               </div>
             </div>
@@ -396,7 +393,7 @@ export function PlateDetailSheet({
             Primary revenue-capture CTA: one tap adds to cart + opens the
             checkout form, skipping the view-cart step. */}
         {!soldOut && (
-          <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-4 pb-5 pt-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+          <div className="flex-shrink-0 border-t border-border bg-background/80 px-4 pb-5 pt-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
             <button
               type="button"
               onClick={() =>
@@ -406,7 +403,7 @@ export function PlateDetailSheet({
                   selectedExtras.length > 0 ? selectedExtras : undefined
                 )
               }
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-base font-bold text-white shadow-[0_8px_28px_rgba(27,94,32,0.55),0_0_24px_rgba(27,94,32,0.4)] transition-all active:scale-[0.98]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-base font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98]"
             >
               <Zap size={18} className="fill-white" />
               Buy Now · ${totalForQty}

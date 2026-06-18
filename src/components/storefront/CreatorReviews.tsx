@@ -89,17 +89,17 @@ export function CreatorReviews({
   return (
     <div className="px-4 py-4">
       {/* Summary header */}
-      <div className="flex items-center gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+      <div className="glass-card flex items-center gap-4 rounded-2xl p-4">
         <div className="text-center">
-          <p className="text-3xl font-black leading-none text-white">
+          <p className="text-3xl font-black leading-none text-foreground">
             {summary.average != null ? summary.average.toFixed(1) : "—"}
           </p>
           <StarRow rating={Math.round(summary.average ?? 0)} size={13} />
-          <p className="mt-1 text-[11px] text-white/40">
+          <p className="mt-1 text-[11px] text-muted-foreground">
             {summary.count} {summary.count === 1 ? "review" : "reviews"}
           </p>
         </div>
-        <div className="flex-1 text-sm text-white/60">
+        <div className="flex-1 text-sm text-muted-foreground">
           {summary.count > 0
             ? "What customers say after their orders."
             : "No reviews yet — be the first to order and leave one."}
@@ -109,23 +109,23 @@ export function CreatorReviews({
       {/* List */}
       <div className="mt-3 space-y-2">
         {state === "loading" && (
-          <p className="py-10 text-center text-sm text-white/40">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             Loading reviews…
           </p>
         )}
 
         {state === "error" && (
-          <p className="py-10 text-center text-sm text-white/40">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             Couldn&apos;t load reviews. Pull to refresh.
           </p>
         )}
 
         {state === "ready" && reviews && reviews.length === 0 && (
           <div className="flex flex-col items-center justify-center gap-3 py-12">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
-              <MessageSquareText size={24} className="text-white/20" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <MessageSquareText size={24} className="text-muted-foreground/40" />
             </div>
-            <p className="text-center text-sm text-white/50">
+            <p className="text-center text-sm text-muted-foreground">
               No reviews yet.
             </p>
           </div>
@@ -136,20 +136,20 @@ export function CreatorReviews({
           reviews.map((r) => (
             <div
               key={r.id}
-              className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3.5"
+              className="glass-card rounded-2xl p-3.5"
             >
               <div className="flex items-center justify-between">
                 <StarRow rating={r.rating} size={14} />
-                <span className="text-[11px] text-white/35">
+                <span className="text-[11px] text-muted-foreground">
                   {timeAgo(r.created_at)}
                 </span>
               </div>
               {r.body && (
-                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-white/80">
+                <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-foreground/80">
                   {r.body}
                 </p>
               )}
-              <p className="mt-2 text-xs font-medium text-white/45">
+              <p className="mt-2 text-xs font-medium text-muted-foreground">
                 — {r.reviewer_name}
               </p>
             </div>
@@ -166,7 +166,7 @@ function StarRow({ rating, size }: { rating: number; size: number }) {
         <Star
           key={n}
           size={size}
-          className={cn(n <= rating ? "text-yellow-400" : "text-white/15")}
+          className={cn(n <= rating ? "text-amber-400" : "text-muted-foreground/30")}
           fill={n <= rating ? "currentColor" : "none"}
         />
       ))}

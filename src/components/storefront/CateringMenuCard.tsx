@@ -56,14 +56,14 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
       aria-pressed={selected}
       aria-label={`${selected ? "Unselect" : "Select"} ${listing.name} for catering inquiry`}
       className={cn(
-        "group relative flex w-full gap-3 overflow-hidden rounded-2xl border bg-white/[0.02] p-3 text-left transition-all active:scale-[0.99]",
+        "group relative flex w-full gap-3 overflow-hidden rounded-2xl border bg-card p-3 text-left transition-all active:scale-[0.99]",
         selected
-          ? "border-green-400/50 bg-green-900/10 shadow-[0_0_16px_rgba(27,94,32,0.25)]"
-          : "border-white/[0.08] hover:border-white/[0.18]"
+          ? "border-primary/50 bg-primary/10 shadow-[0_0_16px_rgba(127,201,60,0.25)]"
+          : "border-border hover:border-primary/30"
       )}
     >
       {/* Photo (square thumb on the left) */}
-      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-white/[0.04]">
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-muted">
         {photo ? (
           <Image
             src={photo}
@@ -74,7 +74,7 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <ImageOff size={20} className="text-white/20" />
+            <ImageOff size={20} className="text-muted-foreground/40" />
           </div>
         )}
       </div>
@@ -83,17 +83,14 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         {/* Top row: name + price */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 truncate text-sm font-semibold text-white">
+          <h3 className="min-w-0 truncate text-sm font-semibold text-foreground">
             {listing.name}
           </h3>
           <span className="shrink-0 text-right">
-            <span
-              className="text-base font-bold text-green-300"
-              style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-            >
+            <span className="text-base font-bold text-primary">
               ${listing.price.toFixed(0)}
             </span>
-            <span className="ml-0.5 text-[10px] text-white/40">
+            <span className="ml-0.5 text-[10px] text-muted-foreground">
               {isPerHead ? "/guest" : "flat"}
             </span>
           </span>
@@ -107,18 +104,18 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
 
         {/* Bottom row: metadata chips */}
         <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/60">
+          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             <Users size={10} />
             {guestsLabel} guests
           </span>
-          <span className="flex items-center gap-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/60">
+          <span className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             <Clock size={10} />
             {leadLabel}
           </span>
           {listing.catering_fulfillment.map((f) => (
             <span
               key={f}
-              className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-medium text-white/60"
+              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
             >
               {FULFILLMENT_LABELS[f] ?? f}
             </span>
@@ -129,7 +126,7 @@ export function CateringMenuCard({ listing, selected, onToggle }: Props) {
       {/* Selected checkmark badge in the corner */}
       {selected && (
         <span
-          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-black shadow"
+          className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow"
           aria-hidden="true"
         >
           <Check size={14} strokeWidth={3} />
@@ -152,9 +149,9 @@ function InclusionsSummary({ listing }: { listing: Listing }) {
         {entries.slice(0, 3).map(([group, items]) => (
           <p
             key={group}
-            className="line-clamp-1 text-xs leading-snug text-white/60"
+            className="line-clamp-1 text-xs leading-snug text-muted-foreground"
           >
-            <span className="font-semibold text-white/75">{group}:</span>{" "}
+            <span className="font-semibold text-foreground/80">{group}:</span>{" "}
             {items?.join(", ")}
           </p>
         ))}
@@ -163,14 +160,14 @@ function InclusionsSummary({ listing }: { listing: Listing }) {
   }
   if (listing.catering_inclusions) {
     return (
-      <p className="line-clamp-2 text-xs leading-snug text-white/60">
+      <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
         {listing.catering_inclusions}
       </p>
     );
   }
   if (listing.description) {
     return (
-      <p className="line-clamp-2 text-xs leading-snug text-white/60">
+      <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
         {listing.description}
       </p>
     );

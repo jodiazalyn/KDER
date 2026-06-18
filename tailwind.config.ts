@@ -67,16 +67,25 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        // Geist (loaded via next/font/google in src/app/layout.tsx) is
-        // the new display/body face for the marketing landing. Falls
-        // back to the system stack for any surface that doesn't load
-        // the variable (e.g. emergency error boundaries).
+        // Inter is the app body face (loaded via next/font in layout.tsx);
+        // Geist remains as a fallback for the marketing landing and any
+        // surface that renders before the variable binds (e.g. emergency
+        // error boundaries). System stack is the final fallback.
         sans: [
+          "var(--font-inter)",
           "var(--font-geist)",
           "-apple-system",
           "BlinkMacSystemFont",
           "SF Pro Display",
           "SF Pro Text",
+          "system-ui",
+          "sans-serif",
+        ],
+        // Poppins for display/headings in the new aesthetic. Use via
+        // `font-display`; globals.css also applies it to h1-h6 by default.
+        display: [
+          "var(--font-poppins)",
+          "var(--font-inter)",
           "system-ui",
           "sans-serif",
         ],

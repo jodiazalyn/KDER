@@ -41,10 +41,10 @@ export function CartSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] text-white max-h-[80vh]"
+        className="rounded-t-3xl border-border text-foreground max-h-[80vh]"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">
+          <SheetTitle className="text-foreground">
             Your Cart ({items.length} {items.length === 1 ? "item" : "items"})
           </SheetTitle>
         </SheetHeader>
@@ -73,10 +73,10 @@ export function CartSheet({
                   />
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {item.listing.name}
                     </p>
-                    <p className="text-xs text-green-300">
+                    <p className="text-xs text-primary">
                       ${lineTotal.toFixed(2)}
                     </p>
                   </div>
@@ -87,12 +87,12 @@ export function CartSheet({
                       onClick={() =>
                         onUpdateQty(item.listing.id, item.quantity - 1)
                       }
-                      className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/60 active:scale-90 transition-transform"
+                      className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground active:scale-90 transition-transform"
                       aria-label="Decrease quantity"
                     >
                       <Minus size={14} />
                     </button>
-                    <span className="w-7 text-center text-sm font-medium">
+                    <span className="w-7 text-center text-sm font-medium text-foreground">
                       {item.quantity}
                     </span>
                     <button
@@ -100,7 +100,7 @@ export function CartSheet({
                       onClick={() =>
                         onUpdateQty(item.listing.id, item.quantity + 1)
                       }
-                      className="glass-btn-pill flex h-11 w-11 items-center justify-center text-white/60 active:scale-90 transition-transform"
+                      className="glass-btn-pill flex h-11 w-11 items-center justify-center text-muted-foreground active:scale-90 transition-transform"
                       aria-label="Increase quantity"
                     >
                       <Plus size={14} />
@@ -122,17 +122,17 @@ export function CartSheet({
                     (handled by cart-store). Hidden when the line has
                     no extras so the cart stays clean. */}
                 {extras.length > 0 && (
-                  <ul className="mt-2 space-y-1 border-t border-white/[0.06] pt-2">
+                  <ul className="mt-2 space-y-1 border-t border-border pt-2">
                     {extras.map((ex) => (
                       <li
                         key={ex.name}
                         className="flex items-center gap-2 pl-1"
                       >
-                        <span className="text-xs text-white/55">+</span>
-                        <span className="min-w-0 flex-1 truncate text-xs text-white/75">
+                        <span className="text-xs text-muted-foreground">+</span>
+                        <span className="min-w-0 flex-1 truncate text-xs text-foreground/80">
                           {ex.name}
                           {ex.price_cents > 0 && (
-                            <span className="ml-1 text-white/40">
+                            <span className="ml-1 text-muted-foreground">
                               · ${(ex.price_cents / 100).toFixed(
                                 ex.price_cents % 100 === 0 ? 0 : 2
                               )}
@@ -150,12 +150,12 @@ export function CartSheet({
                                   ex.qty - 1
                                 )
                               }
-                              className="flex h-8 w-8 items-center justify-center rounded-full text-white/55 hover:bg-white/[0.05] active:scale-90 transition-transform"
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.05] active:scale-90 transition-transform"
                               aria-label={`Decrease ${ex.name}`}
                             >
                               <Minus size={12} />
                             </button>
-                            <span className="w-5 text-center text-xs font-medium tabular-nums">
+                            <span className="w-5 text-center text-xs font-medium tabular-nums text-foreground">
                               {ex.qty}
                             </span>
                             <button
@@ -167,7 +167,7 @@ export function CartSheet({
                                   ex.qty + 1
                                 )
                               }
-                              className="flex h-8 w-8 items-center justify-center rounded-full text-white/55 hover:bg-white/[0.05] active:scale-90 transition-transform"
+                              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.05] active:scale-90 transition-transform"
                               aria-label={`Increase ${ex.name}`}
                             >
                               <Plus size={12} />
@@ -184,13 +184,10 @@ export function CartSheet({
         </div>
 
         {/* Subtotal + Checkout */}
-        <div className="border-t border-white/[0.08] pt-4 pb-6 space-y-3">
+        <div className="border-t border-border pt-4 pb-6 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-white/60">Subtotal</span>
-            <span
-              className="text-xl font-bold text-green-300"
-              style={{ filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-            >
+            <span className="text-sm text-muted-foreground">Subtotal</span>
+            <span className="text-xl font-bold text-primary">
               ${total.toFixed(2)}
             </span>
           </div>
@@ -198,7 +195,7 @@ export function CartSheet({
           <button
             type="button"
             onClick={onCheckout}
-            className="flex h-12 w-full items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform"
+            className="flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
           >
             Proceed to Checkout
           </button>
