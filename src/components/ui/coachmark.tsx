@@ -253,16 +253,16 @@ export function Coachmark({
           type="button"
           onClick={handleDismiss}
           aria-label="Dismiss tip"
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-white/55 hover:bg-white/[0.08] hover:text-white active:scale-90 transition-all"
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90 transition-all"
         >
           <X size={16} strokeWidth={2.5} />
         </button>
-        <p className="text-sm leading-relaxed text-white/90">{copy}</p>
+        <p className="text-sm leading-relaxed text-foreground">{copy}</p>
         <div className="mt-3 flex items-center justify-end">
           <button
             type="button"
             onClick={handleDismiss}
-            className="inline-flex h-9 items-center justify-center rounded-full bg-[#1B5E20] px-5 text-xs font-bold text-white shadow-[0_0_14px_rgba(27,94,32,0.4)] active:scale-95 transition-transform"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(34,197,94,0.35)] active:scale-95 transition-transform"
           >
             Got it
           </button>

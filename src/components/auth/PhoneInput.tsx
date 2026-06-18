@@ -41,8 +41,8 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
         disabled={disabled}
         aria-label="Phone number"
         className={cn(
-          "glass-input h-14 w-full px-4 text-center text-2xl text-white placeholder:text-white/35",
-          "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40",
+          "glass-input h-14 w-full px-4 text-center text-2xl text-foreground placeholder:text-muted-foreground/60",
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
           "disabled:cursor-not-allowed disabled:opacity-50",
           "transition-colors duration-200",
           className

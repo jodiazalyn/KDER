@@ -141,13 +141,13 @@ function WaitlistInner() {
   const isCreator = mode !== "customer";
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between px-6 py-12 bg-[#0A0A0A]">
-      {/* Green radial glow — same vibe as /signup */}
+    <main className="relative flex min-h-screen flex-col items-center justify-between px-6 py-12 bg-background">
+      {/* Soft green radial glow — same vibe as /signup, tuned for light */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 30%, rgba(46,125,50,0.12) 0%, transparent 65%)",
+            "radial-gradient(ellipse at 50% 30%, rgba(127,201,60,0.10) 0%, transparent 65%)",
         }}
       />
 
@@ -159,35 +159,32 @@ function WaitlistInner() {
           width={100}
           height={100}
           priority
-          style={{ filter: "drop-shadow(0 0 30px rgba(46,125,50,0.4))" }}
+          style={{ filter: "drop-shadow(0 0 24px rgba(127,201,60,0.30))" }}
         />
-        <h1
-          className="mt-4 text-4xl font-black tracking-widest text-white"
-          style={{ filter: "drop-shadow(0 0 30px rgba(46,125,50,0.5))" }}
-        >
+        <h1 className="mt-4 text-4xl font-black tracking-widest text-foreground">
           KDER
         </h1>
       </div>
 
       {/* Center — message */}
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-5 text-center">
-        <div className="glass-card flex h-14 w-14 items-center justify-center rounded-full border-green-400/30 bg-green-900/30 p-0">
-          <Check size={28} className="text-green-300" />
+        <div className="glass-card flex h-14 w-14 items-center justify-center rounded-full border-primary/30 bg-primary/15 p-0">
+          <Check size={28} className="text-primary" />
         </div>
 
-        <h2 className="text-2xl font-black text-white">
+        <h2 className="text-2xl font-black text-foreground">
           We&apos;re reviewing your account
         </h2>
 
-        <p className="text-base text-white/70">
+        <p className="text-base text-muted-foreground">
           KDER is a private club for Houston home cooks and the people who
           love them. We&apos;re approving new members by hand. Drop us a DM
           on Facebook or Instagram to fast-track your spot.
         </p>
 
         {tail && (
-          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-white/80">
-            <Phone size={14} className="text-white/50" />
+          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-foreground/80">
+            <Phone size={14} className="text-muted-foreground" />
             Got your number — {display || `…${tail}`}
           </div>
         )}
@@ -198,13 +195,13 @@ function WaitlistInner() {
             The "error" state intentionally renders nothing — see the
             ReserveState type comment above. */}
         {isCreator && reserve.kind === "reserving" && (
-          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-white/70">
-            <Loader2 size={14} className="animate-spin text-white/60" />
+          <div className="glass-btn-pill flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground">
+            <Loader2 size={14} className="animate-spin text-muted-foreground" />
             Locking in your handle…
           </div>
         )}
         {isCreator && reserve.kind === "reserved" && (
-          <div className="glass-btn-pill flex items-center gap-2 border-green-400/30 bg-green-900/30 px-4 py-2 text-sm text-green-200 shadow-[0_0_12px_rgba(27,94,32,0.30)]">
+          <div className="glass-btn-pill flex items-center gap-2 border-primary/30 bg-primary/15 px-4 py-2 text-sm text-primary">
             <Check size={14} />
             @{reserve.handle} is yours when you get access
           </div>
@@ -213,7 +210,7 @@ function WaitlistInner() {
         {/* Social CTA — sized like a chunky touch target since these
             are the primary call-to-action below the message. */}
         <div className="mt-2 flex flex-col items-center gap-3">
-          <p className="text-xs uppercase tracking-wider text-white/40">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
             DM us
           </p>
           <div className="flex items-center gap-3">
@@ -222,7 +219,7 @@ function WaitlistInner() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="DM KDER on Facebook"
-              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-white/85 transition-all hover:border-blue-400/40 hover:bg-blue-900/30 hover:text-blue-300 active:scale-90"
+              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-foreground/80 transition-all hover:border-blue-400/40 hover:bg-blue-500/10 hover:text-blue-600 active:scale-90"
             >
               <FacebookIcon />
             </a>
@@ -231,7 +228,7 @@ function WaitlistInner() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="DM KDER on Instagram"
-              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-white/85 transition-all hover:border-pink-400/40 hover:bg-pink-900/20 hover:text-pink-300 active:scale-90"
+              className="glass-btn-pill flex h-12 w-12 items-center justify-center !p-0 text-foreground/80 transition-all hover:border-pink-400/40 hover:bg-pink-500/10 hover:text-pink-600 active:scale-90"
             >
               <InstagramIcon />
             </a>
@@ -243,7 +240,7 @@ function WaitlistInner() {
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-3 pb-4">
         <Link
           href="/"
-          className="glass-btn-pill flex h-14 w-full items-center justify-center text-base font-semibold text-white/90 transition-all active:scale-95 hover:bg-white/[0.10]"
+          className="glass-btn-pill flex h-14 w-full items-center justify-center text-base font-semibold text-foreground transition-all active:scale-95 hover:bg-muted/60"
         >
           Back to home
         </Link>

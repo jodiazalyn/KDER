@@ -91,13 +91,13 @@ function SignupPageInner() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-between px-6 py-12 bg-[#0A0A0A]">
-      {/* Green radial glow */}
+    <main className="relative flex min-h-screen flex-col items-center justify-between px-6 py-12 bg-background">
+      {/* Soft green radial glow — toned down for the light surface */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 50% 30%, rgba(46,125,50,0.12) 0%, transparent 65%)",
+            "radial-gradient(ellipse at 50% 30%, rgba(127,201,60,0.10) 0%, transparent 65%)",
         }}
       />
 
@@ -109,19 +109,16 @@ function SignupPageInner() {
           width={100}
           height={100}
           priority
-          style={{ filter: "drop-shadow(0 0 30px rgba(46,125,50,0.4))" }}
+          style={{ filter: "drop-shadow(0 0 24px rgba(127,201,60,0.30))" }}
         />
-        <h1
-          className="mt-4 text-4xl font-black tracking-widest text-white"
-          style={{ filter: "drop-shadow(0 0 30px rgba(46,125,50,0.5))" }}
-        >
+        <h1 className="mt-4 text-4xl font-black tracking-widest text-foreground">
           KDER
         </h1>
       </div>
 
       {/* Center section — Phone input */}
       <div className="relative z-10 flex w-full max-w-sm flex-col items-center gap-6">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-foreground">
           Enter your phone number
         </h2>
         <div ref={phoneCoachRef} className="w-full">
@@ -139,11 +136,11 @@ function SignupPageInner() {
           onClick={handleSendCode}
           disabled={!isValid || loading}
           className={cn(
-            "flex h-14 w-full items-center justify-center rounded-full text-lg font-bold text-white transition-all duration-200",
+            "flex h-14 w-full items-center justify-center rounded-full text-lg font-bold transition-all duration-200",
             "active:scale-95",
             isValid && !loading
-              ? "bg-[#1B5E20] shadow-[0_0_20px_rgba(27,94,32,0.5)]"
-              : "glass-btn-pill cursor-not-allowed opacity-50"
+              ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+              : "glass-btn-pill cursor-not-allowed text-muted-foreground opacity-60"
           )}
         >
           {loading ? (
@@ -153,11 +150,11 @@ function SignupPageInner() {
           )}
         </button>
 
-        <p className="text-center text-xs text-white/40">
+        <p className="text-center text-xs text-muted-foreground">
           By continuing you agree to our{" "}
           <button
             type="button"
-            className="underline text-white/60 hover:text-white/80"
+            className="underline text-foreground/70 hover:text-foreground"
             onClick={() => toast.info("Terms of Service — coming soon")}
           >
             Terms of Service

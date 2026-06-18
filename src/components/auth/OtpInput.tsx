@@ -163,8 +163,8 @@ function OtpInputInner({
           onPaste={i === 0 ? handlePaste : undefined}
           aria-label={`Digit ${i + 1} of ${length}`}
           className={cn(
-            "glass-input h-14 !w-12 px-0 text-center text-2xl font-bold text-white",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40",
+            "glass-input h-14 !w-12 px-0 text-center text-2xl font-bold text-foreground",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
             "disabled:cursor-not-allowed disabled:opacity-50",
             "transition-all duration-200",
             error && "!border-red-500/60 !bg-red-500/[0.08]"
