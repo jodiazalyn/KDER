@@ -20,14 +20,14 @@ export function ShareLinkCard({ handle }: ShareLinkCardProps) {
       // + glass-shine for the specular highlight. KDER green tint
       // layered on top via Tailwind utilities (per design-system.md
       // pattern for accent-tinted glass surfaces).
-      className="glass-card-elevated glass-shine rounded-glass-lg border-emerald-400/30 bg-emerald-500/15 p-4"
+      className="glass-card-elevated glass-shine rounded-glass-lg border-emerald-500/30 bg-emerald-500/10 p-4"
     >
-      <p className="text-xs font-medium text-green-300/70 uppercase tracking-wider">
+      <p className="text-xs font-medium text-emerald-700/80 dark:text-emerald-300/70 uppercase tracking-wider">
         Your storefront link
       </p>
 
       <div className="mt-2 flex items-center gap-2">
-        <p className="flex-1 text-lg font-bold text-white truncate">
+        <p className="flex-1 text-lg font-bold text-foreground truncate">
           {link}
         </p>
         <CopyLinkButton handle={handle} variant="icon" />

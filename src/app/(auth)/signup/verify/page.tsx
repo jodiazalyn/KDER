@@ -163,11 +163,11 @@ export default function VerifyPage() {
     : "";
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center px-6 py-12 bg-[#0A0A0A]">
+    <main className="relative flex min-h-screen flex-col items-center px-6 py-12 bg-background">
       {/* Back button — glass-btn-pill at Apple HIG 44px tap target */}
       <button
         onClick={() => router.back()}
-        className="glass-btn-pill absolute left-4 top-4 flex h-12 w-12 items-center justify-center text-white/70 hover:text-white active:scale-90 transition-transform"
+        className="glass-btn-pill absolute left-4 top-4 flex h-12 w-12 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-transform"
         aria-label="Go back"
       >
         <ArrowLeft size={24} />
@@ -175,18 +175,18 @@ export default function VerifyPage() {
 
       {/* Loading overlay — translucent glass scrim */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%]">
-          <Loader2 className="h-10 w-10 animate-spin text-green-400" />
-          <p className="mt-4 text-lg text-white/80">Verifying...</p>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[24px] backdrop-saturate-[180%]">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="mt-4 text-lg text-muted-foreground">Verifying...</p>
         </div>
       )}
 
       <div className="flex flex-1 flex-col items-center justify-center gap-8 w-full max-w-sm">
         <div className="flex flex-col items-center gap-2">
-          <h1 className="text-3xl font-black text-white">Enter your code</h1>
-          <p className="text-sm text-white/60">
+          <h1 className="text-3xl font-black text-foreground">Enter your code</h1>
+          <p className="text-sm text-muted-foreground">
             We sent a 6-digit code to{" "}
-            <span className="font-medium text-white/80">{displayPhone}</span>
+            <span className="font-medium text-foreground">{displayPhone}</span>
           </p>
         </div>
 
@@ -200,24 +200,24 @@ export default function VerifyPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-400" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             Incorrect code. Try again.
           </p>
         )}
 
         <div className="flex flex-col items-center gap-1">
           {locked ? (
-            <p className="text-sm text-red-400">
+            <p className="text-sm text-destructive">
               Too many attempts. Wait 1 hour.
             </p>
           ) : countdown > 0 ? (
-            <p className="text-sm text-white/40">
+            <p className="text-sm text-muted-foreground">
               Resend code in 0:{countdown.toString().padStart(2, "0")}
             </p>
           ) : (
             <button
               onClick={handleResend}
-              className="text-sm font-medium text-green-400 hover:text-green-300 active:scale-95"
+              className="text-sm font-medium text-primary hover:text-primary/80 active:scale-95"
             >
               Resend code
             </button>
@@ -231,11 +231,11 @@ export default function VerifyPage() {
             Supabase test phone list and DMs them their code, they
             come back to this same screen and enter it. */}
         <div className="mt-4 flex flex-col items-center gap-2">
-          <div className="h-px w-12 bg-white/[0.12]" aria-hidden />
-          <p className="text-xs text-white/40">Don&apos;t have a code yet?</p>
+          <div className="h-px w-12 bg-border" aria-hidden />
+          <p className="text-xs text-muted-foreground">Don&apos;t have a code yet?</p>
           <Link
             href="/signup/waitlist"
-            className="text-sm font-semibold text-white/85 underline-offset-4 hover:underline active:scale-95"
+            className="text-sm font-semibold text-foreground underline-offset-4 hover:underline active:scale-95"
           >
             Apply for access →
           </Link>

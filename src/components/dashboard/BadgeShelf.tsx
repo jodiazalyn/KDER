@@ -31,10 +31,7 @@ export function BadgeShelf({ badges }: BadgeShelfProps) {
 
   return (
     <div>
-      <h2
-        className="mb-3 text-lg font-bold text-green-300"
-        style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.6))" }}
-      >
+      <h2 className="mb-3 text-lg font-bold text-foreground">
         Badges
       </h2>
 
@@ -59,10 +56,10 @@ export function BadgeShelf({ badges }: BadgeShelfProps) {
             key={badge.id}
             // Locked badges use glass-card for the consistent tile
             // substrate; opacity-40 dims to indicate locked state.
-            className="glass-card rounded-glass-lg flex-shrink-0 flex flex-col items-center gap-1.5 p-3 w-20 opacity-40"
+            className="glass-card rounded-glass-lg flex-shrink-0 flex flex-col items-center gap-1.5 p-3 w-20 opacity-50"
           >
-            <Lock size={22} className="text-white/30" />
-            <span className="text-[10px] font-medium text-white/30 text-center leading-tight">
+            <Lock size={22} className="text-muted-foreground/50" />
+            <span className="text-[10px] font-medium text-muted-foreground/60 text-center leading-tight">
               {badge.name}
             </span>
           </div>
@@ -70,7 +67,7 @@ export function BadgeShelf({ badges }: BadgeShelfProps) {
       </div>
 
       {earned.length === 0 && (
-        <p className="mt-1 text-xs text-white/30">
+        <p className="mt-1 text-xs text-muted-foreground">
           Complete orders and maintain streaks to earn badges!
         </p>
       )}
