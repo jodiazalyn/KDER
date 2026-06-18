@@ -75,7 +75,7 @@ export function PhotoUpload({
       onClick={() => inputRef.current?.click()}
       disabled={loading}
       className={cn(
-        "relative flex items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-white/20 bg-white/[0.06] backdrop-blur-[16px] backdrop-saturate-[180%] transition-all hover:border-green-400/40 hover:bg-white/[0.10] active:scale-95 disabled:cursor-wait",
+        "relative flex items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-border bg-muted backdrop-blur-[16px] backdrop-saturate-[180%] transition-all hover:border-primary/40 hover:bg-muted/70 active:scale-95 disabled:cursor-wait",
         className
       )}
       style={{ width: size, height: size }}
@@ -89,9 +89,9 @@ export function PhotoUpload({
           className="object-cover"
         />
       ) : loading ? (
-        <Loader2 size={size * 0.3} className="animate-spin text-white/60" />
+        <Loader2 size={size * 0.3} className="animate-spin text-muted-foreground" />
       ) : (
-        <Camera size={size * 0.3} className="text-white/40" />
+        <Camera size={size * 0.3} className="text-muted-foreground/60" />
       )}
 
       {loading && value && (
