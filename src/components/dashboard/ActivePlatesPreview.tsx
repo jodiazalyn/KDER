@@ -13,12 +13,12 @@ export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
   if (plates.length === 0) {
     return (
       <div className="glass-card rounded-glass-lg p-6 text-center">
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-muted-foreground">
           No active plates yet. Add your first plate and start earning.
         </p>
         <Link
           href="/listings/new"
-          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-[#1B5E20] px-5 text-sm font-bold text-white shadow-[0_0_16px_rgba(27,94,32,0.4)] active:scale-95 transition-transform"
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-5 text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
         >
           <Plus size={16} />
           Add Plate
@@ -30,15 +30,12 @@ export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2
-          className="text-lg font-bold text-green-300"
-          style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.6))" }}
-        >
+        <h2 className="text-lg font-bold text-foreground">
           Active Plates
         </h2>
         <Link
           href="/listings"
-          className="text-xs font-medium text-green-400 hover:text-green-300"
+          className="text-xs font-medium text-primary hover:text-primary/80"
         >
           View All
         </Link>
@@ -61,16 +58,16 @@ export function ActivePlatesPreview({ plates }: ActivePlatesPreviewProps) {
                   className="object-cover"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-white/[0.04]">
-                  <ImageOff size={20} className="text-white/20" />
+                <div className="flex h-full items-center justify-center bg-muted">
+                  <ImageOff size={20} className="text-muted-foreground/40" />
                 </div>
               )}
             </div>
             <div className="p-2">
-              <p className="truncate text-xs font-medium text-white">
+              <p className="truncate text-xs font-medium text-foreground">
                 {plate.name}
               </p>
-              <p className="text-sm font-bold text-green-300">
+              <p className="text-sm font-bold text-primary">
                 ${plate.price.toFixed(2)}
               </p>
             </div>

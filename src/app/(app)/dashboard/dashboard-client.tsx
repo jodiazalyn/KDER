@@ -59,7 +59,7 @@ export function DashboardClient({
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0A0A0A] via-[#0D1A0D] to-[#0A0A0A]">
+    <main className="min-h-screen bg-background">
       {/* Storefront Header Hero */}
       <StorefrontHeader
         profile={profile}
@@ -76,12 +76,12 @@ export function DashboardClient({
         {!profile.email && (
           <Link
             href="/settings"
-            className="flex w-full items-start gap-3 rounded-2xl border border-orange-400/30 bg-orange-900/20 px-4 py-3 text-sm text-orange-200 active:scale-[0.99] transition-transform"
+            className="flex w-full items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-200 active:scale-[0.99] transition-transform"
           >
-            <Mail size={18} className="mt-0.5 flex-shrink-0 text-orange-300" />
+            <Mail size={18} className="mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-300" />
             <div>
               <p className="font-semibold">Add your email so you don&apos;t miss orders</p>
-              <p className="mt-0.5 text-xs text-orange-200/70">
+              <p className="mt-0.5 text-xs text-amber-700/70 dark:text-amber-200/70">
                 We send new-order alerts to your email — tap to add one in Settings.
               </p>
             </div>
@@ -95,14 +95,14 @@ export function DashboardClient({
           className={cn(
             "flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm font-medium transition-all active:scale-[0.98]",
             profile.storefront_active
-              ? "border-green-400/20 bg-green-900/20 text-green-300"
-              : "border-orange-400/20 bg-orange-900/20 text-orange-300"
+              ? "border-primary/30 bg-primary/10 text-primary"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
           )}
         >
           <span className="flex items-center gap-2">
             {profile.storefront_active ? (
               <>
-                <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                 Your storefront is live
               </>
             ) : (
@@ -112,7 +112,7 @@ export function DashboardClient({
               </>
             )}
           </span>
-          <span className="flex items-center gap-1 text-xs text-white/40">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
             {profile.storefront_active ? (
               <>
                 <Pause size={12} /> Pause

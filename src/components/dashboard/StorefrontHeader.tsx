@@ -14,7 +14,11 @@ interface StorefrontHeaderProps {
 
 export function StorefrontHeader({ profile, heroImage, onPhotoChange }: StorefrontHeaderProps) {
   return (
-    <div className="relative h-72 w-full overflow-hidden">
+    // The hero is a media surface — a blurred photo (or green radial) under a
+    // dark readability overlay — so its glass card + white text are meant to
+    // sit on a dark zone. Pin it `dark` so the glass stays dark-frosted and the
+    // white text stays readable regardless of the page's light/dark theme.
+    <div className="dark relative h-72 w-full overflow-hidden">
       {/* Hero background */}
       {heroImage ? (
         <Image

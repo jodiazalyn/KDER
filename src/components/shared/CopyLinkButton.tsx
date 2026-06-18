@@ -50,8 +50,8 @@ export function CopyLinkButton({
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-xl border transition-all active:scale-90",
           copied
-            ? "border-green-400/40 bg-green-900/30 text-green-400"
-            : "border-white/20 bg-white/[0.08] text-white/70 hover:bg-white/[0.15]",
+            ? "border-primary/40 bg-primary/15 text-primary"
+            : "border-border bg-muted text-muted-foreground hover:bg-muted/70",
           className
         )}
         aria-label={copied ? "Link copied" : "Copy storefront link"}
@@ -69,8 +69,8 @@ export function CopyLinkButton({
         onClick={() => setSheetOpen(true)}
         className={cn(
           variant === "compact"
-            ? "flex h-10 items-center gap-2 rounded-full px-5 text-sm font-bold border border-white/25 bg-white/[0.06] text-white hover:bg-white/[0.1] active:scale-95 transition-all"
-            : "flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-bold bg-white/[0.15] text-white hover:bg-white/[0.2] active:scale-95 transition-all",
+            ? "flex h-10 items-center gap-2 rounded-full px-5 text-sm font-bold border border-border bg-muted text-foreground hover:bg-muted/70 active:scale-95 transition-all"
+            : "flex h-12 w-full items-center justify-center gap-2 rounded-full text-sm font-bold bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] hover:opacity-95 active:scale-95 transition-all",
           className
         )}
       >
