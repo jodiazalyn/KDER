@@ -50,7 +50,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {/* 44×44 tap target — see SheetContent for rationale. */}
-      <DialogPrimitive.Close className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white/80 ring-offset-background backdrop-blur-sm transition-all hover:bg-white/20 hover:text-white active:scale-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground ring-offset-background backdrop-blur-sm transition-all hover:bg-muted/70 hover:text-foreground active:scale-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
         <X className="h-5 w-5" strokeWidth={2.5} />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

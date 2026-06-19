@@ -91,19 +91,19 @@ export default async function BookingsPage({
   const rows = (data ?? []) as BookingRow[];
 
   return (
-    <div className="min-h-[100dvh] bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="min-h-[100dvh] bg-background pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 border-b border-border bg-background/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto max-w-lg">
-          <h1 className="text-xl font-bold text-white">Catering bookings</h1>
-          <p className="text-xs text-white/50">
+          <h1 className="text-xl font-bold text-foreground">Catering bookings</h1>
+          <p className="text-xs text-muted-foreground">
             Confirmed + paid catering events
           </p>
         </div>
       </div>
 
       {/* Tab strip */}
-      <div className="border-b border-white/[0.08] bg-[#0A0A0A]">
+      <div className="border-b border-border bg-background">
         <div className="mx-auto flex max-w-lg">
           {(
             [
@@ -117,8 +117,8 @@ export default async function BookingsPage({
               href={`/catering/bookings?tab=${t.key}`}
               className={`flex h-12 flex-1 items-center justify-center text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${
                 activeTab === t.key
-                  ? "border-b-2 border-green-400 text-white"
-                  : "border-b-2 border-transparent text-white/40 hover:text-white/70"
+                  ? "border-b-2 border-primary text-foreground"
+                  : "border-b-2 border-transparent text-muted-foreground hover:text-foreground/70"
               }`}
             >
               {t.label}
@@ -130,10 +130,10 @@ export default async function BookingsPage({
       <div className="mx-auto max-w-lg px-4 pt-4">
         {rows.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 pt-20">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
-              <CalendarRange size={28} className="text-white/30" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
+              <CalendarRange size={28} className="text-muted-foreground/60" />
             </div>
-            <p className="text-center text-sm text-white/50">
+            <p className="text-center text-sm text-muted-foreground">
               {activeTab === "upcoming"
                 ? "No upcoming bookings."
                 : activeTab === "issues"
@@ -164,17 +164,17 @@ export default async function BookingsPage({
                     href={`/catering/bookings/${b.id}`}
                     className={`flex items-center gap-3 rounded-2xl border p-3 transition-all active:scale-[0.99] ${
                       isIssue
-                        ? "border-red-400/[0.30] bg-red-900/[0.20] hover:border-red-400/[0.45]"
-                        : "border-white/[0.08] bg-white/[0.02] hover:border-white/[0.18]"
+                        ? "border-red-400/[0.30] bg-red-500/10 hover:border-red-400/[0.45] dark:bg-red-900/[0.20]"
+                        : "border-border bg-muted/30 hover:border-border/60"
                     }`}
                   >
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                         isIssue
-                          ? "bg-red-500/20 text-red-300"
+                          ? "bg-red-500/10 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                           : b.status === "completed"
-                            ? "bg-white/[0.06] text-white/40"
-                            : "bg-green-500/20 text-green-300"
+                            ? "bg-muted/40 text-muted-foreground"
+                            : "bg-primary/10 text-primary"
                       }`}
                     >
                       {isIssue ? (
@@ -187,20 +187,20 @@ export default async function BookingsPage({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-white">
+                        <p className="truncate text-sm font-semibold text-foreground">
                           {b.customer?.display_name ?? "Customer"}
                         </p>
-                        <p className="shrink-0 text-[11px] text-white/40">
+                        <p className="shrink-0 text-[11px] text-muted-foreground">
                           {eventDateLabel}
                           {timeLabel ? ` · ${timeLabel}` : ""}
                         </p>
                       </div>
-                      <div className="mt-0.5 flex items-center gap-3 text-[11px] text-white/50">
+                      <div className="mt-0.5 flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Users size={11} />
                           {b.inquiry?.guest_count ?? 0}
                         </span>
-                        <span className="text-white/70">
+                        <span className="text-foreground/80">
                           ${(b.total_cents / 100).toFixed(0)}
                         </span>
                         <StatusBadge status={b.status} />
@@ -219,12 +219,12 @@ export default async function BookingsPage({
 
 function StatusBadge({ status }: { status: BookingRow["status"] }) {
   const map: Record<BookingRow["status"], { label: string; cls: string }> = {
-    pending_acceptance: { label: "Pending", cls: "text-amber-300" },
-    confirmed: { label: "Confirmed", cls: "text-green-300" },
-    balance_due: { label: "Balance due", cls: "text-red-300" },
-    balance_paid: { label: "Paid in full", cls: "text-green-400" },
-    completed: { label: "Complete", cls: "text-white/50" },
-    cancelled: { label: "Cancelled", cls: "text-white/40" },
+    pending_acceptance: { label: "Pending", cls: "text-amber-700 dark:text-orange-300" },
+    confirmed: { label: "Confirmed", cls: "text-primary" },
+    balance_due: { label: "Balance due", cls: "text-red-600 dark:text-red-400" },
+    balance_paid: { label: "Paid in full", cls: "text-primary" },
+    completed: { label: "Complete", cls: "text-muted-foreground" },
+    cancelled: { label: "Cancelled", cls: "text-muted-foreground/60" },
   };
   const m = map[status];
   return (

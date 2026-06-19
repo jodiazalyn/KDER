@@ -43,7 +43,7 @@ export function InfoTip({
           aria-label={label}
           className={
             triggerClassName ??
-            "ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-white/40 hover:text-white/70 active:scale-90 transition-all"
+            "ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground active:scale-90 transition-all"
           }
         >
           <HelpCircle size={14} aria-hidden="true" />
@@ -56,10 +56,10 @@ export function InfoTip({
           collisionPadding={16}
           // glass-card provides bg + blur + border + shadow + rounded.
           // We only layer typography + sizing + open-state animation.
-          className="glass-card z-[80] max-w-[280px] p-3 text-xs leading-relaxed text-white/85 focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+          className="glass-card z-[80] max-w-[280px] p-3 text-xs leading-relaxed text-foreground focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
         >
           {children}
-          <Popover.Arrow className="fill-white/10" />
+          <Popover.Arrow className="fill-border" />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>

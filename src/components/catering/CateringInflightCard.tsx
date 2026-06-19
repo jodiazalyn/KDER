@@ -36,13 +36,13 @@ export function CateringInflightCard({
 
   return (
     <section
-      className="mt-4 overflow-hidden rounded-2xl border border-white/[0.10] bg-gradient-to-b from-amber-900/[0.10] to-transparent"
+      className="mt-4 overflow-hidden rounded-2xl border border-border bg-gradient-to-b from-amber-500/[0.08] to-transparent"
       aria-label="Catering in flight"
     >
-      <header className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
-        <Inbox size={16} className="text-amber-300" />
-        <h2 className="text-sm font-bold text-white">Catering — in flight</h2>
-        <span className="ml-auto text-[11px] font-semibold text-white/40">
+      <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+        <Inbox size={16} className="text-amber-600 dark:text-amber-300" />
+        <h2 className="text-sm font-bold text-foreground">Catering — in flight</h2>
+        <span className="ml-auto text-[11px] font-semibold text-muted-foreground">
           {total}
         </span>
       </header>
@@ -87,16 +87,16 @@ type Tone = "urgent" | "open" | "sent";
 
 const TONE_STYLES: Record<Tone, { label: string; row: string }> = {
   urgent: {
-    label: "bg-red-900/40 text-red-200 ring-1 ring-inset ring-red-400/30",
-    row: "hover:bg-red-900/[0.12]",
+    label: "bg-red-500/10 text-red-700 dark:bg-red-900/40 dark:text-red-200 ring-1 ring-inset ring-red-400/30",
+    row: "hover:bg-red-500/[0.06] dark:hover:bg-red-900/[0.12]",
   },
   open: {
-    label: "bg-amber-900/40 text-amber-200 ring-1 ring-inset ring-amber-400/30",
-    row: "hover:bg-amber-900/[0.10]",
+    label: "bg-amber-500/10 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200 ring-1 ring-inset ring-amber-400/30",
+    row: "hover:bg-amber-500/[0.06] dark:hover:bg-amber-900/[0.10]",
   },
   sent: {
-    label: "bg-blue-900/40 text-blue-200 ring-1 ring-inset ring-blue-400/30",
-    row: "hover:bg-blue-900/[0.10]",
+    label: "bg-blue-500/10 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200 ring-1 ring-inset ring-blue-400/30",
+    row: "hover:bg-blue-500/[0.06] dark:hover:bg-blue-900/[0.10]",
   },
 };
 
@@ -117,7 +117,7 @@ function Bucket({
 }) {
   const styles = TONE_STYLES[tone];
   return (
-    <div className="border-b border-white/[0.06] last:border-b-0">
+    <div className="border-b border-border last:border-b-0">
       <div className="flex items-center gap-2 px-4 pt-3">
         <span
           className={`inline-flex h-5 items-center gap-1 rounded-full px-2 text-[10px] font-bold uppercase tracking-wider ${styles.label}`}
@@ -125,7 +125,7 @@ function Bucket({
           {icon}
           {title}
         </span>
-        <span className="text-[11px] text-white/45">{subtitle}</span>
+        <span className="text-[11px] text-muted-foreground">{subtitle}</span>
       </div>
       <ul className="px-2 py-1">
         {items.map((item) => (
@@ -135,10 +135,10 @@ function Bucket({
               className={`flex items-center gap-3 rounded-xl px-2 py-2 transition-colors ${styles.row}`}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">
+                <p className="truncate text-sm font-semibold text-foreground">
                   {item.customerName}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/55">
+                <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <span>{formatEventDate(item.eventDate, item.eventTime)}</span>
                   <span aria-hidden>·</span>
                   <Users size={10} aria-hidden />
@@ -146,7 +146,7 @@ function Bucket({
                   {showDeadline === "acceptDeadline" && item.acceptDeadline && (
                     <>
                       <span aria-hidden>·</span>
-                      <span className="font-semibold text-red-300">
+                      <span className="font-semibold text-red-600 dark:text-red-300">
                         {formatCountdown(item.acceptDeadline)} left to accept
                       </span>
                     </>
@@ -154,7 +154,7 @@ function Bucket({
                   {showDeadline === "quoteExpiresAt" && item.quoteExpiresAt && (
                     <>
                       <span aria-hidden>·</span>
-                      <span className="text-blue-300/85">
+                      <span className="text-blue-700/85 dark:text-blue-300/85">
                         expires {formatShortDate(item.quoteExpiresAt)}
                       </span>
                     </>
@@ -162,11 +162,11 @@ function Bucket({
                 </p>
               </div>
               {item.totalCents !== null && (
-                <span className="shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-bold tabular-nums text-white/85">
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold tabular-nums text-foreground/85">
                   ${Math.round(item.totalCents / 100)}
                 </span>
               )}
-              <ChevronRight size={16} className="shrink-0 text-white/35" />
+              <ChevronRight size={16} className="shrink-0 text-muted-foreground/60" />
             </Link>
           </li>
         ))}

@@ -6,10 +6,10 @@ import type { Listing } from "@/types";
 import { cn } from "@/lib/utils";
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-white/10 text-white/60" },
-  active: { label: "Active", className: "bg-green-900/50 text-green-300" },
-  paused: { label: "Paused", className: "bg-yellow-900/40 text-yellow-300" },
-  archived: { label: "Archived", className: "bg-white/10 text-white/40" },
+  draft: { label: "Draft", className: "bg-muted/40 text-muted-foreground" },
+  active: { label: "Active", className: "bg-primary/10 text-primary dark:bg-green-900/50 dark:text-green-300" },
+  paused: { label: "Paused", className: "bg-amber-500/10 text-amber-700 dark:bg-orange-900/50 dark:text-orange-300" },
+  archived: { label: "Archived", className: "bg-muted/40 text-muted-foreground/60" },
 };
 
 interface PlateCardProps {
@@ -32,8 +32,8 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
             className="object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-white/[0.04]">
-            <ImageOff size={32} className="text-white/20" />
+          <div className="flex h-full items-center justify-center bg-muted/30">
+            <ImageOff size={32} className="text-muted-foreground/60" />
           </div>
         )}
 
@@ -77,15 +77,15 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
 
       {/* Info — bottom 40% */}
       <div className="p-3">
-        <h3 className="truncate text-sm font-semibold text-white">
+        <h3 className="truncate text-sm font-semibold text-foreground">
           {listing.name}
         </h3>
         <div className="mt-1 flex items-center justify-between">
-          <span className="text-base font-bold text-green-300">
+          <span className="text-base font-bold text-primary">
             ${listing.price.toFixed(2)}
           </span>
           {listing.order_count > 0 && (
-            <span className="text-xs text-white/40">
+            <span className="text-xs text-muted-foreground">
               {listing.order_count} orders
             </span>
           )}
@@ -94,7 +94,7 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
         {/* Category tags + fulfillment */}
         <div className="mt-2 flex flex-wrap gap-1">
           {/* Fulfillment pill */}
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/70">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
             {listing.fulfillment_type === "pickup"
               ? "Pickup"
               : listing.fulfillment_type === "delivery"
@@ -106,7 +106,7 @@ export function PlateCard({ listing, onMenuClick }: PlateCardProps) {
           {listing.category_tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-green-900/50 px-2 py-0.5 text-[10px] font-medium text-green-300"
+              className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
             >
               {tag}
             </span>

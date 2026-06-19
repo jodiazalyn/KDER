@@ -11,12 +11,12 @@ const STATUS_BADGES: Record<
   string,
   { label: string; className: string }
 > = {
-  pending: { label: "Pending", className: "bg-orange-900/50 text-orange-300" },
-  accepted: { label: "Accepted", className: "bg-green-900/50 text-green-300" },
-  ready: { label: "Ready", className: "bg-blue-900/50 text-blue-300" },
-  completed: { label: "Completed", className: "bg-white/10 text-white/60" },
-  declined: { label: "Declined", className: "bg-red-900/40 text-red-300" },
-  cancelled: { label: "Cancelled", className: "bg-white/10 text-white/40" },
+  pending: { label: "Pending", className: "bg-amber-500/10 text-amber-700 dark:bg-orange-900/50 dark:text-orange-300" },
+  accepted: { label: "Accepted", className: "bg-primary/10 text-primary" },
+  ready: { label: "Ready", className: "bg-blue-500/10 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300" },
+  completed: { label: "Completed", className: "bg-muted text-muted-foreground" },
+  declined: { label: "Declined", className: "bg-red-500/10 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
+  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground/70" },
 };
 
 interface OrderCardProps {
@@ -52,7 +52,7 @@ export function OrderCard({
         className="flex items-start gap-3 p-4"
       >
         {/* Member avatar */}
-        <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-white/[0.1]">
+        <div className="relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-full border border-border bg-muted">
           {order.member_photo ? (
             <Image
               src={order.member_photo}
@@ -61,7 +61,7 @@ export function OrderCard({
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-base font-bold text-white/40">
+            <div className="flex h-full w-full items-center justify-center text-base font-bold text-muted-foreground">
               {order.member_name.charAt(0)}
             </div>
           )}
@@ -70,18 +70,18 @@ export function OrderCard({
         {/* Order info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white truncate">
+            <h3 className="text-sm font-semibold text-foreground truncate">
               {order.member_name}
             </h3>
             <span
-              className="text-2xl font-black text-green-300"
+              className="text-2xl font-black text-primary"
               style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
             >
               ${order.total_amount.toFixed(2)}
             </span>
           </div>
 
-          <p className="text-xs text-white/50 truncate">
+          <p className="text-xs text-muted-foreground truncate">
             {order.listing_name} × {order.quantity}
           </p>
           {/* Compact extras sub-list — only renders when the order
@@ -101,7 +101,7 @@ export function OrderCard({
             </span>
 
             {/* Fulfillment pill */}
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/60">
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               {order.fulfillment_type === "pickup" ? "Pickup" : "Delivery"}
             </span>
 
@@ -115,7 +115,7 @@ export function OrderCard({
 
       {/* Action buttons */}
       {(isPending || isAccepted || isReady) && (
-        <div className="flex gap-2 border-t border-white/[0.08] px-4 py-3">
+        <div className="flex gap-2 border-t border-border px-4 py-3">
           {isPending && (
             <>
               {/* Accept is the primary revenue action — wider + taller + glow.
@@ -123,7 +123,7 @@ export function OrderCard({
               <button
                 type="button"
                 onClick={() => onAccept?.(order.id)}
-                className="flex h-12 flex-[2] items-center justify-center rounded-full bg-[#1B5E20] text-base font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.55)] active:scale-95 transition-transform"
+                className="flex h-12 flex-[2] items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-base font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
               >
                 Accept · ${order.total_amount.toFixed(2)}
               </button>
@@ -132,7 +132,7 @@ export function OrderCard({
                   decline from there via the confirmed decline flow. */}
               <Link
                 href={`/orders/${order.id}`}
-                className="glass-btn-secondary flex h-12 flex-1 items-center justify-center rounded-full text-sm font-semibold text-white/80 active:scale-95 transition-transform"
+                className="glass-btn-secondary flex h-12 flex-1 items-center justify-center rounded-full text-sm font-semibold text-foreground/80 active:scale-95 transition-transform"
               >
                 Review
               </Link>
@@ -142,7 +142,7 @@ export function OrderCard({
             <button
               type="button"
               onClick={() => onMarkReady?.(order.id)}
-              className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_16px_rgba(27,94,32,0.4)] active:scale-95 transition-transform"
+              className="flex h-10 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
             >
               Mark Ready
             </button>
@@ -151,7 +151,7 @@ export function OrderCard({
             <button
               type="button"
               onClick={() => onMarkComplete?.(order.id)}
-              className="flex h-10 flex-1 items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_16px_rgba(27,94,32,0.4)] active:scale-95 transition-transform"
+              className="flex h-10 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
             >
               Mark Complete
             </button>

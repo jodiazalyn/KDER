@@ -53,7 +53,7 @@ export function CountdownTimer({ createdAt, className }: CountdownTimerProps) {
     <span
       className={cn(
         "text-xs font-bold tabular-nums",
-        isUrgent ? "text-red-400" : "text-orange-300",
+        isUrgent ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400",
         className
       )}
       aria-label={`Waiting ${label}`}

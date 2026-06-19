@@ -147,10 +147,10 @@ export function TimePicker12h({
             // truncating mid-word. Min-w-0 on the inner span is
             // what actually lets the parent flex container shrink
             // the text below its intrinsic width.
-            "group flex h-12 w-full min-w-0 items-center gap-1.5 rounded-xl border border-white/[0.10] bg-white/[0.04] pl-2.5 pr-2 text-left text-white transition-colors",
-            "hover:border-white/[0.18] hover:bg-white/[0.06]",
-            "focus-visible:border-emerald-400/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/30",
-            "data-[state=open]:border-emerald-400/50 data-[state=open]:bg-white/[0.06]",
+            "group flex h-12 w-full min-w-0 items-center gap-1.5 rounded-xl border border-border bg-muted pl-2.5 pr-2 text-left text-foreground transition-colors",
+            "hover:border-border hover:bg-muted/70",
+            "focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            "data-[state=open]:border-primary/50 data-[state=open]:bg-muted/70",
             className
           )}
         >
@@ -159,7 +159,7 @@ export function TimePicker12h({
             aria-hidden
             className={cn(
               "shrink-0 transition-colors",
-              displayText ? "text-emerald-300" : "text-white/40"
+              displayText ? "text-primary" : "text-muted-foreground"
             )}
           />
           <span
@@ -170,7 +170,7 @@ export function TimePicker12h({
               // placeholders inside the pill on a half-width
               // mobile column.
               "min-w-0 flex-1 truncate text-sm leading-none",
-              displayText ? "font-semibold text-white" : "text-white/50"
+              displayText ? "font-semibold text-foreground" : "text-muted-foreground"
             )}
           >
             {displayText || placeholder}
@@ -178,7 +178,7 @@ export function TimePicker12h({
           <ChevronDown
             size={14}
             aria-hidden
-            className="shrink-0 text-white/40 transition-transform group-data-[state=open]:rotate-180"
+            className="shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
           />
         </button>
       </Popover.Trigger>
@@ -191,7 +191,7 @@ export function TimePicker12h({
           // glass-card gives the bg + blur + border; we layer the
           // sizing + scroll + animation here.
           className={cn(
-            "glass-card z-[70] w-[var(--radix-popover-trigger-width)] min-w-[12rem] overflow-hidden rounded-2xl p-1 text-white shadow-[0_12px_36px_rgba(0,0,0,0.45)]",
+            "glass-card z-[70] w-[var(--radix-popover-trigger-width)] min-w-[12rem] overflow-hidden rounded-2xl p-1 text-foreground shadow-[0_12px_36px_rgba(0,0,0,0.25)]",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           )}
@@ -203,7 +203,7 @@ export function TimePicker12h({
             className="max-h-[18rem] overflow-y-auto py-1 [scrollbar-width:thin]"
           >
             {visibleSlots.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-white/50">
+              <p className="px-3 py-4 text-center text-xs text-muted-foreground">
                 No times available — set a start time first.
               </p>
             ) : (
@@ -223,15 +223,15 @@ export function TimePicker12h({
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors",
                       selected
-                        ? "bg-emerald-900/50 text-emerald-200 ring-1 ring-inset ring-emerald-400/30"
-                        : "text-white/85 hover:bg-white/[0.06] active:bg-white/[0.10]"
+                        ? "bg-primary/10 text-primary ring-1 ring-inset ring-primary/30"
+                        : "text-foreground hover:bg-muted/60 active:bg-muted"
                     )}
                   >
                     <span className="tabular-nums">
                       {formatTime12(slot)}
                     </span>
                     {selected && (
-                      <Check size={14} className="text-emerald-300" />
+                      <Check size={14} className="text-primary" />
                     )}
                   </button>
                 );

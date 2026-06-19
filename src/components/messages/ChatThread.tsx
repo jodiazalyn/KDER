@@ -79,11 +79,11 @@ function groupMessages(messages: Message[]): { date: Date; groups: MessageGroup[
 function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="rounded-2xl rounded-bl-md border border-white/[0.12] bg-white/[0.08] px-4 py-3 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]">
+      <div className="rounded-2xl rounded-bl-md border border-border bg-muted px-4 py-3 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]">
         <div className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-white/40 animate-[bounce_1.4s_ease-in-out_infinite]" />
-          <span className="h-2 w-2 rounded-full bg-white/40 animate-[bounce_1.4s_ease-in-out_0.2s_infinite]" />
-          <span className="h-2 w-2 rounded-full bg-white/40 animate-[bounce_1.4s_ease-in-out_0.4s_infinite]" />
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-[bounce_1.4s_ease-in-out_infinite]" />
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-[bounce_1.4s_ease-in-out_0.2s_infinite]" />
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40 animate-[bounce_1.4s_ease-in-out_0.4s_infinite]" />
         </div>
       </div>
     </div>
@@ -381,10 +381,10 @@ export function ChatThread({
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/[0.06]">
-              <Send size={22} className="text-white/20 -rotate-45" />
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/40">
+              <Send size={22} className="text-muted-foreground/60 -rotate-45" />
             </div>
-            <p className="text-center text-xs text-white/30">
+            <p className="text-center text-xs text-muted-foreground/60">
               No messages yet. Say hello to {partnerName}.
             </p>
           </div>
@@ -393,7 +393,7 @@ export function ChatThread({
             <div key={si}>
               {/* Date separator */}
               <div className="flex justify-center my-4">
-                <span className="rounded-full border border-white/[0.10] bg-white/[0.06] px-3 py-1 text-[11px] font-medium text-white/40 backdrop-blur-[16px] backdrop-saturate-[180%]">
+                <span className="rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur-[16px] backdrop-saturate-[180%]">
                   {formatDateSeparator(section.date)}
                 </span>
               </div>
@@ -439,8 +439,8 @@ export function ChatThread({
                               "max-w-[78%] px-3.5 py-2 text-[15px] leading-snug",
                               radiusClass,
                               isMine
-                                ? "border border-green-400/[0.22] bg-green-900/[0.45] text-white backdrop-blur-[24px] backdrop-saturate-[200%] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.30)]"
-                                : "border border-white/[0.12] bg-white/[0.08] text-white/90 backdrop-blur-[16px] backdrop-saturate-[180%] shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
+                                ? "bg-primary text-primary-foreground shadow-[0_2px_10px_rgba(0,0,0,0.20)]"
+                                : "glass-card text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_2px_8px_rgba(0,0,0,0.25)]"
                             )}
                           >
                             {msg.media_url && (
@@ -467,7 +467,7 @@ export function ChatThread({
                         isMine ? "justify-end" : "justify-start"
                       )}
                     >
-                      <span className={cn("text-[10px]", isMine ? "text-green-300/40" : "text-white/25")}>
+                      <span className={cn("text-[10px]", isMine ? "text-primary/40" : "text-muted-foreground/60")}>
                         {new Date(
                           group.messages[group.messages.length - 1].created_at
                         ).toLocaleTimeString([], {
@@ -480,9 +480,9 @@ export function ChatThread({
                       {isMine && (
                         <span className="flex items-center gap-0.5">
                           {group.messages[group.messages.length - 1].read_at ? (
-                            <CheckCheck size={12} className="text-green-400/70" />
+                            <CheckCheck size={12} className="text-primary/70" />
                           ) : (
-                            <Check size={12} className="text-white/30" />
+                            <Check size={12} className="text-muted-foreground/60" />
                           )}
                         </span>
                       )}
@@ -505,12 +505,12 @@ export function ChatThread({
       {/* Media preview — translucent backdrop matches the input bar
           below so the two stack as a single iOS-style attachment chrome. */}
       {mediaPreview && (
-        <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-3 pt-2 backdrop-blur-[24px] backdrop-saturate-[180%]">
+        <div className="flex-shrink-0 border-t border-border bg-background/80 px-3 pt-2 backdrop-blur-[24px] backdrop-saturate-[180%]">
           <div className="relative inline-block">
             <img
               src={mediaPreview}
               alt="Preview"
-              className="h-20 w-20 rounded-xl object-cover border border-white/[0.12]"
+              className="h-20 w-20 rounded-xl object-cover border border-border"
             />
             <button
               type="button"
@@ -518,7 +518,7 @@ export function ChatThread({
               // 44×44 tap target (was 28×28). Negative offsets keep it
               // visually small relative to the 80×80 preview while still
               // being easy to press.
-              className="absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white shadow-lg active:scale-90 transition-transform"
+              className="absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500/10 text-red-700 dark:bg-red-900/40 dark:text-red-300 shadow-lg active:scale-90 transition-transform"
               aria-label="Remove photo"
             >
               <X size={20} strokeWidth={2.5} />
@@ -529,7 +529,7 @@ export function ChatThread({
 
       {/* Input bar — iOS-style translucent chrome. Camera/Send buttons
           bumped to 44px (h-11 w-11) per Apple HIG tap targets. */}
-      <div className="flex-shrink-0 border-t border-white/[0.10] bg-[#0A0A0A]/80 px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="flex-shrink-0 border-t border-border bg-background/80 px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="flex items-end gap-2">
           {/* Camera/attachment — opens native file picker */}
           <input
@@ -542,7 +542,7 @@ export function ChatThread({
           />
           <button
             type="button"
-            className="glass-btn-pill flex h-11 w-11 flex-shrink-0 items-center justify-center text-white/50 active:scale-90 transition-transform"
+            className="glass-btn-pill flex h-11 w-11 flex-shrink-0 items-center justify-center text-muted-foreground active:scale-90 transition-transform"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Attach photo"
           >
@@ -550,7 +550,7 @@ export function ChatThread({
           </button>
 
           {/* Auto-resize textarea — translucent pill substrate. */}
-          <div className="flex flex-1 items-end rounded-[22px] border border-white/[0.12] bg-white/[0.06] backdrop-blur-[16px] backdrop-saturate-[180%] transition-colors focus-within:border-green-400/50 focus-within:bg-white/[0.10]">
+          <div className="flex flex-1 items-end rounded-[22px] border border-border bg-muted/40 backdrop-blur-[16px] backdrop-saturate-[180%] transition-colors focus-within:border-primary/50 focus-within:bg-muted/60">
             <textarea
               ref={textareaRef}
               value={input}
@@ -563,7 +563,7 @@ export function ChatThread({
               }}
               placeholder={`Message ${partnerName}...`}
               rows={1}
-              className="flex-1 resize-none bg-transparent px-4 py-2.5 text-base text-white placeholder:text-white/35 focus:outline-none max-h-[100px] leading-snug"
+              className="flex-1 resize-none bg-transparent px-4 py-2.5 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none max-h-[100px] leading-snug"
               style={{ minHeight: "44px" }}
               aria-label="Message input"
             />
@@ -577,8 +577,8 @@ export function ChatThread({
             className={cn(
               "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200 active:scale-90",
               input.trim() && !sending
-                ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.5)]"
-                : "glass-btn-pill text-white/30"
+                ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+                : "glass-btn-pill text-muted-foreground/60"
             )}
             aria-label="Send message"
           >

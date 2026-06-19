@@ -130,7 +130,7 @@ export function OrderMessages({
         className="max-h-60 min-h-[120px] overflow-y-auto p-3 space-y-2"
       >
         {messages.length === 0 ? (
-          <p className="text-center text-xs text-white/30 py-6">
+          <p className="text-center text-xs text-muted-foreground/60 py-6">
             No messages yet. Start the conversation.
           </p>
         ) : (
@@ -148,15 +148,15 @@ export function OrderMessages({
                   className={cn(
                     "glass-card rounded-glass max-w-[75%] px-3 py-2 text-sm",
                     isMine
-                      ? "border-emerald-400/30 bg-emerald-500/15 text-white"
-                      : "text-white/90"
+                      ? "border-emerald-400/30 bg-primary/10 text-foreground"
+                      : "text-foreground/80"
                   )}
                 >
                   <p>{msg.body}</p>
                   <p
                     className={cn(
                       "mt-1 text-[10px]",
-                      isMine ? "text-green-300/50" : "text-white/30"
+                      isMine ? "text-primary/50" : "text-muted-foreground/60"
                     )}
                   >
                     {new Date(msg.created_at).toLocaleTimeString([], {
@@ -172,7 +172,7 @@ export function OrderMessages({
       </div>
 
       {/* Input bar */}
-      <div className="flex items-center gap-2 border-t border-white/[0.08] p-3">
+      <div className="flex items-center gap-2 border-t border-border p-3">
         <input
           type="text"
           value={input}
@@ -184,7 +184,7 @@ export function OrderMessages({
             }
           }}
           placeholder="Type a message..."
-          className="glass-input h-10 flex-1 rounded-full px-4 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+          className="glass-input h-10 flex-1 rounded-full px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
           aria-label="Message input"
         />
         <button
@@ -194,8 +194,8 @@ export function OrderMessages({
           className={cn(
             "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90",
             input.trim() && !sending
-              ? "bg-[#1B5E20] text-white shadow-[0_0_12px_rgba(27,94,32,0.4)]"
-              : "bg-white/10 text-white/30 cursor-not-allowed"
+              ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
+              : "bg-muted text-muted-foreground/60 cursor-not-allowed"
           )}
           aria-label="Send message"
         >

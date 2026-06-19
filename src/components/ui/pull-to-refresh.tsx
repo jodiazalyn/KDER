@@ -181,11 +181,11 @@ export function PullToRefresh({
           }}
         >
           {refreshing ? (
-            <Loader2 size={18} className="animate-spin text-green-300" />
+            <Loader2 size={18} className="animate-spin text-primary" />
           ) : (
             <RefreshCw
               size={18}
-              className="text-white/70"
+              className="text-muted-foreground"
               style={{ transform: `rotate(${spinnerRotation}deg)` }}
             />
           )}
@@ -201,7 +201,7 @@ export function PullToRefresh({
         disabled={refreshing}
         aria-label="Refresh"
         // glass-btn-pill for the circular floating button.
-        className="glass-btn-pill fixed right-4 top-3 z-[70] flex h-9 w-9 items-center justify-center text-white/60 hover:text-white/90 active:scale-90 transition-all disabled:opacity-50"
+        className="glass-btn-pill fixed right-4 top-3 z-[70] flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all disabled:opacity-50"
       >
         {refreshing ? (
           <Loader2 size={14} className="animate-spin" />

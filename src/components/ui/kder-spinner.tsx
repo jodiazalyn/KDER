@@ -61,7 +61,7 @@ export function KderSpinner({ size = 64, label, className }: Props) {
         priority
       />
       {label && (
-        <p className="text-xs font-medium text-white/55">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
       )}
     </div>
   );

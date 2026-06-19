@@ -12,7 +12,7 @@ function Skeleton({
       // glass-shine specular highlight on cards/buttons. Honors
       // prefers-reduced-motion via globals.css.
       className={cn(
-        "rounded-glass bg-white/[0.04] animate-glass-shimmer",
+        "rounded-glass bg-foreground/[0.04] animate-glass-shimmer",
         className
       )}
       {...props}

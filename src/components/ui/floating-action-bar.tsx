@@ -51,8 +51,10 @@ export function FloatingActionBar({
         // Translucent floating chrome via raw backdrop-filter
         // (`glass-nav` forces top-of-viewport positioning, which
         // breaks this bar — it sits above the BottomNav, not the top).
+        // Theme-aware: token bg/border resolve to frosted white in light
+        // and the original dark glass under a `.dark` ancestor.
         styled &&
-          "border-t border-white/[0.10] bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%]",
+          "border-t border-border bg-background/80 backdrop-blur-[24px] backdrop-saturate-[180%]",
         className
       )}
     >

@@ -168,13 +168,13 @@ export default function CalendarClient({
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#0A0A0A] pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="flex min-h-[100dvh] flex-col bg-background pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {/* Header */}
-      <div className="sticky top-0 z-30 border-b border-white/[0.10] bg-[#0A0A0A]/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
+      <div className="sticky top-0 z-30 border-b border-border bg-background/80 px-4 py-4 backdrop-blur-[24px] backdrop-saturate-[180%]">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-white">Calendar</h1>
-            <p className="text-xs text-white/50">
+            <h1 className="text-xl font-bold text-foreground">Calendar</h1>
+            <p className="text-xs text-muted-foreground">
               Catering bookings &amp; blackout dates
             </p>
           </div>
@@ -184,7 +184,7 @@ export default function CalendarClient({
             {openInquiryCount > 0 && (
               <Link
                 href="/catering/inquiries"
-                className="relative flex h-11 items-center gap-1.5 rounded-full bg-amber-900/30 px-3 text-xs font-semibold text-amber-200 transition-all hover:bg-amber-900/50 active:scale-95"
+                className="relative flex h-11 items-center gap-1.5 rounded-full bg-amber-500/10 px-3 text-xs font-semibold text-amber-700 transition-all hover:bg-amber-500/20 active:scale-95 dark:bg-amber-900/30 dark:text-amber-200 dark:hover:bg-amber-900/50"
                 aria-label={`${openInquiryCount} open catering inquir${openInquiryCount === 1 ? "y" : "ies"}`}
               >
                 <Inbox size={14} />
@@ -196,10 +196,10 @@ export default function CalendarClient({
               type="button"
               onClick={() => setRecurringOpen((o) => !o)}
               className={cn(
-                "flex h-11 items-center gap-1.5 rounded-full border border-white/[0.10] px-3 text-xs font-medium transition-all active:scale-95",
+                "flex h-11 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium transition-all active:scale-95",
                 recurringOpen
-                  ? "bg-green-900/40 text-green-300"
-                  : "text-white/70 hover:bg-white/[0.06]"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted/60"
               )}
               aria-pressed={recurringOpen}
               aria-label="Manage recurring blackouts"
@@ -213,9 +213,9 @@ export default function CalendarClient({
 
       {/* Recurring weekday picker — collapsible panel below header */}
       {recurringOpen && (
-        <div className="border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
+        <div className="border-b border-border bg-muted/30 px-4 py-3">
           <div className="mx-auto max-w-lg">
-            <p className="mb-2 text-xs font-medium text-white/60">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
               Tap a weekday to always block it (e.g. always closed Mondays).
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -240,8 +240,8 @@ export default function CalendarClient({
                       className={cn(
                         "h-11 min-w-[3rem] rounded-full border px-3 text-xs font-semibold transition-all active:scale-95",
                         active
-                          ? "border-red-400/40 bg-red-950/40 text-red-200"
-                          : "border-white/[0.10] text-white/60 hover:bg-white/[0.06]"
+                          ? "border-red-400/40 bg-red-500/10 text-red-700 dark:bg-red-950/40 dark:text-red-200"
+                          : "border-border text-muted-foreground hover:bg-muted/60"
                       )}
                     >
                       {label}
@@ -258,10 +258,10 @@ export default function CalendarClient({
       <div className="flex-1 overflow-y-auto px-4 pt-4">
         <div className="mx-auto max-w-lg">
           {loading ? (
-            <div className="flex h-72 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <div className="flex h-72 items-center justify-center rounded-2xl border border-border bg-muted/30">
               <Loader2
                 size={24}
-                className="animate-spin text-white/40"
+                className="animate-spin text-muted-foreground"
                 aria-label="Loading calendar"
               />
             </div>
@@ -291,10 +291,10 @@ export default function CalendarClient({
           {/* Day drawer (inline, below the calendar — feels more
               natural on mobile than a slide-in panel) */}
           {selectedDate && (
-            <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+            <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4">
               <div className="mb-3 flex items-start justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-white">
+                  <h2 className="text-sm font-semibold text-foreground">
                     {new Date(selectedDate + "T00:00:00").toLocaleDateString(
                       "en-US",
                       {
@@ -304,7 +304,7 @@ export default function CalendarClient({
                       }
                     )}
                   </h2>
-                  <p className="mt-0.5 text-xs text-white/50">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {blackoutsForSelected.length === 0
                       ? "Available for bookings."
                       : "Blacked out — customers can't book."}
@@ -314,7 +314,7 @@ export default function CalendarClient({
                   type="button"
                   onClick={() => setSelectedDate(null)}
                   aria-label="Close day details"
-                  className="flex h-11 w-11 items-center justify-center rounded-full text-white/40 hover:bg-white/[0.06] hover:text-white active:scale-90"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted/60 hover:text-foreground active:scale-90"
                 >
                   <X size={18} />
                 </button>
@@ -326,7 +326,7 @@ export default function CalendarClient({
                   type="button"
                   onClick={() => addOneOff(selectedDate)}
                   disabled={busyDate === selectedDate}
-                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-white/[0.10] text-sm font-medium text-white/80 transition-all hover:bg-white/[0.06] active:scale-95 disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-border text-sm font-medium text-foreground/80 transition-all hover:bg-muted/60 active:scale-95 disabled:opacity-50"
                 >
                   {busyDate === selectedDate ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -347,10 +347,10 @@ export default function CalendarClient({
                   {blackoutsForSelected.map((b) => (
                     <li
                       key={b.id}
-                      className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2"
+                      className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">
+                        <p className="text-sm font-medium text-foreground">
                           {b.kind === "one_off"
                             ? "This date"
                             : `Every ${
@@ -360,7 +360,7 @@ export default function CalendarClient({
                               }`}
                         </p>
                         {b.reason && (
-                          <p className="truncate text-xs text-white/40">
+                          <p className="truncate text-xs text-muted-foreground">
                             {b.reason}
                           </p>
                         )}
@@ -370,7 +370,7 @@ export default function CalendarClient({
                         onClick={() => removeBlackout(b.id)}
                         disabled={busyDate === selectedDate}
                         aria-label="Remove blackout"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/50 hover:bg-red-500/10 hover:text-red-300 active:scale-90 disabled:opacity-50"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-300 active:scale-90 disabled:opacity-50"
                       >
                         {busyDate === selectedDate ? (
                           <Loader2 size={16} className="animate-spin" />
@@ -387,7 +387,7 @@ export default function CalendarClient({
 
           {/* Empty hint for first-time users */}
           {!loading && blackouts.length === 0 && !selectedDate && (
-            <p className="mt-4 text-center text-xs text-white/40">
+            <p className="mt-4 text-center text-xs text-muted-foreground/60">
               Tap any date to mark it unavailable. Bookings will appear here
               once customers start placing catering orders.
             </p>

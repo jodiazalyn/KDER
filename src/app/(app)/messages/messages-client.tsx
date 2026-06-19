@@ -58,7 +58,7 @@ export function MessagesClient({
   return (
     <main className="px-4 pb-4 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-black text-white">Messages</h1>
+        <h1 className="text-3xl font-black text-foreground">Messages</h1>
 
         <button
           type="button"
@@ -66,8 +66,8 @@ export function MessagesClient({
           className={cn(
             "glass-btn-pill px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
             inboxActive
-              ? "bg-green-900/30 border border-green-400/25 text-green-300 shadow-[0_0_12px_rgba(27,94,32,0.30)]"
-              : "text-white/50"
+              ? "bg-primary/10 border border-primary/25 text-primary shadow-[0_0_12px_rgba(27,94,32,0.30)]"
+              : "text-muted-foreground"
           )}
         >
           Inbox {inboxActive ? "On" : "Off"}
@@ -75,7 +75,7 @@ export function MessagesClient({
       </div>
 
       {!inboxActive && (
-        <div className="mt-3 rounded-xl border border-orange-400/20 bg-orange-900/20 px-4 py-2.5 text-xs text-orange-300">
+        <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-700 dark:border-orange-400/20 dark:bg-orange-900/20 dark:text-orange-300">
           General inbox is paused — messages are queued
         </div>
       )}
@@ -91,13 +91,13 @@ export function MessagesClient({
               className={cn(
                 "glass-segment-item flex-1 py-2 text-xs font-medium transition-all",
                 activeTab === tab.key
-                  ? "bg-white/[0.12] text-white"
-                  : "text-white/40 hover:text-white/60"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground/60"
               )}
             >
               {tab.label}
               {unread > 0 && (
-                <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
+                <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
                   {unread}
                 </span>
               )}
@@ -114,20 +114,20 @@ export function MessagesClient({
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 pt-24">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/[0.06]">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/40">
             {activeTab === "general" ? (
-              <MessageCircle size={28} className="text-white/20" />
+              <MessageCircle size={28} className="text-muted-foreground/60" />
             ) : (
-              <Mail size={28} className="text-white/20" />
+              <Mail size={28} className="text-muted-foreground/60" />
             )}
           </div>
           {activeTab === "general" ? (
-            <p className="text-center text-sm text-white/50">
+            <p className="text-center text-sm text-muted-foreground">
               No messages yet. Tap the compose button below to start a new
               conversation with a past customer.
             </p>
           ) : (
-            <p className="text-center text-sm text-white/50">
+            <p className="text-center text-sm text-muted-foreground">
               No order messages yet. They&apos;ll appear here when you
               receive orders.
             </p>
@@ -139,7 +139,7 @@ export function MessagesClient({
         type="button"
         onClick={() => setComposeOpen(true)}
         aria-label="New message"
-        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#1B5E20] text-white shadow-[0_8px_28px_rgba(27,94,32,0.55)] ring-1 ring-green-400/20 transition-all hover:bg-[#207024] active:scale-90"
+        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] ring-1 ring-primary/20 transition-all active:scale-90"
       >
         <PenSquare size={20} />
       </button>

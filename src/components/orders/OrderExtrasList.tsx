@@ -41,7 +41,7 @@ export function OrderExtrasList({
   return (
     <ul
       className={
-        tight ? "mt-1 space-y-0.5" : "mt-1.5 space-y-1 border-l-2 border-white/[0.08] pl-2"
+        tight ? "mt-1 space-y-0.5" : "mt-1.5 space-y-1 border-l-2 border-border pl-2"
       }
     >
       {rows.map((r) => (
@@ -49,15 +49,15 @@ export function OrderExtrasList({
           key={r.key}
           className={
             tight
-              ? "truncate text-[11px] text-white/45"
-              : "flex items-baseline justify-between text-xs text-white/65"
+              ? "truncate text-[11px] text-muted-foreground"
+              : "flex items-baseline justify-between text-xs text-muted-foreground"
           }
         >
           <span className={tight ? "" : "min-w-0 truncate"}>
             + {r.qty} {r.name}
           </span>
           {!tight && showPrices && r.price_cents > 0 && (
-            <span className="shrink-0 tabular-nums text-white/55">
+            <span className="shrink-0 tabular-nums text-muted-foreground/80">
               ${((r.price_cents / 100) * r.qty).toFixed(2)}
             </span>
           )}
