@@ -257,14 +257,17 @@ export function SuperAgentPanel({
               type="button"
               onClick={voice.toggle}
               disabled={pending}
-              aria-label={voice.listening ? "Stop dictation" : "Dictate"}
-              className={`flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-95 disabled:opacity-50 ${
+              aria-label={voice.listening ? "Stop and send" : "Speak to Cleopatra"}
+              className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all active:scale-95 disabled:opacity-50 ${
                 voice.listening
-                  ? "animate-pulse bg-[#D97757] text-white"
-                  : "text-[#6B6862] hover:bg-[#F0EEE6]"
+                  ? "bg-[#C15F3C] text-white shadow-[0_4px_18px_rgba(193,95,60,0.5)]"
+                  : "bg-[#C15F3C] text-white shadow-[0_3px_12px_rgba(193,95,60,0.35)] hover:bg-[#A94F30]"
               }`}
             >
-              <Mic size={18} />
+              {voice.listening ? (
+                <span className="absolute inset-0 animate-ping rounded-full bg-[#C15F3C]/40" />
+              ) : null}
+              <Mic size={22} className="relative" />
             </button>
           ) : (
             <span />
@@ -274,18 +277,20 @@ export function SuperAgentPanel({
             onClick={() => send(input)}
             disabled={pending || !input.trim()}
             aria-label="Send"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C15F3C] text-white transition-all hover:bg-[#A94F30] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#E0DDD3] disabled:text-[#B5B1A6]"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2D2A26] text-white transition-all hover:bg-[#1F1E1D] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#E0DDD3] disabled:text-[#B5B1A6]"
           >
             {pending ? (
-              <Loader2 size={17} className="animate-spin" />
+              <Loader2 size={16} className="animate-spin" />
             ) : (
-              <ArrowUp size={18} strokeWidth={2.5} />
+              <ArrowUp size={17} strokeWidth={2.5} />
             )}
           </button>
         </div>
       </div>
       <p className="mt-2 text-center text-[11px] text-[#9B968A]">
-        Cards come from live marketplace data — KDER internal analyst
+        {voice.supported
+          ? "Tap the mic to ask out loud, or type — cards come from live data"
+          : "Cards come from live marketplace data — KDER internal analyst"}
       </p>
     </div>
   );
@@ -324,6 +329,32 @@ export function SuperAgentPanel({
               I&apos;m Cleopatra VII. What can I find in your data?
             </h1>
           </div>
+
+          {/* Voice is the primary way in: a big tap-to-talk mic. */}
+          {voice.supported ? (
+            <div className="mb-8 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={voice.toggle}
+                disabled={pending}
+                aria-label={voice.listening ? "Stop and send" : "Speak to Cleopatra"}
+                className={`relative flex h-24 w-24 items-center justify-center rounded-full text-white transition-all active:scale-95 disabled:opacity-50 ${
+                  voice.listening
+                    ? "bg-[#C15F3C] shadow-[0_8px_36px_rgba(193,95,60,0.55)]"
+                    : "bg-[#C15F3C] shadow-[0_6px_28px_rgba(193,95,60,0.4)] hover:bg-[#A94F30]"
+                }`}
+              >
+                {voice.listening ? (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-[#C15F3C]/40" />
+                ) : null}
+                <Mic size={40} className="relative" strokeWidth={2} />
+              </button>
+              <p className="text-[14px] font-medium text-[#6B6862]">
+                {voice.listening ? "Listening… tap to send" : "Tap to ask out loud"}
+              </p>
+            </div>
+          ) : null}
+
           {composer}
           <div className="mt-6 flex max-w-3xl flex-wrap justify-center gap-2 px-4">
             {SUGGESTIONS.map((s) => (

@@ -38,6 +38,9 @@ interface SpeechRecognitionLike {
   onerror: ((e: { error?: string }) => void) | null;
   onend: (() => void) | null;
 }
+
+// Errors that mean "give up" — anything else is transient and we resume.
+const FATAL_SPEECH_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 function getRecognitionCtor(): SpeechRecognitionCtor | null {
@@ -55,6 +58,12 @@ export function useVoiceInput(onFinal: (text: string) => void) {
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const onFinalRef = useRef(onFinal);
+  // The user explicitly tapped stop (vs. the engine auto-ending). Only an
+  // intentional stop finalizes + submits; an engine-initiated `onend` resumes.
+  const intentionalStopRef = useRef(false);
+  // Accumulated final transcript, kept in a ref so it survives the engine's
+  // periodic auto-restarts (Chrome ends recognition even in continuous mode).
+  const finalTextRef = useRef("");
 
   useEffect(() => {
     onFinalRef.current = onFinal;
@@ -67,12 +76,21 @@ export function useVoiceInput(onFinal: (text: string) => void) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSupported(getRecognitionCtor() != null);
     return () => {
-      recognitionRef.current?.abort();
+      // Detach handlers so teardown can't resurrect, finalize, or setState
+      // after unmount; then abort.
+      const rec = recognitionRef.current;
+      if (rec) {
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.abort();
+      }
       recognitionRef.current = null;
     };
   }, []);
 
   const stop = useCallback(() => {
+    intentionalStopRef.current = true;
     recognitionRef.current?.stop();
     setListening(false);
   }, []);
@@ -81,39 +99,67 @@ export function useVoiceInput(onFinal: (text: string) => void) {
     const Ctor = getRecognitionCtor();
     if (!Ctor) return;
 
-    // Tear down any prior instance before starting fresh.
-    recognitionRef.current?.abort();
+    // Tear down any prior instance before starting fresh. Detach its
+    // handlers first so a stale onend can't race and resurrect/finalize.
+    const prev = recognitionRef.current;
+    if (prev) {
+      prev.onresult = null;
+      prev.onerror = null;
+      prev.onend = null;
+      prev.abort();
+    }
 
     const rec = new Ctor();
     rec.lang = "en-US";
-    rec.continuous = false;
+    // Stay open across natural pauses — `false` would auto-stop (and, via the
+    // panel's onFinal wiring, auto-submit) on the first brief silence.
+    rec.continuous = true;
     rec.interimResults = true;
-
-    let finalText = "";
 
     rec.onresult = (e) => {
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
         const text = res[0]?.transcript ?? "";
-        if (res.isFinal) finalText += text;
+        if (res.isFinal) finalTextRef.current += text;
         else interim += text;
       }
-      setTranscript((finalText + interim).trim());
+      setTranscript((finalTextRef.current + interim).trim());
     };
 
-    rec.onerror = () => {
-      setListening(false);
+    rec.onerror = (e) => {
+      // Permission/service errors are fatal — stop cleanly, no restart loop.
+      // Everything else (no-speech, aborted, network blips) is transient and
+      // handled by the resume path in onend.
+      if (e?.error && FATAL_SPEECH_ERRORS.has(e.error)) {
+        intentionalStopRef.current = true;
+        setListening(false);
+      }
     };
 
     rec.onend = () => {
-      setListening(false);
-      const settled = finalText.trim();
-      if (settled.length > 0) onFinalRef.current(settled);
-      setTranscript("");
+      if (intentionalStopRef.current) {
+        // User tapped stop (or we're tearing down): finalize once.
+        intentionalStopRef.current = false;
+        setListening(false);
+        const settled = finalTextRef.current.trim();
+        finalTextRef.current = "";
+        setTranscript("");
+        if (settled.length > 0) onFinalRef.current(settled);
+        return;
+      }
+      // Engine auto-ended while the user still intends to dictate — resume
+      // without firing onFinal, preserving the accumulated transcript.
+      try {
+        rec.start();
+      } catch {
+        // start() throws if it's already running — safe to ignore.
+      }
     };
 
     recognitionRef.current = rec;
+    finalTextRef.current = "";
+    intentionalStopRef.current = false;
     setTranscript("");
     setListening(true);
     try {
