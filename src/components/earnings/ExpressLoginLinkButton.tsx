@@ -42,19 +42,19 @@ export function ExpressLoginLinkButton() {
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-white/[0.18] transition-colors disabled:opacity-60"
+      className="glass-card rounded-glass-lg flex w-full items-center justify-between p-4 text-left active:bg-muted/60 transition-colors disabled:opacity-60"
     >
       <div className="flex items-center gap-3">
-        <ExternalLink size={18} className="text-white/60" />
+        <ExternalLink size={18} className="text-muted-foreground" />
         <div>
-          <p className="text-sm font-medium text-white">Manage in Stripe</p>
-          <p className="text-xs text-white/50">
+          <p className="text-sm font-medium text-foreground">Manage in Stripe</p>
+          <p className="text-xs text-muted-foreground">
             Bank info, tax docs, account details
           </p>
         </div>
       </div>
       {loading ? (
-        <Loader2 size={16} className="animate-spin text-white/40" />
+        <Loader2 size={16} className="animate-spin text-muted-foreground/60" />
       ) : null}
     </button>
   );

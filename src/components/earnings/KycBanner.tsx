@@ -33,13 +33,13 @@ export function KycBanner({
         <div className="flex items-start gap-3">
           <CheckCircle2
             size={18}
-            className="mt-0.5 flex-shrink-0 text-green-400"
+            className="mt-0.5 flex-shrink-0 text-emerald-600 dark:text-green-400"
           />
           <div className="flex-1">
-            <p className="text-sm font-medium text-green-300">
+            <p className="text-sm font-medium text-emerald-700 dark:text-green-300">
               Connected with Stripe
             </p>
-            <p className="mt-1 text-xs text-white/40">
+            <p className="mt-1 text-xs text-muted-foreground">
               You&apos;re all set to receive payouts. Stripe sends earnings
               to your bank on a 2-day rolling schedule.
             </p>
@@ -54,18 +54,19 @@ export function KycBanner({
     status === "failed"
       ? {
           border: "border-red-400/25",
-          bg: "bg-red-900/20",
-          icon: "text-red-400",
-          title: "text-red-300",
-          button: "bg-red-600/30 text-red-200",
+          bg: "bg-red-500/10 dark:bg-red-900/20",
+          icon: "text-red-600 dark:text-red-400",
+          title: "text-red-700 dark:text-red-300",
+          button: "bg-red-600 text-white dark:bg-red-600/30 dark:text-red-200",
           headline: "Stripe verification needs attention",
         }
       : {
           border: "border-orange-400/20",
-          bg: "bg-orange-900/20",
-          icon: "text-orange-400",
-          title: "text-orange-300",
-          button: "bg-orange-600/30 text-orange-200",
+          bg: "bg-amber-500/10 dark:bg-orange-900/20",
+          icon: "text-amber-600 dark:text-orange-400",
+          title: "text-amber-700 dark:text-orange-300",
+          button:
+            "bg-amber-500 text-white dark:bg-orange-600/30 dark:text-orange-200",
           headline:
             status === "not_started"
               ? "Complete your payout setup to receive earnings"
@@ -106,7 +107,7 @@ export function KycBanner({
           <p className={`text-sm font-medium ${tone.title}`}>
             {tone.headline}
           </p>
-          <p className="mt-1 text-xs text-white/40">{subtitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
           <button
             ref={buttonCoachRef}
             type="button"

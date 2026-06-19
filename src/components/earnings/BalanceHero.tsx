@@ -63,37 +63,34 @@ export function BalanceHero({
       className="glass-card-elevated glass-shine rounded-glass-xl border-emerald-400/30 bg-emerald-500/15 p-6"
     >
       <div className="flex items-center gap-2">
-        <Wallet size={16} className="text-green-300/60" />
-        <span className="text-xs font-medium text-green-300/60 uppercase tracking-wider">
+        <Wallet size={16} className="text-emerald-700/70 dark:text-green-300/60" />
+        <span className="text-xs font-medium text-emerald-700/70 dark:text-green-300/60 uppercase tracking-wider">
           Available Balance
         </span>
       </div>
 
-      <p
-        className="mt-2 text-4xl font-bold text-green-300"
-        style={{ filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-      >
+      <p className="mt-2 text-4xl font-bold text-emerald-700 dark:text-green-300">
         ${(availableCents / 100).toFixed(2)}
       </p>
 
       {pendingCents > 0 && (
-        <p className="mt-1 text-xs text-white/50">
+        <p className="mt-1 text-xs text-emerald-700/80 dark:text-white/50">
           + ${(pendingCents / 100).toFixed(2)} pending
         </p>
       )}
 
-      <p className="mt-2 text-[11px] text-white/50">
+      <p className="mt-2 text-[11px] text-emerald-700/70 dark:text-white/50">
         KDER&apos;s 10% platform fee is deducted before payout.
       </p>
 
       {errorCode && (
-        <p className="mt-2 text-xs text-red-300">
+        <p className="mt-2 text-xs text-red-600 dark:text-red-300">
           Couldn&apos;t reach Stripe. Refresh to retry. [{errorCode}]
         </p>
       )}
 
       {account?.nextPayoutDate && (
-        <div className="mt-3 flex items-center gap-1.5 text-xs text-white/60">
+        <div className="mt-3 flex items-center gap-1.5 text-xs text-emerald-700/80 dark:text-white/60">
           <Calendar size={12} />
           <span>
             Next payout: {formatNextPayout(account.nextPayoutDate)} · ~$
@@ -115,13 +112,13 @@ export function BalanceHero({
             type="button"
             onClick={onInstantPayout}
             aria-label="Request instant payout, 1.5 percent fee, within 30 minutes"
-            className="glass-btn flex h-12 flex-1 flex-col items-center justify-center text-white active:scale-95 transition-transform"
+            className="glass-btn flex h-12 flex-1 flex-col items-center justify-center text-foreground active:scale-95 transition-transform"
           >
             <span className="flex items-center gap-1 text-sm font-bold">
               <Zap size={12} />
               Instant
             </span>
-            <span className="text-[10px] text-white/40">
+            <span className="text-[10px] text-muted-foreground">
               1.5% fee · 30 min
             </span>
           </button>

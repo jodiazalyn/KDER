@@ -10,14 +10,14 @@ interface LifetimeStatsCardProps {
 const Tile = ({
   label,
   cents,
-  accent = "text-white",
+  accent = "text-foreground",
 }: {
   label: string;
   cents: number;
   accent?: string;
 }) => (
   <div className="glass-card rounded-glass-lg flex-1 p-3">
-    <p className="text-[10px] text-white/40 uppercase tracking-wider">
+    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
       {label}
     </p>
     <p className={`mt-1 text-base font-bold ${accent}`}>
@@ -32,7 +32,7 @@ export function LifetimeStatsCard({
 }: LifetimeStatsCardProps) {
   if (errorCode) {
     return (
-      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-3 text-xs text-red-300">
+      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-300">
         Stats unavailable [{errorCode}]
       </div>
     );
@@ -50,12 +50,12 @@ export function LifetimeStatsCard({
       <Tile
         label="Paid out"
         cents={data.paidOutCents}
-        accent="text-green-300"
+        accent="text-emerald-600 dark:text-green-300"
       />
       <Tile
         label="Net pending"
         cents={data.netPendingCents}
-        accent="text-orange-300"
+        accent="text-amber-600 dark:text-orange-300"
       />
     </div>
   );

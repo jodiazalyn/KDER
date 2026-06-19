@@ -20,23 +20,23 @@ export function HowEarningsWorkAccordion() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between p-4 text-left active:bg-white/[0.06] transition-colors rounded-glass-lg"
+        className="flex w-full items-center justify-between p-4 text-left active:bg-muted/40 transition-colors rounded-glass-lg"
       >
         <div className="flex items-center gap-3">
-          <Info size={18} className="text-white/60" />
-          <p className="text-sm font-medium text-white">
+          <Info size={18} className="text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">
             How earnings work
           </p>
         </div>
         <ChevronDown
           size={16}
-          className={`text-white/40 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
         <div className="px-4 pb-4 -mt-1">
-          <p className="text-xs text-white/60 leading-relaxed">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             Every order on KDER goes through Stripe. Here&apos;s what
             happens to a $20 plate:
           </p>
@@ -45,27 +45,27 @@ export function HowEarningsWorkAccordion() {
             <Row
               label="Order total"
               value="+$20.00"
-              accent="text-white"
+              accent="text-foreground"
             />
             <Row
               label="KDER platform fee (10%)"
               value="−$2.00"
-              accent="text-red-400"
+              accent="text-red-600 dark:text-red-400"
             />
             <Row
               label="Stripe processing (~2.9% + $0.30)"
               value="−$0.88"
-              accent="text-red-400"
+              accent="text-red-600 dark:text-red-400"
             />
-            <div className="h-px bg-white/[0.06] my-1" />
+            <div className="h-px bg-border my-1" />
             <Row
               label="You receive"
               value="$17.12"
-              accent="text-green-300 font-bold"
+              accent="text-emerald-600 dark:text-green-300 font-bold"
             />
           </div>
 
-          <p className="mt-3 text-[11px] text-white/40 leading-relaxed">
+          <p className="mt-3 text-[11px] text-muted-foreground/60 leading-relaxed">
             Stripe&apos;s exact processing fee can vary slightly by card
             type and country. Refunds reverse both the order total and
             KDER&apos;s fee — Stripe&apos;s processing fee is not refunded.
@@ -87,7 +87,7 @@ function Row({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-white/50">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <span className={accent}>{value}</span>
     </div>
   );
