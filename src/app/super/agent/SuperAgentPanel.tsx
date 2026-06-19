@@ -31,10 +31,10 @@ type Entry =
   | { kind: "creators"; creators: CreatorCard[] };
 
 const SUGGESTIONS = [
-  "Show me creators who have spaghetti meals",
-  "Which creators need attention?",
-  "Find vegan plates",
-  "Who sells tacos?",
+  "Creators who have spaghetti meals",
+  "Delivery plates under $20",
+  "Most popular vegan dishes",
+  "Verified creators who need attention",
 ];
 
 function ClaudeMark({ size = 20 }: { size?: number }) {
@@ -296,9 +296,14 @@ export function SuperAgentPanel({
       <div className="flex items-center justify-between border-b border-[#E5E2D9] px-4 py-3">
         <div className="flex items-center gap-2">
           <ClaudeMark size={16} />
-          <span className="text-[15px] font-semibold text-[#1F1E1D]">
-            Ask the data
-          </span>
+          <div className="leading-none">
+            <span className="text-[15px] font-semibold text-[#1F1E1D]">
+              Cleopatra VII
+            </span>
+            <p className="mt-0.5 text-[11px] text-[#9B968A]">
+              KDER data analyst
+            </p>
+          </div>
         </div>
         <button
           type="button"
@@ -316,7 +321,7 @@ export function SuperAgentPanel({
           <div className="mb-8 flex flex-col items-center gap-4">
             <ClaudeMark size={30} />
             <h1 className="text-center text-[28px] font-semibold tracking-tight text-[#3D2C23]">
-              What can I find in your data?
+              I&apos;m Cleopatra VII. What can I find in your data?
             </h1>
           </div>
           {composer}
