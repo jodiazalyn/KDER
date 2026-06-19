@@ -33,10 +33,10 @@ export function OrderTransferDrawer({
       <SheetContent
         side="bottom"
         // Sheet primitive provides glass-modal substrate from Phase 2.
-        className="rounded-t-glass-lg text-white"
+        className="rounded-t-glass-lg text-foreground"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">
+          <SheetTitle className="text-foreground">
             {transaction?.plateName ?? "Order"}
           </SheetTitle>
         </SheetHeader>
@@ -108,28 +108,28 @@ function DrawerBody({
             label="KDER fee"
             value={`−$${(transaction.platformFeeCents / 100).toFixed(2)}`}
             copyable={false}
-            accent="text-red-400"
+            accent="text-red-600 dark:text-red-400"
           />
           <Row
             label="Your payout"
             value={`$${(transaction.netPayoutCents / 100).toFixed(2)}`}
             copyable={false}
-            accent="text-green-300"
+            accent="text-emerald-600 dark:text-green-300"
           />
         </div>
       )}
 
       <div className="glass-card rounded-glass-lg p-4 space-y-2">
-        <p className="text-[10px] uppercase tracking-wider text-white/40">
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/60">
           Stripe IDs
         </p>
         {loading ? (
-          <div className="flex items-center gap-2 text-xs text-white/50">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 size={12} className="animate-spin" />
             Loading payment details…
           </div>
         ) : errorCode ? (
-          <p className="text-xs text-red-300">
+          <p className="text-xs text-red-600 dark:text-red-300">
             Couldn&apos;t load Stripe IDs [{errorCode}]
           </p>
         ) : details ? (
@@ -161,7 +161,7 @@ function DrawerBody({
       <button
         type="button"
         onClick={onClose}
-        className="flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform"
+        className="flex h-12 w-full items-center justify-center rounded-full border border-border text-sm font-bold text-foreground active:scale-95 transition-transform"
       >
         Close
       </button>
@@ -173,7 +173,7 @@ function Row({
   label,
   value,
   copyable,
-  accent = "text-white",
+  accent = "text-foreground",
 }: {
   label: string;
   value: string;
@@ -195,18 +195,18 @@ function Row({
 
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-white/50">{label}</span>
+      <span className="text-muted-foreground">{label}</span>
       <button
         type="button"
         onClick={handleCopy}
         disabled={!copyable}
-        className={`flex items-center gap-1.5 ${accent} ${copyable ? "cursor-pointer hover:text-white" : "cursor-default"}`}
+        className={`flex items-center gap-1.5 ${accent} ${copyable ? "cursor-pointer hover:text-foreground" : "cursor-default"}`}
         title={copyable ? "Copy to clipboard" : undefined}
       >
         <span className="font-mono text-[11px]">{value}</span>
         {copyable &&
           (copied ? (
-            <Check size={11} className="text-green-400" />
+            <Check size={11} className="text-emerald-600 dark:text-green-400" />
           ) : (
             <Copy size={11} className="opacity-50" />
           ))}

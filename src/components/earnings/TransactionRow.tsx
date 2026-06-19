@@ -6,13 +6,24 @@ const STATUS_STYLE: Record<
   EarningsTransaction["status"],
   { label: string; className: string }
 > = {
-  paid: { label: "Paid", className: "bg-green-900/50 text-green-300" },
+  paid: {
+    label: "Paid",
+    className:
+      "bg-emerald-500/10 text-emerald-700 dark:bg-green-900/50 dark:text-green-300",
+  },
   pending: {
     label: "Pending",
-    className: "bg-orange-900/40 text-orange-300",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:bg-orange-900/40 dark:text-orange-300",
   },
-  held: { label: "Held", className: "bg-white/10 text-white/50" },
-  refunded: { label: "Refunded", className: "bg-red-900/50 text-red-300" },
+  held: {
+    label: "Held",
+    className: "bg-muted text-muted-foreground",
+  },
+  refunded: {
+    label: "Refunded",
+    className: "bg-red-500/10 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+  },
 };
 
 interface TransactionRowProps {
@@ -31,31 +42,28 @@ export function TransactionRow({ transaction, onClick }: TransactionRowProps) {
     <Wrapper
       type={onClick ? "button" : undefined}
       onClick={onClick}
-      className={`glass-card rounded-glass-lg block w-full text-left p-4 ${onClick ? "active:bg-white/[0.18] transition-colors" : ""}`}
+      className={`glass-card rounded-glass-lg block w-full text-left p-4 ${onClick ? "active:bg-muted/60 transition-colors" : ""}`}
     >
       <div className="flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-white truncate">
+          <p className="text-sm font-semibold text-foreground truncate">
             {transaction.plateName}
           </p>
-          <p className="text-xs text-white/40">{transaction.memberName}</p>
+          <p className="text-xs text-muted-foreground">{transaction.memberName}</p>
         </div>
         {isRefunded ? (
-          <span className="text-base font-bold text-red-400 flex-shrink-0">
+          <span className="text-base font-bold text-red-600 dark:text-red-400 flex-shrink-0">
             −${(transaction.refundAmountCents / 100).toFixed(2)}
           </span>
         ) : (
-          <span
-            className="text-base font-bold text-green-300 flex-shrink-0"
-            style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-          >
+          <span className="text-base font-bold text-emerald-600 dark:text-green-300 flex-shrink-0">
             +${(transaction.netPayoutCents / 100).toFixed(2)}
           </span>
         )}
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[10px] text-white/30">
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground/60">
           <span>
             {date.toLocaleDateString([], {
               month: "short",

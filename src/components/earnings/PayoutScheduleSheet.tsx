@@ -75,10 +75,10 @@ export function PayoutScheduleSheet({
       <SheetContent
         side="bottom"
         // Sheet primitive provides glass-modal substrate from Phase 2.
-        className="rounded-t-glass-lg text-white"
+        className="rounded-t-glass-lg text-foreground"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">Payout Schedule</SheetTitle>
+          <SheetTitle className="text-foreground">Payout Schedule</SheetTitle>
         </SheetHeader>
 
         <div className="mt-4 space-y-4 pb-6">
@@ -104,8 +104,8 @@ export function PayoutScheduleSheet({
                     onClick={() => setAnchor(a.key)}
                     className={
                       a.key === anchor
-                        ? "flex-1 rounded-lg bg-white/15 px-2 py-2 text-xs font-bold text-white"
-                        : "flex-1 rounded-lg bg-white/[0.04] px-2 py-2 text-xs text-white/50 hover:bg-white/[0.08]"
+                        ? "flex-1 rounded-lg bg-primary/10 px-2 py-2 text-xs font-bold text-primary"
+                        : "flex-1 rounded-lg bg-muted px-2 py-2 text-xs text-muted-foreground hover:bg-muted/70"
                     }
                   >
                     {a.label}
@@ -121,7 +121,7 @@ export function PayoutScheduleSheet({
             />
           </div>
 
-          <p className="text-xs text-white/40 text-center">
+          <p className="text-xs text-muted-foreground/60 text-center">
             Changes take effect on your next payout cycle. Funds already in
             transit are unaffected.
           </p>
@@ -131,7 +131,7 @@ export function PayoutScheduleSheet({
               type="button"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
-              className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform disabled:opacity-50"
+              className="flex h-12 flex-1 items-center justify-center rounded-full border border-border text-sm font-bold text-foreground active:scale-95 transition-transform disabled:opacity-50"
             >
               Cancel
             </button>
@@ -139,7 +139,7 @@ export function PayoutScheduleSheet({
               type="button"
               onClick={handleSave}
               disabled={submitting}
-              className="flex h-12 flex-1 items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform disabled:opacity-60"
+              className="flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform disabled:opacity-60"
             >
               {submitting ? "Saving…" : "Save"}
             </button>
@@ -168,21 +168,23 @@ function ScheduleOption({
       className={
         checked
           ? "glass-card rounded-glass-lg flex w-full items-start gap-3 border-emerald-400/30 bg-emerald-500/10 p-4 text-left"
-          : "glass-card rounded-glass-lg flex w-full items-start gap-3 p-4 text-left hover:bg-white/[0.18]"
+          : "glass-card rounded-glass-lg flex w-full items-start gap-3 p-4 text-left hover:bg-muted/60"
       }
     >
       <div
         className={
           checked
-            ? "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-green-400"
-            : "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-white/30"
+            ? "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-emerald-500 dark:border-green-400"
+            : "mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 border-border"
         }
       >
-        {checked && <span className="h-2.5 w-2.5 rounded-full bg-green-400" />}
+        {checked && (
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 dark:bg-green-400" />
+        )}
       </div>
       <div className="flex-1">
-        <p className="text-sm font-bold text-white">{label}</p>
-        <p className="text-xs text-white/50">{description}</p>
+        <p className="text-sm font-bold text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
     </button>
   );

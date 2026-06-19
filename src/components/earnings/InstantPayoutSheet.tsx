@@ -68,10 +68,10 @@ export function InstantPayoutSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[90vh] overflow-y-auto"
+        className="rounded-t-3xl border-border backdrop-blur-[24px] text-foreground max-h-[90vh] overflow-y-auto"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">
+          <SheetTitle className="text-foreground">
             {view === "confirm"
               ? "Instant Payout"
               : view === "no_debit_card"
@@ -172,34 +172,31 @@ function ConfirmView({
 
   return (
     <div className="mt-4 space-y-4 pb-6">
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 space-y-3">
+      <div className="rounded-2xl border border-border bg-muted p-4 space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Available balance</span>
-          <span className="text-white">
+          <span className="text-muted-foreground">Available balance</span>
+          <span className="text-foreground">
             ${(availableCents / 100).toFixed(2)}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-white/60">Instant fee (1.5%)</span>
-          <span className="text-red-400">
+          <span className="text-muted-foreground">Instant fee (1.5%)</span>
+          <span className="text-red-600 dark:text-red-400">
             −${(feeCents / 100).toFixed(2)}
           </span>
         </div>
-        <div className="h-px bg-white/[0.08]" />
+        <div className="h-px bg-border" />
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-white">
+          <span className="text-sm font-bold text-foreground">
             You&apos;ll receive
           </span>
-          <span
-            className="text-xl font-bold text-green-300"
-            style={{ filter: "drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-          >
+          <span className="text-xl font-bold text-emerald-600 dark:text-green-300">
             ${(payoutCents / 100).toFixed(2)}
           </span>
         </div>
       </div>
 
-      <p className="text-xs text-white/40 text-center">
+      <p className="text-xs text-muted-foreground/60 text-center">
         Funds arrive within 30 minutes to your linked debit card. Fee may
         vary by region or balance.
       </p>
@@ -209,7 +206,7 @@ function ConfirmView({
           type="button"
           onClick={onCancel}
           disabled={submitting}
-          className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform disabled:opacity-50"
+          className="flex h-12 flex-1 items-center justify-center rounded-full border border-border text-sm font-bold text-foreground active:scale-95 transition-transform disabled:opacity-50"
         >
           Cancel
         </button>
@@ -217,7 +214,7 @@ function ConfirmView({
           type="button"
           onClick={onConfirm}
           disabled={submitting}
-          className="flex h-12 flex-1 items-center justify-center rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform disabled:opacity-60"
+          className="flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform disabled:opacity-60"
         >
           {submitting ? "Confirming…" : "Confirm Payout"}
         </button>
@@ -231,50 +228,50 @@ function ConfirmView({
 function NoDebitCardView({ onClose }: { onClose: () => void }) {
   return (
     <div className="mt-4 space-y-5 pb-6">
-      <p className="text-sm text-white/80">
+      <p className="text-sm text-foreground/80">
         Instant payouts go straight to a debit card linked to your bank
         account — funds usually land in under 30 minutes.
       </p>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4 space-y-3">
-        <p className="text-[11px] uppercase tracking-wider text-white/40">
+      <div className="rounded-2xl border border-border bg-muted p-4 space-y-3">
+        <p className="text-[11px] uppercase tracking-wider text-muted-foreground/60">
           Two payout options once you add a card
         </p>
         <PayoutOption
-          icon={<Zap size={16} className="text-yellow-300" />}
+          icon={<Zap size={16} className="text-yellow-500 dark:text-yellow-300" />}
           title="Instant"
           subtitle="1.5% fee · arrives in ~30 min"
         />
-        <div className="h-px bg-white/[0.06]" />
+        <div className="h-px bg-border" />
         <PayoutOption
-          icon={<TrendingUp size={16} className="text-green-300" />}
+          icon={<TrendingUp size={16} className="text-emerald-600 dark:text-green-300" />}
           title="Standard"
           subtitle="Free · arrives in 2-3 business days"
         />
       </div>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
-        <p className="text-[11px] uppercase tracking-wider text-white/40">
+      <div className="rounded-2xl border border-border bg-muted p-4">
+        <p className="text-[11px] uppercase tracking-wider text-muted-foreground/60">
           How to add a debit card
         </p>
-        <ol className="mt-2 space-y-2 text-xs text-white/70">
+        <ol className="mt-2 space-y-2 text-xs text-foreground/80">
           <li>
-            <span className="font-bold text-white">1.</span> Tap{" "}
-            <span className="font-medium text-white">Open Stripe</span> below.
+            <span className="font-bold text-foreground">1.</span> Tap{" "}
+            <span className="font-medium text-foreground">Open Stripe</span> below.
           </li>
           <li>
-            <span className="font-bold text-white">2.</span> In the Stripe
+            <span className="font-bold text-foreground">2.</span> In the Stripe
             dashboard, go to{" "}
-            <span className="font-medium text-white">Payouts</span> →{" "}
-            <span className="font-medium text-white">Bank account</span>.
+            <span className="font-medium text-foreground">Payouts</span> →{" "}
+            <span className="font-medium text-foreground">Bank account</span>.
           </li>
           <li>
-            <span className="font-bold text-white">3.</span> Tap{" "}
-            <span className="font-medium text-white">Add new</span> and pick{" "}
-            <span className="font-medium text-white">Debit card</span>.
+            <span className="font-bold text-foreground">3.</span> Tap{" "}
+            <span className="font-medium text-foreground">Add new</span> and pick{" "}
+            <span className="font-medium text-foreground">Debit card</span>.
           </li>
           <li>
-            <span className="font-bold text-white">4.</span> Come back to KDER
+            <span className="font-bold text-foreground">4.</span> Come back to KDER
             — instant payouts will be available.
           </li>
         </ol>
@@ -284,7 +281,7 @@ function NoDebitCardView({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="flex h-12 flex-1 items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform"
+          className="flex h-12 flex-1 items-center justify-center rounded-full border border-border text-sm font-bold text-foreground active:scale-95 transition-transform"
         >
           Close
         </button>
@@ -301,15 +298,15 @@ function NoDebitCardView({ onClose }: { onClose: () => void }) {
 function NotEnabledView({ onClose }: { onClose: () => void }) {
   return (
     <div className="mt-4 space-y-5 pb-6">
-      <p className="text-sm text-white/80">
+      <p className="text-sm text-foreground/80">
         Stripe hasn&apos;t turned on instant payouts for your account yet.
         Your money is safe — it&apos;ll go out on the standard schedule
         instead.
       </p>
 
       {/* Visual: standard payout timeline */}
-      <div className="rounded-2xl border border-green-400/[0.18] bg-green-900/[0.10] p-4">
-        <p className="text-[11px] uppercase tracking-wider text-green-300/70">
+      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+        <p className="text-[11px] uppercase tracking-wider text-emerald-700/80 dark:text-green-300/70">
           What happens to your money
         </p>
         <div className="mt-3 flex items-center gap-2 text-xs">
@@ -323,32 +320,32 @@ function NotEnabledView({ onClose }: { onClose: () => void }) {
           <TimelineArrow />
           <TimelineStep label="Bank" sublabel="Funds land" active />
         </div>
-        <p className="mt-3 text-[11px] text-white/50">
+        <p className="mt-3 text-[11px] text-muted-foreground">
           Standard payouts are free and run automatically on your schedule.
         </p>
       </div>
 
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
+      <div className="rounded-2xl border border-border bg-muted p-4">
         <div className="flex items-start gap-2">
           <Info
             size={14}
-            className="mt-0.5 flex-shrink-0 text-white/40"
+            className="mt-0.5 flex-shrink-0 text-muted-foreground/60"
           />
-          <div className="text-xs text-white/70 space-y-2">
+          <div className="text-xs text-foreground/80 space-y-2">
             <p>
-              <span className="font-bold text-white">Why is this?</span>{" "}
+              <span className="font-bold text-foreground">Why is this?</span>{" "}
               Stripe enables instant payouts after your account has
               processed enough orders for their risk system to score it.
               This is automatic — no action needed from you.
             </p>
             <p>
-              <span className="font-bold text-white">When will it open?</span>{" "}
+              <span className="font-bold text-foreground">When will it open?</span>{" "}
               Usually after a few hundred dollars of successful payments
               over a couple weeks. There&apos;s no exact threshold Stripe
               publishes.
             </p>
             <p>
-              <span className="font-bold text-white">Need it sooner?</span>{" "}
+              <span className="font-bold text-foreground">Need it sooner?</span>{" "}
               Reach out to Stripe support and ask them to review instant
               payout eligibility on your Connect account.
             </p>
@@ -361,7 +358,7 @@ function NotEnabledView({ onClose }: { onClose: () => void }) {
           href={STRIPE_SUPPORT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/[0.15] text-sm font-bold text-white hover:bg-white/[0.20] active:scale-95 transition-all"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-muted text-sm font-bold text-foreground hover:bg-muted/70 active:scale-95 transition-all"
         >
           Email Stripe Support
           <ExternalLink size={12} />
@@ -372,7 +369,7 @@ function NotEnabledView({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-sm font-bold text-white active:scale-95 transition-transform"
+          className="flex h-12 w-full items-center justify-center rounded-full border border-border text-sm font-bold text-foreground active:scale-95 transition-transform"
         >
           Got it
         </button>
@@ -419,7 +416,7 @@ function OpenStripeButton({
       type="button"
       onClick={handleClick}
       disabled={loading}
-      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#1B5E20] text-sm font-bold text-white shadow-[0_0_20px_rgba(27,94,32,0.5)] active:scale-95 transition-transform disabled:opacity-60"
+      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform disabled:opacity-60"
     >
       {loading ? <Loader2 size={14} className="animate-spin" /> : children}
       {label}
@@ -438,12 +435,12 @@ function PayoutOption({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.06]">
+      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted">
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-white">{title}</p>
-        <p className="text-[11px] text-white/50">{subtitle}</p>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="text-[11px] text-muted-foreground">{subtitle}</p>
       </div>
     </div>
   );
@@ -460,14 +457,14 @@ function TimelineStep({
 }) {
   return (
     <div
-      className={`flex-1 rounded-lg border p-2 text-center ${active ? "border-green-400/30 bg-green-900/20" : "border-white/[0.08] bg-white/[0.04]"}`}
+      className={`flex-1 rounded-lg border p-2 text-center ${active ? "border-primary/30 bg-primary/10" : "border-border bg-muted"}`}
     >
-      <p className="text-[11px] font-bold text-white">{label}</p>
-      <p className="text-[9px] text-white/50">{sublabel}</p>
+      <p className="text-[11px] font-bold text-foreground">{label}</p>
+      <p className="text-[9px] text-muted-foreground">{sublabel}</p>
     </div>
   );
 }
 
 function TimelineArrow() {
-  return <span className="text-white/30 text-xs">→</span>;
+  return <span className="text-muted-foreground/50 text-xs">→</span>;
 }

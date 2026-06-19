@@ -157,29 +157,29 @@ export function ShareSheet({
   );
 
   const destinations: ShareDestination[] = [
-    { id: "messages", name: "Messages", icon: <MessageCircle size={22} />, color: "bg-green-900/[0.40] backdrop-blur-[20px] border border-green-400/[0.25] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_16px_rgba(0,0,0,0.3)] text-green-300" },
-    { id: "whatsapp", name: "WhatsApp", icon: <WhatsAppIcon />, color: "bg-green-900/[0.40] backdrop-blur-[20px] border border-green-400/[0.25] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_16px_rgba(0,0,0,0.3)] text-green-300" },
-    { id: "instagram", name: "Instagram", icon: <InstagramIcon />, color: "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-pink-300" },
-    { id: "x", name: "X", icon: <XIcon />, color: "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-white/80" },
-    { id: "facebook", name: "Facebook", icon: <FacebookIcon />, color: "bg-blue-900/[0.30] backdrop-blur-[8px] border border-blue-400/[0.20] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-blue-300" },
-    { id: "email", name: "Email", icon: <Mail size={22} />, color: "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-white/70" },
-    { id: "copy", name: copied ? "Copied!" : "Copy Link", icon: copied ? <Check size={22} /> : <LinkIcon size={22} />, color: copied ? "bg-green-900/[0.40] backdrop-blur-[20px] border border-green-400/[0.25] shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_16px_rgba(0,0,0,0.3)] text-green-300" : "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-white/70" },
-    { id: "more", name: "More...", icon: <Share2 size={22} />, color: "bg-white/[0.06] backdrop-blur-[8px] border border-white/[0.12] shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_4px_16px_rgba(0,0,0,0.3)] text-white/70" },
+    { id: "messages", name: "Messages", icon: <MessageCircle size={22} />, color: "border border-primary/25 bg-primary/10 backdrop-blur-[20px] text-primary dark:bg-green-900/[0.40] dark:text-green-300" },
+    { id: "whatsapp", name: "WhatsApp", icon: <WhatsAppIcon />, color: "border border-primary/25 bg-primary/10 backdrop-blur-[20px] text-primary dark:bg-green-900/[0.40] dark:text-green-300" },
+    { id: "instagram", name: "Instagram", icon: <InstagramIcon />, color: "border border-pink-400/25 bg-pink-500/10 backdrop-blur-[8px] text-pink-600 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-pink-300" },
+    { id: "x", name: "X", icon: <XIcon />, color: "border border-border bg-muted backdrop-blur-[8px] text-foreground dark:bg-white/[0.06] dark:text-white/80" },
+    { id: "facebook", name: "Facebook", icon: <FacebookIcon />, color: "border border-blue-400/25 bg-blue-500/10 backdrop-blur-[8px] text-blue-600 dark:border-blue-400/[0.20] dark:bg-blue-900/[0.30] dark:text-blue-300" },
+    { id: "email", name: "Email", icon: <Mail size={22} />, color: "border border-border bg-muted backdrop-blur-[8px] text-muted-foreground dark:bg-white/[0.06] dark:text-white/70" },
+    { id: "copy", name: copied ? "Copied!" : "Copy Link", icon: copied ? <Check size={22} /> : <LinkIcon size={22} />, color: copied ? "border border-primary/25 bg-primary/10 backdrop-blur-[20px] text-primary dark:bg-green-900/[0.40] dark:text-green-300" : "border border-border bg-muted backdrop-blur-[8px] text-muted-foreground dark:bg-white/[0.06] dark:text-white/70" },
+    { id: "more", name: "More...", icon: <Share2 size={22} />, color: "border border-border bg-muted backdrop-blur-[8px] text-muted-foreground dark:bg-white/[0.06] dark:text-white/70" },
   ];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="rounded-t-3xl border-white/[0.22] bg-[#0A0A0A]/95 backdrop-blur-[24px] text-white max-h-[50vh]"
+        className="rounded-t-3xl border-border backdrop-blur-[24px] text-foreground max-h-[50vh]"
       >
         <SheetHeader>
-          <SheetTitle className="text-white">Share your storefront</SheetTitle>
+          <SheetTitle className="text-foreground">Share your storefront</SheetTitle>
         </SheetHeader>
 
         {/* Link preview */}
         <div className="mt-4 flex items-center gap-2">
-          <div className="flex-1 rounded-full border border-white/[0.12] bg-white/[0.06] px-4 py-2.5 text-sm text-white/80 truncate backdrop-blur-[8px]">
+          <div className="flex-1 rounded-full border border-border bg-muted px-4 py-2.5 text-sm text-foreground truncate backdrop-blur-[8px]">
             {displayLink}
           </div>
           <button
@@ -188,8 +188,8 @@ export function ShareSheet({
             className={cn(
               "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border transition-all active:scale-90",
               copied
-                ? "border-green-400/40 bg-green-900/30 text-green-400"
-                : "border-white/20 bg-white/[0.08] text-white/70 hover:bg-white/[0.15]"
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
             )}
             aria-label={copied ? "Link copied" : "Copy link"}
           >
@@ -201,7 +201,7 @@ export function ShareSheet({
             replaces the default share text piped to every destination. */}
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-white/50">
+            <span className="text-xs font-medium text-muted-foreground">
               Caption (optional)
             </span>
             <AiDraftButton
@@ -221,7 +221,7 @@ export function ShareSheet({
             onChange={(e) => setAiCaption(e.target.value.slice(0, 280))}
             placeholder="Leave blank to use the default share text, or draft a social caption with AI."
             rows={2}
-            className="w-full rounded-2xl border border-white/[0.12] bg-white/[0.06] px-3 py-2 text-base text-white placeholder:text-white/30 backdrop-blur-[8px] focus:border-green-400/60 focus:outline-none resize-none"
+            className="w-full rounded-2xl border border-border bg-muted px-3 py-2 text-base text-foreground placeholder:text-muted-foreground/50 backdrop-blur-[8px] focus:border-primary/60 focus:outline-none resize-none"
           />
         </div>
 
@@ -244,7 +244,7 @@ export function ShareSheet({
                 >
                   {dest.icon}
                 </div>
-                <span className="text-[10px] text-white/60 whitespace-nowrap">
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                   {dest.name}
                 </span>
               </button>

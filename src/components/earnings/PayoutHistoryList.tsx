@@ -12,12 +12,20 @@ const STATUS_PILL: Record<
   EarningsPayout["status"],
   { label: string; className: string }
 > = {
-  paid: { label: "Paid", className: "bg-green-900/50 text-green-300" },
+  paid: {
+    label: "Paid",
+    className:
+      "bg-emerald-500/10 text-emerald-700 dark:bg-green-900/50 dark:text-green-300",
+  },
   pending: {
     label: "Pending",
-    className: "bg-orange-900/40 text-orange-300",
+    className:
+      "bg-amber-500/10 text-amber-700 dark:bg-orange-900/40 dark:text-orange-300",
   },
-  failed: { label: "Failed", className: "bg-red-900/50 text-red-300" },
+  failed: {
+    label: "Failed",
+    className: "bg-red-500/10 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+  },
 };
 
 export function PayoutHistoryList({
@@ -26,7 +34,7 @@ export function PayoutHistoryList({
 }: PayoutHistoryListProps) {
   if (errorCode) {
     return (
-      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-4 text-sm text-red-300">
+      <div className="glass-card rounded-glass-lg border-red-400/20 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-300">
         Couldn&apos;t load payout history. [{errorCode}]
       </div>
     );
@@ -34,7 +42,7 @@ export function PayoutHistoryList({
 
   if (payouts.length === 0) {
     return (
-      <div className="glass-card rounded-glass-lg p-6 text-center text-sm text-white/50">
+      <div className="glass-card rounded-glass-lg p-6 text-center text-sm text-muted-foreground">
         No payouts yet — earnings auto-pay on your schedule.
       </div>
     );
@@ -52,13 +60,13 @@ export function PayoutHistoryList({
           >
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                   {p.method === "instant" && (
-                    <Zap size={12} className="text-white/60" />
+                    <Zap size={12} className="text-muted-foreground" />
                   )}
                   {p.method === "instant" ? "Instant payout" : "Payout"}
                 </p>
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   {date.toLocaleDateString([], {
                     month: "short",
                     day: "numeric",
@@ -72,16 +80,13 @@ export function PayoutHistoryList({
                   )}
                 </p>
                 {p.status === "failed" && p.failureReason && (
-                  <p className="mt-1 text-xs text-red-300/80">
+                  <p className="mt-1 text-xs text-red-600/80 dark:text-red-300/80">
                     {p.failureReason}
                   </p>
                 )}
               </div>
               <div className="text-right">
-                <p
-                  className="text-base font-bold text-green-300"
-                  style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
-                >
+                <p className="text-base font-bold text-emerald-600 dark:text-green-300">
                   ${(p.amountCents / 100).toFixed(2)}
                 </p>
                 <span

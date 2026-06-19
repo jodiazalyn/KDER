@@ -94,17 +94,17 @@ export function CollapsibleSection({
           aria-controls={`section-${id}-body`}
           className="flex flex-1 items-center justify-between rounded-lg py-1 text-left active:opacity-70 transition-opacity"
         >
-          <h2 className="flex items-center gap-2 text-lg font-bold text-white/80">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
             <span>{title}</span>
             {count !== undefined && (
-              <span className="text-xs font-medium text-white/40">
+              <span className="text-xs font-medium text-muted-foreground/60">
                 {count}
               </span>
             )}
           </h2>
           <ChevronDown
             size={16}
-            className={`text-white/40 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
         {dismissible && (
@@ -112,7 +112,7 @@ export function CollapsibleSection({
             type="button"
             onClick={handleDismiss}
             aria-label={`Hide ${title} section`}
-            className="-mr-1 rounded-full p-2 text-white/30 hover:bg-white/[0.06] hover:text-white/70 active:scale-95 transition-all"
+            className="-mr-1 rounded-full p-2 text-muted-foreground/60 hover:bg-muted/60 hover:text-foreground active:scale-95 transition-all"
           >
             <X size={14} />
           </button>

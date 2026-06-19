@@ -19,8 +19,8 @@ const TABS: { key: LeaderboardSort; label: string; icon: typeof Star }[] = [
 ];
 
 const RANK_COLORS: Record<number, string> = {
-  1: "text-yellow-400",
-  2: "text-slate-300",
+  1: "text-yellow-500 dark:text-yellow-400",
+  2: "text-slate-400 dark:text-slate-300",
   3: "text-amber-600",
 };
 
@@ -62,10 +62,10 @@ export function LeaderboardPanel({
         side="right"
         // Sheet primitive already applies `glass-modal` (Phase 2);
         // we only override sizing/text/scroll here.
-        className="w-full max-w-sm text-white p-0 overflow-y-auto"
+        className="w-full max-w-sm text-foreground p-0 overflow-y-auto"
       >
         <SheetHeader className="px-5 pt-6 pb-3">
-          <SheetTitle className="flex items-center gap-2 text-white">
+          <SheetTitle className="flex items-center gap-2 text-foreground">
             <Crown size={20} className="text-yellow-400" />
             Leaderboard
           </SheetTitle>
@@ -76,7 +76,7 @@ export function LeaderboardPanel({
               green tint to highlight as "your" section. */}
           {!anonymous && userRanks && (
             <div className="glass-card rounded-glass-lg border-emerald-400/25 bg-emerald-500/10 p-4">
-              <p className="text-xs font-medium text-green-300/60 uppercase tracking-wider mb-3">
+              <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-3">
                 Your Rankings
               </p>
               <div className="grid grid-cols-3 gap-3">
@@ -88,7 +88,7 @@ export function LeaderboardPanel({
                 <RankCard
                   label="Orders"
                   rank={userRanks.orders}
-                  icon={<ShoppingBag size={14} className="text-green-300" />}
+                  icon={<ShoppingBag size={14} className="text-primary" />}
                 />
                 <RankCard
                   label="Streak"
@@ -109,8 +109,8 @@ export function LeaderboardPanel({
                 className={cn(
                   "glass-segment-item flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium",
                   sortBy === tab.key
-                    ? "glass-segment-item-active text-white"
-                    : "text-white/40 hover:text-white/60"
+                    ? "glass-segment-item-active text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <tab.icon size={12} />
@@ -147,10 +147,10 @@ function RankCard({
   return (
     <div className="glass-card rounded-glass flex flex-col items-center gap-1 p-3">
       {icon}
-      <span className="text-xl font-black text-white">
+      <span className="text-xl font-black text-foreground">
         #{rank ?? "—"}
       </span>
-      <span className="text-[10px] text-white/40">{label}</span>
+      <span className="text-[10px] text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -162,7 +162,7 @@ function LeaderboardRow({
   entry: LeaderboardEntry;
   sortBy: LeaderboardSort;
 }) {
-  const rankColor = RANK_COLORS[entry.rank] || "text-white/40";
+  const rankColor = RANK_COLORS[entry.rank] || "text-muted-foreground";
   const value =
     sortBy === "vibeScore"
       ? entry.vibeScore.toFixed(1)
@@ -185,7 +185,7 @@ function LeaderboardRow({
         "glass-card rounded-glass flex w-full items-center gap-3 p-2.5 transition-all text-left",
         entry.isCurrentUser
           ? "border-emerald-400/25 bg-emerald-500/15 cursor-default"
-          : "hover:bg-white/[0.18] cursor-pointer active:scale-[0.98]"
+          : "hover:bg-muted/60 cursor-pointer active:scale-[0.98]"
       )}
     >
       {/* Rank */}
@@ -194,7 +194,7 @@ function LeaderboardRow({
       </span>
 
       {/* Avatar */}
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.08] text-xs font-bold text-white/60 flex-shrink-0">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground flex-shrink-0">
         {entry.displayName.charAt(0)}
       </div>
 
@@ -203,23 +203,23 @@ function LeaderboardRow({
         <p
           className={cn(
             "text-sm font-semibold truncate",
-            entry.isCurrentUser ? "text-green-300" : "text-white"
+            entry.isCurrentUser ? "text-primary" : "text-foreground"
           )}
         >
           {entry.displayName}
           {entry.isCurrentUser && (
-            <span className="ml-1 text-[10px] text-green-300/60">(You)</span>
+            <span className="ml-1 text-[10px] text-primary/70">(You)</span>
           )}
         </p>
-        <p className="text-[10px] text-white/30">@{entry.handle}</p>
+        <p className="text-[10px] text-muted-foreground/60">@{entry.handle}</p>
       </div>
 
       {/* Value */}
-      <span className="text-sm font-bold text-green-300">{value}</span>
+      <span className="text-sm font-bold text-primary">{value}</span>
 
       {/* External link indicator */}
       {!entry.isCurrentUser && (
-        <ExternalLink size={12} className="text-white/20 flex-shrink-0" />
+        <ExternalLink size={12} className="text-muted-foreground/50 flex-shrink-0" />
       )}
     </button>
   );

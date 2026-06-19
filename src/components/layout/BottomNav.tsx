@@ -68,15 +68,18 @@ export function BottomNav() {
 
   return (
     <nav
-      // Translucent saturated bottom-bar substrate. Hand-rolled
-      // backdrop-filter stack (vs liquidglass-tailwind's `glass-nav`,
-      // which forces `position: fixed; top: 0` and would relocate the
-      // bar to the top of the viewport).
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.10] bg-[#0A0A0A]/80 backdrop-blur-[24px] backdrop-saturate-[180%] pb-[env(safe-area-inset-bottom)]"
+      // Floating rounded "pill" nav (Uber-style): detached from the
+      // screen edges, fully rounded, soft shadow, frosted-glass
+      // substrate. The outer wrapper is pointer-events-none so taps in
+      // the side gutters fall through to the page; the pill itself
+      // re-enables pointer events. Hand-rolled backdrop-filter stack
+      // (vs liquidglass-tailwind's `glass-nav`, which forces
+      // `position: fixed; top: 0`).
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]"
       role="navigation"
       aria-label="Main navigation"
     >
-      <ul className="mx-auto flex max-w-lg items-stretch justify-around px-2 py-2">
+      <ul className="pointer-events-auto mx-auto flex max-w-md items-stretch justify-around gap-0.5 rounded-[26px] border border-border bg-background/80 px-1.5 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-[24px] backdrop-saturate-[180%]">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           // Calendar tab gets a red-dot badge when there are open
@@ -93,17 +96,22 @@ export function BottomNav() {
                 }
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-14 flex-col items-center justify-center gap-0.5 rounded-xl transition-all",
+                  "flex flex-col items-center justify-center gap-1 rounded-2xl py-1.5 transition-all active:scale-95",
                   isActive
-                    ? "text-green-300"
-                    : "text-white/50 hover:text-white/80"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <div className="relative">
-                  <tab.icon size={22} strokeWidth={isActive ? 2.4 : 2} />
+                <div
+                  className={cn(
+                    "relative flex h-8 w-12 items-center justify-center rounded-full transition-colors",
+                    isActive && "bg-primary/10"
+                  )}
+                >
+                  <tab.icon size={21} strokeWidth={isActive ? 2.4 : 2} />
                   {showBadge && (
                     <span
-                      className="absolute -right-1.5 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[#0A0A0A]"
+                      className="absolute right-1 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-background"
                       aria-hidden="true"
                     >
                       {inquiryCount > 9 ? "9+" : inquiryCount}

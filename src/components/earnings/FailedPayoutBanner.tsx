@@ -86,11 +86,11 @@ function Inner({ payout }: { payout: EarningsPayout }) {
       <div className="flex items-start gap-3">
         <AlertCircle
           size={18}
-          className="mt-0.5 flex-shrink-0 text-red-400"
+          className="mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400"
         />
         <div className="flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-medium text-red-300">
+            <p className="text-sm font-medium text-red-700 dark:text-red-300">
               Your last payout failed
             </p>
             <button
@@ -98,12 +98,12 @@ function Inner({ payout }: { payout: EarningsPayout }) {
               onClick={handleDismiss}
               aria-label="Dismiss"
               // 44px tap target per Apple HIG (was h-auto + p-1 ≈ 24px)
-              className="-mt-2 -mr-2 flex h-11 w-11 items-center justify-center rounded-full text-red-300/70 hover:bg-red-500/15 hover:text-red-200 active:scale-90 transition-transform"
+              className="-mt-2 -mr-2 flex h-11 w-11 items-center justify-center rounded-full text-red-600/70 hover:bg-red-500/15 hover:text-red-700 dark:text-red-300/70 dark:hover:text-red-200 active:scale-90 transition-transform"
             >
               <X size={18} />
             </button>
           </div>
-          <p className="mt-1 text-xs text-white/60">
+          <p className="mt-1 text-xs text-foreground/70 dark:text-white/60">
             ${(payout.amountCents / 100).toFixed(2)} payout on{" "}
             {new Date(payout.createdAt).toLocaleDateString([], {
               month: "short",
@@ -112,14 +112,14 @@ function Inner({ payout }: { payout: EarningsPayout }) {
             didn&apos;t arrive.
           </p>
           {payout.failureReason && (
-            <p className="mt-1 text-xs text-white/40">
+            <p className="mt-1 text-xs text-foreground/50 dark:text-white/40">
               Reason: {payout.failureReason}
             </p>
           )}
           <button
             type="button"
             onClick={handleManageInStripe}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-600/30 px-4 py-1.5 text-xs font-bold text-red-200 active:scale-95 transition-transform"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-1.5 text-xs font-bold text-white dark:bg-red-600/30 dark:text-red-200 active:scale-95 transition-transform"
           >
             Fix in Stripe
             <ExternalLink size={11} />
