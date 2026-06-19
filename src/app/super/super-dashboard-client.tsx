@@ -111,7 +111,7 @@ export function SuperDashboardClient({
               className="flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-4 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(34,197,94,0.35)] transition-all hover:brightness-110 active:scale-[0.98]"
             >
               <Sparkles size={15} />
-              Ask the data
+              Cleopatra VII
             </button>
             <button
               type="button"

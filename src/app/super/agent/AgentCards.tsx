@@ -8,6 +8,7 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertTriangle,
+  MapPin,
 } from "lucide-react";
 import type { PlateCard, CreatorCard } from "@/lib/admin/agent-tools";
 
@@ -115,6 +116,15 @@ export function PlateResultCard({ plate }: { plate: PlateCard }) {
           ) : null}
           {plate.fulfillment ? <Chip>{plate.fulfillment}</Chip> : null}
           {plate.orderCount > 0 ? <Chip>{plate.orderCount} orders</Chip> : null}
+          {plate.categories.slice(0, 2).map((c) => (
+            <Chip key={c}>#{c}</Chip>
+          ))}
+          {plate.allergens.length > 0 ? (
+            <Chip tone="amber">
+              <AlertTriangle size={10} />
+              {plate.allergens.slice(0, 3).join(", ")}
+            </Chip>
+          ) : null}
         </div>
         <div className="mt-2.5 flex items-center gap-2 border-t border-[#EFEDE4] pt-2.5">
           <Avatar src={plate.creator.photo} alt={creatorLabel} size={24} />
@@ -191,6 +201,15 @@ export function CreatorResultCard({ creator }: { creator: CreatorCard }) {
           <Chip>
             <Star size={10} className="text-[#B8860B]" />
             {creator.rating.toFixed(1)} ({creator.reviewCount})
+          </Chip>
+        ) : null}
+        {creator.serviceZips.length > 0 ? (
+          <Chip>
+            <MapPin size={10} />
+            {creator.serviceZips.slice(0, 2).join(", ")}
+            {creator.serviceZips.length > 2
+              ? ` +${creator.serviceZips.length - 2}`
+              : ""}
           </Chip>
         ) : null}
       </div>
