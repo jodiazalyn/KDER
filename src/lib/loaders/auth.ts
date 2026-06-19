@@ -184,21 +184,32 @@ export interface AdminContext {
 }
 
 export async function requireAdmin(): Promise<AdminContext> {
+  const ctx = await getAdminContext();
+  if (!ctx) {
+    // Not an admin, or the service key is unset (can't read across
+    // tenants) — fail closed rather than render an empty/half view.
+    redirect("/");
+  }
+  return ctx;
+}
+
+/**
+ * Non-redirecting variant of {@link requireAdmin} for API routes, which
+ * must return a JSON 403 rather than issue an HTTP redirect. Returns the
+ * service-role client + identity when the caller is a proven admin AND
+ * the service key is configured; otherwise `null`. Never expose the
+ * returned service client to the browser.
+ */
+export async function getAdminContext(): Promise<AdminContext | null> {
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
 
   const { isAdmin, userId, email } = await evaluateAdmin(supabase);
-  if (!isAdmin || !userId) {
-    redirect("/");
-  }
+  if (!isAdmin || !userId) return null;
 
   const { createServiceClient } = await import("@/lib/supabase/service");
   const service = createServiceClient();
-  if (!service) {
-    // Service key not configured — the dashboard can't read across
-    // tenants, so fail closed rather than render an empty/half view.
-    redirect("/");
-  }
+  if (!service) return null;
 
   return { service, user: { id: userId, email: email ?? "" } };
 }

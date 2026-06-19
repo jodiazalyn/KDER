@@ -16,7 +16,9 @@ import {
   AlertTriangle,
   X,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
+import { SuperAgentPanel } from "./agent/SuperAgentPanel";
 import type {
   SuperMetrics,
   Bucket,
@@ -83,6 +85,7 @@ export function SuperDashboardClient({
   );
 
   const [drill, setDrill] = useState<DrillKey | null>(null);
+  const [agentOpen, setAgentOpen] = useState(false);
   const handleExport = () => downloadCsv(metrics);
 
   const m = metrics;
@@ -101,14 +104,24 @@ export function SuperDashboardClient({
               Live snapshot · {generated} · {adminEmail}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleExport}
-            className="glass-btn-pill flex h-10 items-center gap-2 px-4 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
-          >
-            <Download size={15} />
-            Export CSV
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAgentOpen(true)}
+              className="flex h-10 items-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-4 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(34,197,94,0.35)] transition-all hover:brightness-110 active:scale-[0.98]"
+            >
+              <Sparkles size={15} />
+              Ask the data
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="glass-btn-pill flex h-10 items-center gap-2 px-4 text-sm font-semibold text-white transition-all hover:bg-white/[0.10] active:scale-[0.98]"
+            >
+              <Download size={15} />
+              Export CSV
+            </button>
+          </div>
         </div>
 
         <p className="mt-4 text-[11px] text-white/35">
@@ -368,6 +381,8 @@ export function SuperDashboardClient({
           <DrillBody drill={drill} m={m} />
         </DrillModal>
       )}
+
+      <SuperAgentPanel open={agentOpen} onClose={() => setAgentOpen(false)} />
     </main>
   );
 }
