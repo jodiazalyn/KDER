@@ -231,6 +231,45 @@ export function SuperAgentPanel({
 
   if (!open) return null;
 
+  // The large mic is the primary way to talk to Cleopatra — shown both on
+  // the empty state and pinned above the composer during a conversation, so a
+  // follow-up is always one tap away (no hunting for a tiny inline icon).
+  const bigMic = (variant: "hero" | "footer") => {
+    if (!voice.supported) return null;
+    const hero = variant === "hero";
+    return (
+      <div className={`flex flex-col items-center ${hero ? "gap-3" : "gap-1.5"}`}>
+        <button
+          type="button"
+          onClick={voice.toggle}
+          disabled={pending}
+          aria-label={voice.listening ? "Stop and send" : "Speak to Cleopatra"}
+          className={`relative flex items-center justify-center rounded-full text-white transition-all active:scale-95 disabled:opacity-50 ${
+            hero ? "h-24 w-24" : "h-16 w-16"
+          } ${
+            voice.listening
+              ? "bg-[#C15F3C] shadow-[0_8px_36px_rgba(193,95,60,0.55)]"
+              : "bg-[#C15F3C] shadow-[0_6px_28px_rgba(193,95,60,0.4)] hover:bg-[#A94F30]"
+          }`}
+        >
+          {voice.listening ? (
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#C15F3C]/40" />
+          ) : null}
+          <Mic size={hero ? 40 : 28} className="relative" strokeWidth={2} />
+        </button>
+        <p
+          className={`font-medium text-[#6B6862] ${hero ? "text-[14px]" : "text-[12px]"}`}
+        >
+          {voice.listening
+            ? "Listening… tap to send"
+            : hero
+              ? "Tap to ask out loud"
+              : "Tap to ask a follow-up"}
+        </p>
+      </div>
+    );
+  };
+
   const composer = (
     <div className="mx-auto w-full max-w-3xl px-4">
       <div className="rounded-[1.75rem] border border-[#E5E2D9] bg-white shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-shadow focus-within:shadow-[0_4px_24px_rgba(0,0,0,0.10)]">
@@ -246,32 +285,16 @@ export function SuperAgentPanel({
           }}
           rows={1}
           placeholder={
-            voice.listening ? "Listening…" : "Ask about creators, plates, or the marketplace…"
+            voice.listening
+              ? "Listening…"
+              : voice.supported
+                ? "Or type a question…"
+                : "Ask about creators, plates, or the marketplace…"
           }
           disabled={pending}
           className="max-h-40 min-h-[28px] w-full resize-none bg-transparent px-5 pt-4 text-[15px] leading-relaxed text-[#1F1E1D] placeholder:text-[#9B968A] focus:outline-none disabled:opacity-60"
         />
-        <div className="flex items-center justify-between px-3 pb-3 pt-1">
-          {voice.supported ? (
-            <button
-              type="button"
-              onClick={voice.toggle}
-              disabled={pending}
-              aria-label={voice.listening ? "Stop and send" : "Speak to Cleopatra"}
-              className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all active:scale-95 disabled:opacity-50 ${
-                voice.listening
-                  ? "bg-[#C15F3C] text-white shadow-[0_4px_18px_rgba(193,95,60,0.5)]"
-                  : "bg-[#C15F3C] text-white shadow-[0_3px_12px_rgba(193,95,60,0.35)] hover:bg-[#A94F30]"
-              }`}
-            >
-              {voice.listening ? (
-                <span className="absolute inset-0 animate-ping rounded-full bg-[#C15F3C]/40" />
-              ) : null}
-              <Mic size={22} className="relative" />
-            </button>
-          ) : (
-            <span />
-          )}
+        <div className="flex items-center justify-end px-3 pb-3 pt-1">
           <button
             type="button"
             onClick={() => send(input)}
@@ -287,11 +310,6 @@ export function SuperAgentPanel({
           </button>
         </div>
       </div>
-      <p className="mt-2 text-center text-[11px] text-[#9B968A]">
-        {voice.supported
-          ? "Tap the mic to ask out loud, or type — cards come from live data"
-          : "Cards come from live marketplace data — KDER internal analyst"}
-      </p>
     </div>
   );
 
@@ -331,29 +349,7 @@ export function SuperAgentPanel({
           </div>
 
           {/* Voice is the primary way in: a big tap-to-talk mic. */}
-          {voice.supported ? (
-            <div className="mb-8 flex flex-col items-center gap-3">
-              <button
-                type="button"
-                onClick={voice.toggle}
-                disabled={pending}
-                aria-label={voice.listening ? "Stop and send" : "Speak to Cleopatra"}
-                className={`relative flex h-24 w-24 items-center justify-center rounded-full text-white transition-all active:scale-95 disabled:opacity-50 ${
-                  voice.listening
-                    ? "bg-[#C15F3C] shadow-[0_8px_36px_rgba(193,95,60,0.55)]"
-                    : "bg-[#C15F3C] shadow-[0_6px_28px_rgba(193,95,60,0.4)] hover:bg-[#A94F30]"
-                }`}
-              >
-                {voice.listening ? (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-[#C15F3C]/40" />
-                ) : null}
-                <Mic size={40} className="relative" strokeWidth={2} />
-              </button>
-              <p className="text-[14px] font-medium text-[#6B6862]">
-                {voice.listening ? "Listening… tap to send" : "Tap to ask out loud"}
-              </p>
-            </div>
-          ) : null}
+          {voice.supported ? <div className="mb-8">{bigMic("hero")}</div> : null}
 
           {composer}
           <div className="mt-6 flex max-w-3xl flex-wrap justify-center gap-2 px-4">
@@ -427,8 +423,12 @@ export function SuperAgentPanel({
             </div>
           </div>
 
-          {/* Composer pinned bottom */}
+          {/* Composer pinned bottom — big mic stays centered above it so a
+              follow-up question is always one tap away. */}
           <div className="border-t border-[#E5E2D9] bg-[#F5F4EE] py-4">
+            {voice.supported ? (
+              <div className="mb-3 flex justify-center">{bigMic("footer")}</div>
+            ) : null}
             {composer}
           </div>
         </>
