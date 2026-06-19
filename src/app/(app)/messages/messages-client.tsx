@@ -139,7 +139,12 @@ export function MessagesClient({
         type="button"
         onClick={() => setComposeOpen(true)}
         aria-label="New message"
-        className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] ring-1 ring-primary/20 transition-all active:scale-90"
+        // Stacked ABOVE the global Mia launcher (PricingCoachLauncher),
+        // which sits at right-4 / bottom calc(6rem+safe-area) and is also
+        // h-14. Mia's top edge = 6rem + 3.5rem = 9.5rem; we add a 0.75rem
+        // gap so the two FABs read as a clean vertical stack instead of
+        // overlapping. Right edge aligned to right-4 to match Mia.
+        className="fixed bottom-[calc(10.25rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] ring-1 ring-primary/20 transition-all active:scale-90"
       >
         <PenSquare size={20} />
       </button>
