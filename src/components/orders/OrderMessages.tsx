@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useId } from "react";
-import { Send } from "lucide-react";
+import { Send, Camera, ImagePlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Message } from "@/types";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,14 @@ export function OrderMessages({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Two inputs: one forces the rear camera (capture="environment") for
+  // snapping food / drop-off photos in the moment; one is a plain gallery
+  // picker so people can also attach an existing image.
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
   // Unique per-mount suffix for the Realtime channel name. Without this,
   // Strict Mode's double-invoke + supabase's by-name channel registry can
@@ -99,24 +106,84 @@ export function OrderMessages({
     });
   }, [messages.length]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Reset the input value so picking the same file twice still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Only image files are supported.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image too large. Max 5MB.");
+      return;
+    }
+
+    // Replace any previously staged image (revoke the old object URL first).
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(file);
+    setMediaPreview(URL.createObjectURL(file));
+  };
+
+  const clearMedia = () => {
+    if (mediaPreview) URL.revokeObjectURL(mediaPreview);
+    setMediaFile(null);
+    setMediaPreview(null);
+  };
+
   const handleSend = async () => {
     const body = input.trim();
-    if (!body || sending) return;
+    // Allow photo-only messages (no text), but never send an empty message.
+    if ((!body && !mediaFile) || sending) return;
 
     setSending(true);
+
+    // Upload the image first if one is staged — we need its public URL before
+    // the row is inserted. The bucket-backed route keeps the chat lightweight
+    // (only the URL is stored on the message).
+    let mediaUrl: string | null = null;
+    if (mediaFile) {
+      try {
+        const formData = new FormData();
+        formData.append("file", mediaFile);
+        const uploadRes = await fetch("/api/v1/messages/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          toast.error("Couldn't upload the photo. Try again.");
+          setSending(false);
+          return;
+        }
+        const uploadData = await uploadRes.json();
+        mediaUrl = uploadData.data?.url ?? null;
+      } catch {
+        toast.error("Couldn't upload the photo. Check your connection.");
+        setSending(false);
+        return;
+      }
+    }
+
+    // body is NOT NULL in the schema, so stamp a placeholder for photo-only
+    // sends; the bubble hides this sentinel and shows just the image.
+    const outgoingBody = body || "📷 Photo";
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("messages") as any).insert({
       order_id: orderId,
       sender_id: currentUserId,
       recipient_id: recipientId,
-      body,
+      body: outgoingBody,
+      media_url: mediaUrl,
     });
 
     if (error) {
       toast.error("Couldn't send message. Try again.");
     } else {
       setInput("");
+      clearMedia();
     }
 
     setSending(false);
@@ -152,7 +219,17 @@ export function OrderMessages({
                       : "text-foreground/80"
                   )}
                 >
-                  <p>{msg.body}</p>
+                  {msg.media_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={msg.media_url}
+                      alt="Shared photo"
+                      className="mb-1.5 h-auto max-w-full rounded-xl"
+                      style={{ maxHeight: 240 }}
+                      loading="lazy"
+                    />
+                  )}
+                  {msg.body && msg.body !== "📷 Photo" && <p>{msg.body}</p>}
                   <p
                     className={cn(
                       "mt-1 text-[10px]",
@@ -171,8 +248,65 @@ export function OrderMessages({
         )}
       </div>
 
+      {/* Staged-photo preview — sits directly above the input bar so the
+          two read as one attachment chrome (matches the full-page thread). */}
+      {mediaPreview && (
+        <div className="border-t border-border px-3 pt-2">
+          <div className="relative inline-block">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mediaPreview}
+              alt="Photo to send"
+              className="h-20 w-20 rounded-xl border border-border object-cover"
+            />
+            <button
+              type="button"
+              onClick={clearMedia}
+              className="absolute -right-3 -top-3 flex h-11 w-11 items-center justify-center rounded-full bg-red-500/10 text-red-700 shadow-lg active:scale-90 transition-transform dark:bg-red-900/40 dark:text-red-300"
+              aria-label="Remove photo"
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input bar */}
       <div className="flex items-center gap-2 border-t border-border p-3">
+        {/* Hidden file inputs — camera capture + gallery upload. */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={sending}
+          className="glass-btn-pill flex h-10 w-10 flex-shrink-0 items-center justify-center text-muted-foreground active:scale-90 transition-transform disabled:opacity-50"
+          aria-label="Take a photo"
+        >
+          <Camera size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={() => galleryInputRef.current?.click()}
+          disabled={sending}
+          className="glass-btn-pill flex h-10 w-10 flex-shrink-0 items-center justify-center text-muted-foreground active:scale-90 transition-transform disabled:opacity-50"
+          aria-label="Upload a photo"
+        >
+          <ImagePlus size={18} />
+        </button>
         <input
           type="text"
           value={input}
@@ -183,17 +317,17 @@ export function OrderMessages({
               handleSend();
             }
           }}
-          placeholder="Type a message..."
-          className="glass-input h-10 flex-1 rounded-full px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
+          placeholder={mediaFile ? "Add a caption…" : "Type a message..."}
+          className="glass-input h-10 min-w-0 flex-1 rounded-full px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
           aria-label="Message input"
         />
         <button
           type="button"
           onClick={handleSend}
-          disabled={!input.trim() || sending}
+          disabled={(!input.trim() && !mediaFile) || sending}
           className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90",
-            input.trim() && !sending
+            "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all active:scale-90",
+            (input.trim() || mediaFile) && !sending
               ? "bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)]"
               : "bg-muted text-muted-foreground/60 cursor-not-allowed"
           )}
