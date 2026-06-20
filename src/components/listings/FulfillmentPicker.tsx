@@ -31,8 +31,8 @@ export function FulfillmentPicker({ value, onChange }: FulfillmentPickerProps) {
           className={cn(
             "glass-segment-item flex-1 py-2.5 text-sm font-medium",
             value === opt.value
-              ? "glass-segment-item-active border-emerald-400/30 bg-emerald-500/15 text-white"
-              : "text-white/50 hover:text-white/70"
+              ? "glass-segment-item-active border-emerald-400/30 bg-emerald-500/15 text-accent-foreground"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
           {opt.label}

@@ -68,7 +68,7 @@ export function PlateExtrasEditor({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
       {rows.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-white/[0.12] px-3 py-4 text-center text-xs text-white/40">
+        <p className="rounded-2xl border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
           No extras yet. Add things like drinks, desserts, or extra
           sauce that customers can stack onto this plate.
         </p>
@@ -85,7 +85,7 @@ export function PlateExtrasEditor({ value, onChange }: Props) {
       <button
         type="button"
         onClick={addRow}
-        className="mt-1 flex h-11 w-full items-center justify-center gap-1 rounded-full border border-dashed border-white/[0.15] text-sm font-medium text-white/60 transition-colors hover:border-white/[0.30] hover:text-white/80 active:scale-95"
+        className="mt-1 flex h-11 w-full items-center justify-center gap-1 rounded-full border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground active:scale-95"
       >
         <Plus size={16} />
         Add an extra
@@ -112,7 +112,7 @@ function ExtraRow({
   );
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3">
+    <div className="rounded-2xl border border-border bg-white/[0.02] p-3">
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -123,10 +123,10 @@ function ExtraRow({
             onUpdate({ name: v });
           }}
           placeholder="e.g. Lemonade, Cookie, Extra spice"
-          className="glass-input h-11 flex-1 px-3 text-base text-white placeholder:text-white/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+          className="glass-input h-11 flex-1 px-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
         />
         <div className="relative w-24 shrink-0">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/40">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
             $
           </span>
           <input
@@ -142,7 +142,7 @@ function ExtraRow({
             }}
             placeholder="0"
             className={cn(
-              "glass-input h-11 w-full px-2 pl-6 text-right text-base font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+              "glass-input h-11 w-full px-2 pl-6 text-right text-base font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             )}
           />
         </div>
@@ -150,13 +150,13 @@ function ExtraRow({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${row.name || "extra"}`}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/40 hover:bg-red-500/10 hover:text-red-300 active:scale-90"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-500 active:scale-90"
         >
           <X size={16} />
         </button>
       </div>
       {row.price_cents === 0 && nameDraft.trim() && (
-        <p className="mt-1.5 text-[11px] text-white/45">
+        <p className="mt-1.5 text-[11px] text-muted-foreground">
           Free extra — customers will see &ldquo;Included&rdquo; instead of a price.
         </p>
       )}

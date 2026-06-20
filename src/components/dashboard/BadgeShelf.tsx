@@ -43,8 +43,8 @@ export function BadgeShelf({ badges }: BadgeShelfProps) {
               key={badge.id}
               className={`flex-shrink-0 flex flex-col items-center gap-1.5 rounded-2xl border bg-gradient-to-b p-3 w-20 ${TIER_COLORS[badge.tier]}`}
             >
-              <Icon size={22} className="text-white" />
-              <span className="text-[10px] font-medium text-white/80 text-center leading-tight">
+              <Icon size={22} className="text-foreground" />
+              <span className="text-[10px] font-medium text-muted-foreground text-center leading-tight">
                 {badge.name}
               </span>
             </div>

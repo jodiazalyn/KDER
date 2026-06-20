@@ -127,26 +127,26 @@ export function PlateCard({
             icon and the longer "Thu, Mar 14" label for clarity. */}
         {preOrderDateLong && (
           <div className="mb-3 flex items-center gap-2 rounded-xl border border-green-400/[0.25] bg-green-900/[0.20] px-3 py-2">
-            <Calendar size={14} className="text-green-300" />
-            <span className="text-xs font-semibold text-green-100">
+            <Calendar size={14} className="text-accent-foreground" />
+            <span className="text-xs font-semibold text-accent-foreground">
               Pre-order · available {preOrderDateLong}
             </span>
           </div>
         )}
 
         {/* Name */}
-        <h3 className="text-lg font-bold text-white">{listing.name}</h3>
+        <h3 className="text-lg font-bold text-foreground">{listing.name}</h3>
 
         {/* Description */}
         {listing.description && (
-          <p className="mt-1 line-clamp-3 text-sm text-white/60">
+          <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">
             {listing.description}
           </p>
         )}
 
         {/* Price */}
         <p
-          className="mt-2 text-2xl font-bold text-green-300"
+          className="mt-2 text-2xl font-bold text-accent-foreground"
           style={{ filter: "drop-shadow(0 1px 4px rgba(0,0,0,0.4))" }}
         >
           ${listing.price.toFixed(2)}
@@ -154,13 +154,13 @@ export function PlateCard({
 
         {/* Tags row */}
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70">
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
             {fulfillmentLabel}
           </span>
           {listing.category_tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-green-900/50 px-2.5 py-1 text-[11px] font-medium text-green-300"
+              className="rounded-full bg-green-900/50 px-2.5 py-1 text-[11px] font-medium text-accent-foreground"
             >
               {tag}
             </span>
@@ -177,7 +177,7 @@ export function PlateCard({
 
         {/* Action row */}
         {soldOut ? (
-          <div className="glass-btn-pill mt-4 flex h-11 items-center justify-center text-sm font-semibold text-white/40">
+          <div className="glass-btn-pill mt-4 flex h-11 items-center justify-center text-sm font-semibold text-muted-foreground">
             Sold out
           </div>
         ) : (
@@ -189,11 +189,11 @@ export function PlateCard({
                 onClick={() => setQty(Math.max(1, qty - 1))}
                 disabled={qty <= 1}
                 aria-label="Decrease quantity"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground disabled:text-muted-foreground/40 active:scale-90 transition-transform"
               >
                 <Minus size={16} />
               </button>
-              <span className="w-7 text-center text-base font-semibold text-white">
+              <span className="w-7 text-center text-base font-semibold text-foreground">
                 {qty}
               </span>
               <button
@@ -201,7 +201,7 @@ export function PlateCard({
                 onClick={() => setQty(Math.min(listing.quantity, qty + 1))}
                 disabled={qty >= listing.quantity}
                 aria-label="Increase quantity"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-white/60 disabled:text-white/20 active:scale-90 transition-transform"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground disabled:text-muted-foreground/40 active:scale-90 transition-transform"
               >
                 <Plus size={16} />
               </button>

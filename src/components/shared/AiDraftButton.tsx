@@ -235,8 +235,8 @@ export function AiDraftButton({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-[0.98]",
             streaming
-              ? "border-white/10 bg-white/5 text-white/40 cursor-wait"
-              : "border-green-400/30 bg-green-900/25 text-green-200 hover:bg-green-900/40"
+              ? "border-border bg-white/5 text-muted-foreground cursor-wait"
+              : "border-green-400/30 bg-green-900/25 text-accent-foreground hover:bg-green-900/40"
           )}
         >
           {streaming ? (
@@ -261,7 +261,7 @@ export function AiDraftButton({
           <button
             type="button"
             onClick={() => setHintOpen((v) => !v)}
-            className="text-xs text-white/40 underline-offset-2 hover:text-white/70 hover:underline"
+            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           >
             {hintOpen ? "Hide hint" : "Tweak tone"}
           </button>
@@ -275,13 +275,13 @@ export function AiDraftButton({
             value={hint}
             onChange={(e) => setHint(e.target.value.slice(0, 200))}
             placeholder="e.g., make it shorter, emphasize smoky, keep it family-friendly"
-            className="h-10 flex-1 rounded-xl border border-white/[0.12] bg-white/[0.06] px-3 text-base text-white placeholder:text-white/35 focus:border-green-400/60 focus:outline-none"
+            className="h-10 flex-1 rounded-xl border border-border bg-white/[0.06] px-3 text-base text-foreground placeholder:text-muted-foreground focus:border-green-400/60 focus:outline-none"
           />
           <button
             type="button"
             onClick={() => runDraft({ hint })}
             disabled={streaming}
-            className="inline-flex items-center gap-1 rounded-xl border border-green-400/30 bg-green-900/25 px-3 py-1.5 text-xs font-medium text-green-200 transition-all hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-wait"
+            className="inline-flex items-center gap-1 rounded-xl border border-green-400/30 bg-green-900/25 px-3 py-1.5 text-xs font-medium text-accent-foreground transition-all hover:bg-green-900/40 disabled:opacity-50 disabled:cursor-wait"
           >
             <Sparkles size={12} />
             Apply

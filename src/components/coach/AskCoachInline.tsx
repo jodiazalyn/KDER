@@ -52,11 +52,11 @@ export function AskCoachInline({
         type="button"
         onClick={() => open(seedPrompt)}
         className={cn(
-          "inline-flex items-center gap-1 text-xs font-semibold text-green-300 underline-offset-4 hover:underline active:scale-95",
+          "inline-flex items-center gap-1 text-xs font-semibold text-accent-foreground underline-offset-4 hover:underline active:scale-95",
           className
         )}
       >
-        <Sparkles size={12} className="text-amber-200" aria-hidden />
+        <Sparkles size={12} className="text-amber-500" aria-hidden />
         {label}
       </button>
     );
@@ -78,16 +78,16 @@ export function AskCoachInline({
         <Sparkles size={16} className="text-amber-200" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[13px] font-bold text-white">
+        <span className="block text-[13px] font-bold text-foreground">
           {label}
         </span>
         {hint && (
-          <span className="mt-0.5 block text-[11px] text-white/55">
+          <span className="mt-0.5 block text-[11px] text-muted-foreground">
             {hint}
           </span>
         )}
       </span>
-      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-green-300 opacity-70 group-hover:opacity-100">
+      <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-accent-foreground opacity-70 group-hover:opacity-100">
         Open
       </span>
     </button>

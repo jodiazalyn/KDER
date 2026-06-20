@@ -22,9 +22,9 @@ const buttonVariants = cva(
         // See docs/DESIGN_SYSTEM.md for when to use which.
         // Combine with `bg-{accent}-500/25 border-{accent}-400/20`
         // for tinted CTAs (KDER green-tinted Accept buttons, etc.).
-        glass: "glass-btn text-white",
-        "glass-secondary": "glass-btn-secondary text-white/90",
-        "glass-pill": "glass-btn-pill text-white/90",
+        glass: "glass-btn text-foreground",
+        "glass-secondary": "glass-btn-secondary text-foreground",
+        "glass-pill": "glass-btn-pill text-foreground",
       },
       size: {
         default: "h-10 px-4 py-2",

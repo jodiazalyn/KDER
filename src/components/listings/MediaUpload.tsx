@@ -217,7 +217,7 @@ export function MediaUpload({
         {photos.map((photo, i) => (
           <div
             key={i}
-            className="relative aspect-square overflow-hidden rounded-xl border border-white/[0.12]"
+            className="relative aspect-square overflow-hidden rounded-xl border border-border"
           >
             <Image
               src={photo}
@@ -240,7 +240,7 @@ export function MediaUpload({
 
         {/* Video thumbnail */}
         {video && (
-          <div className="relative aspect-square overflow-hidden rounded-xl border border-white/[0.12]">
+          <div className="relative aspect-square overflow-hidden rounded-xl border border-border">
             <video
               src={video}
               className="h-full w-full object-cover"
@@ -285,7 +285,7 @@ export function MediaUpload({
             // Dashed-border upload affordance — keep the dashed look
             // (Apple's empty-state convention); use glass-card for the
             // base substrate so it matches sibling cards.
-            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
+            className="glass-card rounded-glass flex aspect-square flex-col items-center justify-center gap-1 border-2 border-dashed border-border text-muted-foreground hover:border-green-400/40 hover:text-foreground active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add photo"
           >
             {uploadingCount > 0 ? (
@@ -308,7 +308,7 @@ export function MediaUpload({
             type="button"
             onClick={() => !videoUploading && videoInputRef.current?.click()}
             disabled={videoUploading}
-            className="glass-card rounded-glass relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden border-2 border-dashed border-white/20 text-white/40 hover:border-green-400/40 hover:text-white/60 active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
+            className="glass-card rounded-glass relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden border-2 border-dashed border-border text-muted-foreground hover:border-green-400/40 hover:text-foreground active:scale-95 transition-all disabled:cursor-wait disabled:opacity-60"
             aria-label="Add video"
           >
             {videoUploading ? (
@@ -338,7 +338,7 @@ export function MediaUpload({
         )}
       </div>
 
-      <p className="text-xs text-white/30">
+      <p className="text-xs text-muted-foreground">
         {photos.length}/{maxPhotos} photos{video ? " + 1 video" : ""} · Video max 60s
       </p>
 
