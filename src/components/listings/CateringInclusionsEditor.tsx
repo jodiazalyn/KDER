@@ -59,7 +59,7 @@ export function CateringInclusionsEditor({ value, onChange }: Props) {
           }}
         />
       ))}
-      <p className="text-[11px] text-white/35">
+      <p className="text-[11px] text-muted-foreground">
         Customers see this as a summary on your storefront card and on the
         order page after they pay the deposit.
       </p>
@@ -101,11 +101,11 @@ function CategorySection({
   return (
     <section
       aria-labelledby={labelId}
-      className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3"
+      className="rounded-2xl border border-border bg-white/[0.02] p-3"
     >
       <h3
         id={labelId}
-        className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/45"
+        className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
       >
         {category}
       </h3>
@@ -114,7 +114,7 @@ function CategorySection({
         {items.map((item, idx) => (
           <span
             key={`${item}-${idx}`}
-            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/[0.25] bg-emerald-500/[0.12] py-1 pl-3 pr-1 text-xs font-medium text-emerald-200"
+            className="inline-flex items-center gap-1 rounded-full border border-emerald-400/[0.25] bg-emerald-500/[0.12] py-1 pl-3 pr-1 text-xs font-medium text-accent-foreground"
           >
             <span className="truncate max-w-[180px]">{item}</span>
             <button
@@ -125,8 +125,8 @@ function CategorySection({
               // area stays small but accidental taps just outside still
               // resolve to the X.
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full text-emerald-300/70",
-                "hover:bg-emerald-500/20 hover:text-emerald-100 active:scale-90 transition-all"
+                "flex h-7 w-7 items-center justify-center rounded-full text-accent-foreground/70",
+                "hover:bg-emerald-500/20 hover:text-accent-foreground active:scale-90 transition-all"
               )}
             >
               <X size={14} strokeWidth={2.5} />
@@ -136,8 +136,8 @@ function CategorySection({
 
         {/* Inline add input — looks like a chip, behaves like an input.
             Enter or blur commits; Escape cancels. */}
-        <span className="inline-flex items-center gap-1 rounded-full border border-white/[0.10] bg-white/[0.04] py-1 pl-2 pr-2 text-xs text-white/60">
-          <Plus size={12} className="text-white/40" />
+        <span className="inline-flex items-center gap-1 rounded-full border border-border bg-white/[0.04] py-1 pl-2 pr-2 text-xs text-muted-foreground">
+          <Plus size={12} className="text-muted-foreground" />
           <input
             type="text"
             value={draft}
@@ -145,7 +145,7 @@ function CategorySection({
             onKeyDown={handleKeyDown}
             onBlur={commit}
             placeholder={items.length === 0 ? `Add ${category.toLowerCase()}` : "Add"}
-            className="bg-transparent text-xs text-white placeholder:text-white/35 focus:outline-none"
+            className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
             style={{
               width: `${Math.max(
                 draft.length + 1,

@@ -64,14 +64,14 @@ export function CategoryChips({
       <div className="relative">
         <Search
           size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
         />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search tags…"
-          className="glass-input h-10 w-full pl-8 pr-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
+          className="glass-input h-10 w-full pl-8 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
         />
       </div>
 
@@ -89,7 +89,7 @@ export function CategoryChips({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-white/30">No tags match &ldquo;{search}&rdquo;</p>
+          <p className="text-sm text-muted-foreground">No tags match &ldquo;{search}&rdquo;</p>
         )
       ) : hasAnyGroupedOption ? (
         /* Grouped layout — categories that map into CATEGORY_GROUPS */
@@ -97,7 +97,7 @@ export function CategoryChips({
           {groups?.map(({ group, tags }) =>
             tags.length === 0 ? null : (
               <div key={group}>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-white/35">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {group}
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -148,8 +148,8 @@ function Chip({
       className={cn(
         "glass-btn-pill px-4 py-2 text-sm font-medium transition-all active:scale-95",
         active
-          ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
-          : "text-white/60 hover:text-white/80"
+          ? "border-emerald-400/30 bg-emerald-500/15 text-accent-foreground"
+          : "text-muted-foreground hover:text-foreground"
       )}
     >
       {label}

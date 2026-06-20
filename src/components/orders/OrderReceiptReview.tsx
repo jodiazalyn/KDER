@@ -110,10 +110,10 @@ export function OrderReceiptReview({
   if (phase === "ask") {
     return (
       <div className="glass-card border-green-400/[0.25] bg-green-900/[0.12] p-4">
-        <p className="text-sm font-bold text-white">
+        <p className="text-sm font-bold text-foreground">
           Did you receive your order?
         </p>
-        <p className="mt-0.5 text-xs text-white/50">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Confirm so we can close it out — or let us know if something
           went wrong.
         </p>
@@ -130,7 +130,7 @@ export function OrderReceiptReview({
             type="button"
             disabled={busy}
             onClick={() => setPhase("problem")}
-            className="glass-btn-pill flex h-11 flex-1 items-center justify-center text-sm font-semibold text-white/80 active:scale-95 transition-transform disabled:opacity-60"
+            className="glass-btn-pill flex h-11 flex-1 items-center justify-center text-sm font-semibold text-muted-foreground active:scale-95 transition-transform disabled:opacity-60"
           >
             Report a problem
           </button>
@@ -143,8 +143,8 @@ export function OrderReceiptReview({
   if (phase === "problem") {
     return (
       <div className="glass-card border-red-400/[0.25] bg-red-900/[0.12] p-4">
-        <p className="text-sm font-bold text-white">What went wrong?</p>
-        <p className="mt-0.5 text-xs text-white/50">
+        <p className="text-sm font-bold text-foreground">What went wrong?</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
           Tell us what happened — our team will follow up.
         </p>
         <textarea
@@ -153,7 +153,7 @@ export function OrderReceiptReview({
           rows={3}
           maxLength={1000}
           placeholder="Describe the issue (e.g. order never arrived, wrong item)…"
-          className="mt-3 w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+          className="mt-3 w-full resize-none rounded-xl border border-border bg-white/[0.04] p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none"
         />
         <div className="mt-3 flex gap-2">
           <button
@@ -168,7 +168,7 @@ export function OrderReceiptReview({
             type="button"
             disabled={busy}
             onClick={() => setPhase("ask")}
-            className="glass-btn-pill flex h-11 items-center justify-center px-5 text-sm font-semibold text-white/70 active:scale-95 transition-transform disabled:opacity-60"
+            className="glass-btn-pill flex h-11 items-center justify-center px-5 text-sm font-semibold text-muted-foreground active:scale-95 transition-transform disabled:opacity-60"
           >
             Back
           </button>
@@ -180,8 +180,8 @@ export function OrderReceiptReview({
   // ── Step 3: review ─────────────────────────────────────────────
   return (
     <div className="glass-card p-4">
-      <p className="text-sm font-bold text-white">Leave a review</p>
-      <p className="mt-0.5 text-xs text-white/50">
+      <p className="text-sm font-bold text-foreground">Leave a review</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">
         How was it? Stars required, a note is optional.
       </p>
       <div className="mt-3 flex items-center gap-1.5">
@@ -200,7 +200,7 @@ export function OrderReceiptReview({
               <Star
                 size={30}
                 className={cn(
-                  active ? "text-yellow-400" : "text-white/20"
+                  active ? "text-yellow-400" : "text-muted-foreground"
                 )}
                 fill={active ? "currentColor" : "none"}
               />
@@ -214,7 +214,7 @@ export function OrderReceiptReview({
         rows={3}
         maxLength={2000}
         placeholder="Share a few words (optional)…"
-        className="mt-3 w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-white placeholder:text-white/30 focus:border-white/20 focus:outline-none"
+        className="mt-3 w-full resize-none rounded-xl border border-border bg-white/[0.04] p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-border focus:outline-none"
       />
       <div className="mt-3 flex gap-2">
         <button
@@ -229,7 +229,7 @@ export function OrderReceiptReview({
           type="button"
           disabled={busy}
           onClick={() => setPhase("done")}
-          className="glass-btn-pill flex h-11 items-center justify-center px-5 text-sm font-semibold text-white/70 active:scale-95 transition-transform disabled:opacity-60"
+          className="glass-btn-pill flex h-11 items-center justify-center px-5 text-sm font-semibold text-muted-foreground active:scale-95 transition-transform disabled:opacity-60"
         >
           Skip
         </button>
