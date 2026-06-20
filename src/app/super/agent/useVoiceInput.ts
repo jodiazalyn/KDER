@@ -41,6 +41,14 @@ interface SpeechRecognitionLike {
 
 // Errors that mean "give up" — anything else is transient and we resume.
 const FATAL_SPEECH_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
+
+// Auto-submit when the speaker goes quiet, so finishing a sentence makes
+// Cleopatra react without a second tap. A short grace absorbs natural
+// thinking-pauses with no UI; after that a visible countdown gives the
+// speaker a beat to keep talking (which cancels) before we finalize. Each
+// new speech result resets both, so only a real end-of-turn silence submits.
+const SILENCE_GRACE_MS = 1200;
+const COUNTDOWN_MS = 1500;
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 function getRecognitionCtor(): SpeechRecognitionCtor | null {
@@ -56,6 +64,10 @@ export function useVoiceInput(onFinal: (text: string) => void) {
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  // 0 when idle; ramps 0→1 over COUNTDOWN_MS once the speaker goes quiet, so
+  // the UI can draw a "about to send" ring that the speaker can cancel by
+  // talking again.
+  const [countdownProgress, setCountdownProgress] = useState(0);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const onFinalRef = useRef(onFinal);
   // The user explicitly tapped stop (vs. the engine auto-ending). Only an
@@ -64,10 +76,57 @@ export function useVoiceInput(onFinal: (text: string) => void) {
   // Accumulated final transcript, kept in a ref so it survives the engine's
   // periodic auto-restarts (Chrome ends recognition even in continuous mode).
   const finalTextRef = useRef("");
+  // Silence-endpointing timers: a grace timeout before the countdown starts,
+  // and the interval that drives the countdown ring + the eventual submit.
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   useEffect(() => {
     onFinalRef.current = onFinal;
   }, [onFinal]);
+
+  // Cancel any pending silence-submit and hide the countdown ring. Called on
+  // every new speech result (they're still talking), on manual stop, and on
+  // teardown.
+  const clearEndpointing = useCallback(() => {
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setCountdownProgress(0);
+  }, []);
+
+  // Finalize the current utterance as if the user tapped stop: route through
+  // the engine's `onend` (intentional branch) so the finalize/submit logic
+  // lives in exactly one place.
+  const finalizeNow = useCallback(() => {
+    intentionalStopRef.current = true;
+    recognitionRef.current?.stop();
+    setListening(false);
+  }, []);
+
+  // (Re)start the silence clock. After SILENCE_GRACE_MS of quiet we begin a
+  // visible COUNTDOWN_MS ring; if it completes without new speech, we submit.
+  const scheduleEndpointing = useCallback(() => {
+    clearEndpointing();
+    graceTimerRef.current = setTimeout(() => {
+      const startedAt = Date.now();
+      countdownIntervalRef.current = setInterval(() => {
+        const p = Math.min((Date.now() - startedAt) / COUNTDOWN_MS, 1);
+        setCountdownProgress(p);
+        if (p >= 1) {
+          clearEndpointing();
+          finalizeNow();
+        }
+      }, 50);
+    }, SILENCE_GRACE_MS);
+  }, [clearEndpointing, finalizeNow]);
 
   useEffect(() => {
     // Detect capability after mount, not during render — `window` isn't
@@ -78,6 +137,9 @@ export function useVoiceInput(onFinal: (text: string) => void) {
     return () => {
       // Detach handlers so teardown can't resurrect, finalize, or setState
       // after unmount; then abort.
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      if (countdownIntervalRef.current)
+        clearInterval(countdownIntervalRef.current);
       const rec = recognitionRef.current;
       if (rec) {
         rec.onresult = null;
@@ -90,10 +152,11 @@ export function useVoiceInput(onFinal: (text: string) => void) {
   }, []);
 
   const stop = useCallback(() => {
+    clearEndpointing();
     intentionalStopRef.current = true;
     recognitionRef.current?.stop();
     setListening(false);
-  }, []);
+  }, [clearEndpointing]);
 
   const start = useCallback(() => {
     const Ctor = getRecognitionCtor();
@@ -125,6 +188,9 @@ export function useVoiceInput(onFinal: (text: string) => void) {
         else interim += text;
       }
       setTranscript((finalTextRef.current + interim).trim());
+      // They're still talking — reset the silence clock so we only auto-submit
+      // after a genuine end-of-turn pause.
+      if (finalTextRef.current.trim() || interim.trim()) scheduleEndpointing();
     };
 
     rec.onerror = (e) => {
@@ -139,7 +205,9 @@ export function useVoiceInput(onFinal: (text: string) => void) {
 
     rec.onend = () => {
       if (intentionalStopRef.current) {
-        // User tapped stop (or we're tearing down): finalize once.
+        // User tapped stop, the silence countdown fired, or we're tearing
+        // down: finalize once.
+        clearEndpointing();
         intentionalStopRef.current = false;
         setListening(false);
         const settled = finalTextRef.current.trim();
@@ -160,6 +228,7 @@ export function useVoiceInput(onFinal: (text: string) => void) {
     recognitionRef.current = rec;
     finalTextRef.current = "";
     intentionalStopRef.current = false;
+    clearEndpointing();
     setTranscript("");
     setListening(true);
     try {
@@ -168,12 +237,20 @@ export function useVoiceInput(onFinal: (text: string) => void) {
       // start() throws if called while already running — ignore.
       setListening(false);
     }
-  }, []);
+  }, [clearEndpointing, scheduleEndpointing]);
 
   const toggle = useCallback(() => {
     if (listening) stop();
     else start();
   }, [listening, start, stop]);
 
-  return { supported, listening, transcript, start, stop, toggle };
+  return {
+    supported,
+    listening,
+    transcript,
+    countdownProgress,
+    start,
+    stop,
+    toggle,
+  };
 }
