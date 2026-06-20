@@ -40,13 +40,34 @@ const MAX_MESSAGE_CHARS = 4000;
 // Hard cap on search → narrate cycles so a confused model can't loop forever.
 const MAX_TOOL_ROUNDS = 5;
 
+// Image attachments (paste/drag screenshots, e.g. a competitor's menu). We
+// pass them straight through to the model as base64 — no storage. Keep the
+// guardrails tight so a huge paste can't blow up the request.
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const MAX_IMAGES_PER_MESSAGE = 4;
+// ~5MB raw ≈ 6.8M base64 chars; allow a little headroom over that.
+const MAX_IMAGE_B64_CHARS = 7_200_000;
+
 // Admins are a known, trusted handful — generous cap, just abuse insurance.
 const RATE_LIMIT_MAX = 200;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
+type TextBlockInput = { type: "text"; text: string };
+type ImageBlockInput = {
+  type: "image";
+  source: { type: "base64"; media_type: string; data: string };
+};
+type ContentBlockInput = TextBlockInput | ImageBlockInput;
+
 interface ChatMessage {
   role: "user" | "assistant";
-  content: string;
+  // A plain string (typed/spoken text) or a block array carrying images.
+  content: string | ContentBlockInput[];
 }
 
 interface RequestBody {
@@ -55,6 +76,70 @@ interface RequestBody {
 
 function isValidRole(v: unknown): v is "user" | "assistant" {
   return v === "user" || v === "assistant";
+}
+
+/**
+ * Normalize one message's content. Strings are trimmed/clamped; block arrays
+ * keep valid text + image blocks (right media type, non-empty, under the size
+ * cap, at most MAX_IMAGES_PER_MESSAGE). Returns null when nothing usable is
+ * left so the caller can drop the message.
+ */
+function sanitizeContent(
+  content: unknown
+): string | ContentBlockInput[] | null {
+  if (typeof content === "string") {
+    const t = content.trim();
+    return t.length > 0 ? t.slice(0, MAX_MESSAGE_CHARS) : null;
+  }
+  if (!Array.isArray(content)) return null;
+
+  const blocks: ContentBlockInput[] = [];
+  let images = 0;
+  let hasText = false;
+  for (const raw of content) {
+    if (raw == null || typeof raw !== "object") continue;
+    const block = raw as Record<string, unknown>;
+    if (block.type === "text" && typeof block.text === "string") {
+      const t = block.text.trim();
+      if (t.length > 0) {
+        blocks.push({ type: "text", text: t.slice(0, MAX_MESSAGE_CHARS) });
+        hasText = true;
+      }
+    } else if (
+      block.type === "image" &&
+      block.source != null &&
+      typeof block.source === "object"
+    ) {
+      if (images >= MAX_IMAGES_PER_MESSAGE) continue;
+      const src = block.source as Record<string, unknown>;
+      if (
+        src.type === "base64" &&
+        typeof src.media_type === "string" &&
+        ALLOWED_IMAGE_TYPES.has(src.media_type) &&
+        typeof src.data === "string" &&
+        src.data.length > 0 &&
+        src.data.length <= MAX_IMAGE_B64_CHARS
+      ) {
+        blocks.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: src.media_type,
+            data: src.data,
+          },
+        });
+        images++;
+      }
+    }
+  }
+
+  if (blocks.length === 0) return null;
+  // The model behaves best with a text block alongside the image(s); supply a
+  // default instruction when the cofounder sent a screenshot with no caption.
+  if (!hasText) {
+    blocks.unshift({ type: "text", text: "Analyze the attached image(s)." });
+  }
+  return blocks;
 }
 
 export async function POST(request: NextRequest) {
@@ -75,19 +160,15 @@ export async function POST(request: NextRequest) {
     return apiError("messages array is required.", 400);
   }
 
-  const sanitized: ChatMessage[] = body.messages
+  const sanitized: ChatMessage[] = (body.messages as unknown[])
     .filter(
-      (m): m is ChatMessage =>
+      (m): m is { role: "user" | "assistant"; content: unknown } =>
         m != null &&
         typeof m === "object" &&
-        isValidRole((m as ChatMessage).role) &&
-        typeof (m as ChatMessage).content === "string" &&
-        (m as ChatMessage).content.trim().length > 0
+        isValidRole((m as { role: unknown }).role)
     )
-    .map((m) => ({
-      role: m.role,
-      content: m.content.slice(0, MAX_MESSAGE_CHARS),
-    }))
+    .map((m) => ({ role: m.role, content: sanitizeContent(m.content) }))
+    .filter((m): m is ChatMessage => m.content !== null)
     .slice(-MAX_HISTORY_TURNS);
 
   if (
@@ -140,7 +221,9 @@ export async function POST(request: NextRequest) {
       // user tool_result turns as the loop runs.
       const messages: Anthropic.MessageParam[] = sanitized.map((m) => ({
         role: m.role,
-        content: m.content,
+        // string | (text|image blocks) — both are valid MessageParam content;
+        // the image block's media_type is a literal union upstream, so cast.
+        content: m.content as Anthropic.MessageParam["content"],
       }));
 
       try {
