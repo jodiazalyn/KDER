@@ -16,6 +16,7 @@ import { clearCart } from "@/lib/cart-store";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { OrderExtrasList } from "@/components/orders/OrderExtrasList";
 import { OrderMessages } from "@/components/orders/OrderMessages";
+import { PickupDistance } from "@/components/orders/PickupDistance";
 import { OrderReceiptReview } from "@/components/orders/OrderReceiptReview";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
@@ -344,7 +345,10 @@ function OrderConfirmationInner() {
                   <p className="font-medium text-white/80">Pickup</p>
                   {(order.status === "ready" || order.status === "completed") &&
                   order.pickup_address ? (
-                    <p className="mt-0.5">{order.pickup_address}</p>
+                    <>
+                      <p className="mt-0.5">{order.pickup_address}</p>
+                      <PickupDistance address={order.pickup_address} />
+                    </>
                   ) : (
                     <p className="mt-0.5 text-white/40">
                       Pickup details will appear here once your order is

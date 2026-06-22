@@ -30,7 +30,22 @@ export default function TermsPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showAddMore, setShowAddMore] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [pickupAddress, setPickupAddress] = useState("");
+  // Pickup address — structured into 4 fields (street, city, state, zip)
+  // instead of a single free-text box, so it matches the canonical
+  // "street, city, state zip" shape Uber Direct + the PlateForm parser
+  // expect. Defaults to Houston, TX (KDER's launch market).
+  const [pickupStreet, setPickupStreet] = useState("");
+  const [pickupCity, setPickupCity] = useState("Houston");
+  const [pickupState, setPickupState] = useState("TX");
+  const [pickupZip, setPickupZip] = useState("");
+
+  // Combined single-line value persisted to creators.pickup_address. Only
+  // produced when all four parts are filled so we never store a partial
+  // address that would fail to parse later.
+  const pickupAddress =
+    pickupStreet.trim() && pickupCity.trim() && pickupState.trim() && pickupZip.trim()
+      ? `${pickupStreet.trim()}, ${pickupCity.trim()}, ${pickupState.trim()} ${pickupZip.trim()}`
+      : "";
 
   const isValid = zips.length > 0 && termsAccepted;
 
@@ -266,15 +281,56 @@ export default function TermsPage() {
         <div className="mt-6">
           <h2 className="text-lg font-bold text-white mb-1">Your pickup address</h2>
           <p className="text-xs text-white/40 mb-3">
-            Shared with customers after you confirm a pickup order
+            Where couriers and customers pick up orders. We&apos;ll prefill this
+            on every new plate so you never re-type it.
           </p>
-          <input
-            type="text"
-            value={pickupAddress}
-            onChange={(e) => setPickupAddress(e.target.value)}
-            placeholder="1234 Main St, Houston, TX 77001"
-            className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
-          />
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={pickupStreet}
+              onChange={(e) => setPickupStreet(e.target.value)}
+              placeholder="Street address"
+              autoComplete="address-line1"
+              className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+              aria-label="Street address"
+            />
+            <input
+              type="text"
+              value={pickupCity}
+              onChange={(e) => setPickupCity(e.target.value)}
+              placeholder="City"
+              autoComplete="address-level2"
+              className="glass-input w-full px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+              aria-label="City"
+            />
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={pickupState}
+                onChange={(e) =>
+                  setPickupState(e.target.value.toUpperCase().slice(0, 2))
+                }
+                placeholder="State"
+                maxLength={2}
+                autoComplete="address-level1"
+                className="glass-input w-20 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                aria-label="State"
+              />
+              <input
+                type="text"
+                inputMode="numeric"
+                value={pickupZip}
+                onChange={(e) =>
+                  setPickupZip(e.target.value.replace(/\D/g, "").slice(0, 5))
+                }
+                placeholder="ZIP"
+                maxLength={5}
+                autoComplete="postal-code"
+                className="glass-input flex-1 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors"
+                aria-label="ZIP code"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Terms section */}

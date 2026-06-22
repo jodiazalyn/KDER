@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const { data: creator } = (await (supabase as any)
       .from("creators")
       .select(
-        "stripe_connect_id, kyc_status, payouts_enabled, default_currency"
+        "stripe_connect_id, kyc_status, payouts_enabled, default_currency, pickup_address"
       )
       .eq("member_id", user.id)
       .single()) as {
@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         kyc_status: string | null;
         payouts_enabled: boolean | null;
         default_currency: string | null;
+        pickup_address: string | null;
       } | null;
     };
 
@@ -56,6 +57,10 @@ export async function GET(request: NextRequest) {
       has_account: Boolean(creator.stripe_connect_id),
       payouts_enabled: Boolean(creator.payouts_enabled),
       default_currency: creator.default_currency ?? "usd",
+      // Creator's profile pickup address (collected at onboarding). The
+      // PlateForm prefills new-plate pickup fields from this so creators
+      // don't re-type their kitchen address on every listing.
+      pickup_address: creator.pickup_address ?? null,
     };
 
     if (!fresh || !creator.stripe_connect_id) {
