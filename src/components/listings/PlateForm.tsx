@@ -353,6 +353,19 @@ export function PlateForm({ listing }: PlateFormProps) {
       .then((r) => (r.ok ? r.json() : null))
       .then(async (j) => {
         if (cancelled) return;
+        // Prefill the pickup address from the creator's profile for NEW
+        // plates only (edits keep the listing's own address). The fields
+        // stay fully editable — this just saves re-typing the kitchen
+        // address every time. We parse the stored single-line value into
+        // the structured inputs via the same parser used for old listings.
+        const creatorPickup = j?.data?.pickup_address;
+        if (!isEditing && typeof creatorPickup === "string" && creatorPickup.trim()) {
+          const parsed = parsePickupOnLoad(creatorPickup);
+          if (parsed.street) setPickupStreet(parsed.street);
+          if (parsed.city) setPickupCity(parsed.city);
+          if (parsed.state) setPickupState(parsed.state);
+          if (parsed.zip) setPickupZip(parsed.zip);
+        }
         const kyc = j?.data?.kyc_status ?? "not_started";
         if (kyc === "verified") {
           setConnectVerified(true);
@@ -374,7 +387,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isEditing]);
 
   // Auto-save with debounce (new plates only)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
