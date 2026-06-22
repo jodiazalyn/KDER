@@ -39,6 +39,32 @@ export function formatDistanceMiles(miles: number): string {
 }
 
 /**
+ * Rough driving-time estimate (minutes) from a straight-line distance.
+ *
+ * We don't call a routing API (no key, no cost), so this is a heuristic:
+ * inflate the crow-flies distance by a road-circuity factor, then divide
+ * by an average speed that scales up for longer trips (more highway). It's
+ * deliberately conservative and always labeled "~"/"est." in the UI — the
+ * "Directions" link hands off to a real maps app for exact routing.
+ */
+export function estimateDriveMinutes(straightMiles: number): number {
+  if (!Number.isFinite(straightMiles) || straightMiles <= 0) return 0;
+  const roadMiles = straightMiles * 1.3; // streets aren't straight lines
+  const avgMph = straightMiles > 8 ? 35 : 25; // more highway on longer trips
+  return (roadMiles / avgMph) * 60;
+}
+
+/** Human-friendly ETA label, e.g. "~3 min", "~12 min", "~1 hr 5 min". */
+export function formatEta(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "";
+  const rounded = Math.max(1, Math.round(minutes));
+  if (rounded < 60) return `~${rounded} min`;
+  const hrs = Math.floor(rounded / 60);
+  const mins = rounded % 60;
+  return mins ? `~${hrs} hr ${mins} min` : `~${hrs} hr`;
+}
+
+/**
  * Forward-geocode a free-text address to coordinates via Nominatim.
  * Returns null on any failure (network, no match, malformed response) so
  * callers can degrade gracefully. Pass an AbortSignal to cancel on unmount.

@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Navigation } from "lucide-react";
 import {
+  estimateDriveMinutes,
   formatDistanceMiles,
+  formatEta,
   geocodeAddress,
   getCurrentPosition,
   haversineMiles,
@@ -65,8 +67,16 @@ export function PickupDistance({ address }: { address: string }) {
               About{" "}
               <span className="font-semibold text-white">
                 {formatDistanceMiles(miles)}
-              </span>{" "}
-              from you
+              </span>
+              {formatEta(estimateDriveMinutes(miles)) && (
+                <>
+                  {" · "}
+                  <span className="font-semibold text-white">
+                    {formatEta(estimateDriveMinutes(miles))}
+                  </span>{" "}
+                  by car
+                </>
+              )}
             </span>
             <button
               type="button"
