@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0A0A" />
+<title>Marisol's Kitchen · KDER</title>
+<style>
+  /* KDER storefront — Uber Eats structure · Instagram aesthetic · dark luxury */
+  :root{
+    --bg:#0A0A0A; --ink:#fff; --dim:rgba(255,255,255,.55); --faint:rgba(255,255,255,.34);
+    --line:rgba(255,255,255,.09); --green:#1B5E20; --lit:#37C871;
+    --ig1:#1B5E20; --ig2:#37C871;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{background:#000;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',sans-serif;-webkit-font-smoothing:antialiased}
+  .app{max-width:440px;margin:0 auto;min-height:100dvh;background:var(--bg);position:relative;overflow-x:hidden;padding-bottom:96px}
+
+  /* ---- cover ---- */
+  .cover{position:relative;height:200px}
+  .cover img{width:100%;height:100%;object-fit:cover}
+  .cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.35) 0%,transparent 35%,rgba(10,10,10,.7) 100%)}
+  .cover .bar{position:absolute;top:max(14px,env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:space-between;padding:0 16px;z-index:3}
+  .ic{width:40px;height:40px;border-radius:99px;display:flex;align-items:center;justify-content:center;color:#fff;
+    background:rgba(0,0,0,.35);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.14)}
+  .ic svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---- profile (IG aesthetic) ---- */
+  .profile{padding:0 20px;margin-top:-44px;position:relative;z-index:4}
+  .avatar{width:88px;height:88px;border-radius:99px;padding:3px;background:linear-gradient(135deg,var(--ig2),var(--ig1));box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .avatar img{width:100%;height:100%;border-radius:99px;object-fit:cover;border:3px solid var(--bg)}
+  .name{font-size:24px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:7px;margin-top:13px}
+  .verified{width:19px;height:19px;flex:0 0 19px}
+  .verified svg{width:100%;height:100%}
+  .handle{font-size:14px;color:var(--dim);margin-top:3px}
+  .bio{font-size:14px;line-height:1.5;color:rgba(255,255,255,.82);margin-top:12px}
+
+  /* rating / meta row */
+  .meta{display:flex;align-items:center;gap:9px;margin-top:14px;font-size:13.5px;color:var(--dim);font-weight:500;flex-wrap:wrap}
+  .meta .rate{display:flex;align-items:center;gap:5px;color:var(--ink);font-weight:700}
+  .meta .rate svg{width:15px;height:15px;fill:var(--lit)}
+  .meta .dot{width:3px;height:3px;border-radius:99px;background:var(--faint)}
+  .meta .open{color:var(--lit);font-weight:600}
+
+  /* IG-style action buttons */
+  .actions{display:flex;gap:9px;margin-top:18px}
+  .btn{flex:1;height:42px;border-radius:13px;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:7px;border:none;cursor:pointer}
+  .btn.primary{background:#fff;color:#0A0A0A}
+  .btn.ghost{background:rgba(255,255,255,.08);color:#fff;border:1px solid var(--line)}
+  .btn svg{width:16px;height:16px}
+
+  /* creator links (IG / TikTok / website) */
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .link{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:99px;
+    background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--ink);font-size:13px;font-weight:600;
+    text-decoration:none;transition:background .15s}
+  .link:active{background:rgba(255,255,255,.13)}
+  .link svg{width:15px;height:15px;flex:0 0 15px}
+  .link.web svg{stroke:var(--lit);fill:none;stroke-width:2}
+
+  /* stats strip (Vibe Score / Orders / Fed) */
+  .stats{display:flex;gap:10px;margin-top:18px}
+  .stat{flex:1;border-radius:16px;padding:11px 10px;text-align:center;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+  .stat .v{font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1}
+  .stat .v.green{color:var(--lit)}
+  .stat .vibe{display:inline-flex;align-items:center;gap:4px}
+  .stat .vibe svg{width:14px;height:14px;fill:var(--lit)}
+  .stat .l{font-size:10.5px;color:var(--dim);margin-top:5px;text-transform:uppercase;letter-spacing:.06em}
+
+  /* scroll mini-header */
+  .mini{position:fixed;top:0;left:0;right:0;max-width:440px;margin:0 auto;z-index:25;
+    display:flex;align-items:center;gap:11px;height:52px;padding:0 16px;
+    background:rgba(14,14,14,.72);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);
+    border-bottom:1px solid var(--line);
+    opacity:0;pointer-events:none;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease}
+  .mini.show{opacity:1;pointer-events:auto;transform:none}
+  .mini img{width:34px;height:34px;border-radius:99px;object-fit:cover}
+  .mini .mh-name{flex:1;font-size:15px;font-weight:700}
+  .mini .mh-vibe{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:var(--lit)}
+  .mini .mh-vibe svg{width:13px;height:13px;fill:var(--lit)}
+
+  /* ---- menu list ---- */
+  .menu-title{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:30px 20px 6px}
+  .plate{display:flex;gap:14px;padding:18px 20px;align-items:center;cursor:pointer;transition:background .15s}
+  .plate:active{background:rgba(255,255,255,.03)}
+  .plate+.plate{border-top:1px solid var(--line)}
+  .p-info{flex:1;min-width:0}
+  .p-name{font-size:16px;font-weight:700;letter-spacing:-.01em}
+  .p-desc{font-size:13px;color:var(--dim);line-height:1.4;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .p-price{font-size:15px;font-weight:800;margin-top:9px;letter-spacing:-.02em}
+  .p-thumb{position:relative;flex:0 0 96px}
+  .p-thumb img{width:96px;height:96px;object-fit:cover;border-radius:18px}
+  .p-thumb.out img{filter:grayscale(.8) brightness(.6)}
+  .add{position:absolute;right:-8px;bottom:-8px;width:34px;height:34px;border-radius:99px;border:none;cursor:pointer;
+    background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+  .add svg{width:18px;height:18px;stroke:#0A0A0A;stroke-width:2.6;fill:none;stroke-linecap:round}
+  .add:active{transform:scale(.9)}
+  .sold{position:absolute;top:6px;left:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    padding:4px 8px;border-radius:8px;background:rgba(0,0,0,.7);color:#fff;backdrop-filter:blur(4px)}
+
+  /* ---- tabs ---- */
+  .tabs{display:flex;gap:6px;padding:16px 14px 12px;position:sticky;top:0;z-index:10;
+    background:var(--bg);border-bottom:1px solid var(--line);margin-top:22px}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0;border-radius:12px;
+    font-size:14px;font-weight:700;color:var(--dim);cursor:pointer;transition:background .15s,color .15s;border:none;background:none}
+  .tab.on{color:var(--ink);background:rgba(255,255,255,.07)}
+  .tab .ct{font-size:11px;font-weight:600;color:var(--faint)}
+  .tab.on .ct{color:var(--lit)}
+  .panel{display:none}
+  .panel.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---- catering ---- */
+  .cat-intro{padding:20px 20px 4px;font-size:14px;color:rgba(255,255,255,.82);line-height:1.55}
+  .cat-note{margin:14px 20px 4px;padding:11px 14px;border-radius:13px;background:rgba(255,255,255,.05);
+    border:1px solid var(--line);font-size:12.5px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  .cat-note svg{width:16px;height:16px;stroke:var(--lit);fill:none;stroke-width:2;flex:0 0 16px}
+  .pkg{display:flex;gap:14px;padding:18px 20px;align-items:center}
+  .pkg+.pkg{border-top:1px solid var(--line)}
+  .pkg-info{flex:1;min-width:0}
+  .pkg-serves{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--lit)}
+  .pkg-name{font-size:16px;font-weight:700;margin-top:4px;letter-spacing:-.01em}
+  .pkg-desc{font-size:13px;color:var(--dim);line-height:1.4;margin-top:4px}
+  .pkg-price{font-size:15px;font-weight:800;margin-top:9px;letter-spacing:-.02em}
+  .pkg-price small{color:var(--dim);font-weight:500}
+  .pkg-thumb{flex:0 0 96px}
+  .pkg-thumb img{width:96px;height:96px;object-fit:cover;border-radius:18px}
+  .cat-cta{margin:22px 20px 8px;height:52px;border-radius:14px;border:none;cursor:pointer;width:calc(100% - 40px);
+    background:var(--green);color:#fff;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:9px;
+    box-shadow:0 8px 24px rgba(27,94,32,.45)}
+  .cat-cta svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+
+  /* ---- reviews ---- */
+  .rev-top{display:flex;align-items:center;gap:22px;padding:22px 20px 18px}
+  .rev-score{text-align:center;flex:0 0 auto}
+  .rev-big{font-size:46px;font-weight:800;letter-spacing:-.03em;line-height:1}
+  .rev-stars{display:flex;gap:2px;justify-content:center;margin-top:6px}
+  .rev-stars svg{width:14px;height:14px;fill:var(--lit)}
+  .rev-count{font-size:12px;color:var(--dim);margin-top:6px}
+  .rev-bars{flex:1;display:flex;flex-direction:column;gap:5px}
+  .bar-row{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--faint)}
+  .bar-track{flex:1;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bar-fill{height:100%;background:var(--lit);border-radius:99px}
+  .review{padding:18px 20px;border-top:1px solid var(--line)}
+  .rev-head{display:flex;align-items:center;gap:11px}
+  .rev-av{width:38px;height:38px;border-radius:99px;object-fit:cover;flex:0 0 38px}
+  .rev-who{flex:1}
+  .rev-name{font-size:14px;font-weight:700}
+  .rev-meta{display:flex;align-items:center;gap:7px;margin-top:2px}
+  .rev-meta .s{display:flex;gap:1px}
+  .rev-meta .s svg{width:11px;height:11px;fill:var(--lit)}
+  .rev-meta .d{font-size:11.5px;color:var(--faint)}
+  .rev-text{font-size:13.5px;color:rgba(255,255,255,.82);line-height:1.5;margin-top:11px}
+  .rev-plate{display:inline-block;margin-top:10px;font-size:11.5px;font-weight:600;color:var(--dim);
+    background:rgba(255,255,255,.05);border:1px solid var(--line);padding:5px 10px;border-radius:99px}
+
+  /* ---- sticky cart ---- */
+  .cart{position:fixed;left:0;right:0;bottom:0;max-width:440px;margin:0 auto;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    transform:translateY(120%);transition:transform .35s cubic-bezier(.2,.9,.25,1);z-index:20}
+  .cart.show{transform:translateY(0)}
+  .cart .inner{background:var(--green);border-radius:99px;height:56px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 8px 0 22px;box-shadow:0 10px 30px rgba(27,94,32,.5)}
+  .cart .l{display:flex;align-items:center;gap:11px;color:#fff;font-weight:700;font-size:15px}
+  .cart .count{background:rgba(255,255,255,.22);min-width:26px;height:26px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+  .cart .r{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.16);height:40px;padding:0 18px;border-radius:99px;color:#fff;font-weight:800;font-size:15px}
+
+  /* ---- signup bottom sheet ---- */
+  .scrim{position:fixed;inset:0;z-index:40;max-width:440px;margin:0 auto;background:rgba(0,0,0,.5);
+    opacity:0;pointer-events:none;transition:opacity .3s ease}
+  .scrim.show{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:440px;margin:0 auto;
+    border-radius:28px 28px 0 0;padding:10px 22px calc(26px + env(safe-area-inset-bottom));
+    background:rgba(18,18,18,.92);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);
+    border-top:1px solid rgba(255,255,255,.14);
+    transform:translateY(110%);transition:transform .42s cubic-bezier(.2,.9,.25,1)}
+  .sheet.show{transform:translateY(0)}
+  .grabber{width:42px;height:5px;border-radius:99px;background:rgba(255,255,255,.35);margin:4px auto 16px}
+  .sheet-close{position:absolute;top:14px;right:16px;width:32px;height:32px;border-radius:99px;border:none;cursor:pointer;
+    background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center}
+  .sheet-close svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2.4;stroke-linecap:round}
+  .sheet h3{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-bottom:7px}
+  .sheet .sub{font-size:13.5px;color:var(--dim);line-height:1.45;margin-bottom:18px}
+  .input{width:100%;height:54px;border-radius:18px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+    color:#fff;font-size:17px;padding:0 18px;outline:none;transition:border-color .2s,background .2s}
+  .input:focus{border-color:rgba(74,222,128,.7);background:rgba(255,255,255,.11)}
+  .input::placeholder{color:var(--faint)}
+  .btn-full{width:100%;min-height:54px;margin-top:16px;background:var(--green);color:#fff;font-size:16px;font-weight:700;
+    border:none;border-radius:99px;cursor:pointer;box-shadow:0 6px 22px rgba(27,94,32,.5);
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s,opacity .2s}
+  .btn-full:active{transform:scale(.98)}
+  .btn-full[disabled]{opacity:.4;box-shadow:none;cursor:not-allowed}
+  .legal{font-size:11.5px;color:var(--faint);text-align:center;margin-top:14px;line-height:1.5}
+  .legal a{color:var(--dim)}
+  .signin-link{text-align:center;margin-top:14px;font-size:14px;color:var(--dim)}
+  .signin-link a{color:var(--lit);font-weight:600;text-decoration:none}
+  .otp-row{display:flex;gap:9px;justify-content:space-between;margin-bottom:4px}
+  .otp-box{flex:1;aspect-ratio:1/1.2;max-width:50px;border-radius:14px;background:rgba(255,255,255,.08);
+    border:1.5px solid rgba(255,255,255,.16);color:#fff;font-size:22px;font-weight:700;text-align:center;outline:none;
+    transition:border-color .15s,background .15s}
+  .otp-box:focus{border-color:var(--lit);background:rgba(74,222,128,.1)}
+  .otp-box.filled{border-color:rgba(74,222,128,.5)}
+  .resend{text-align:center;font-size:13px;color:var(--dim);margin-top:14px}
+  .resend b{color:var(--lit)}
+  .step{display:none}
+  .step.active{display:block;animation:stepIn .35s cubic-bezier(.2,.8,.2,1)}
+  @keyframes stepIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .done-wrap{text-align:center;padding:8px 0 4px}
+  .done-ring{width:76px;height:76px;border-radius:99px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;
+    background:rgba(27,94,32,.22);border:1.5px solid rgba(74,222,128,.5);animation:pulseRing 1.6s ease-in-out infinite}
+  .done-ring svg{width:38px;height:38px;stroke:var(--lit);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+  @keyframes pulseRing{0%{box-shadow:0 0 0 0 rgba(27,94,32,.55)}70%{box-shadow:0 0 0 18px rgba(27,94,32,0)}100%{box-shadow:0 0 0 0 rgba(27,94,32,0)}}
+
+  /* ---- toast ---- */
+  .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,24px);z-index:60;
+    padding:13px 20px;border-radius:99px;font-size:14px;font-weight:600;white-space:nowrap;color:#fff;
+    background:rgba(27,94,32,.45);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(74,222,128,.4);
+    opacity:0;pointer-events:none;transition:all .35s cubic-bezier(.2,.8,.2,1)}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+  <!-- scroll mini-header -->
+  <div class="mini" id="mini">
+    <img src="https://images.unsplash.com/photo-1607631568010-a87245c0daf8?w=120&q=70" alt="Marisol Vega">
+    <span class="mh-name">Marisol's Kitchen</span>
+    <span class="mh-vibe"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>94</span>
+  </div>
+
+  <div class="app">
+
+    <!-- cover -->
+    <div class="cover">
+      <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&q=75" alt="Marisol's kitchen">
+      <div class="bar">
+        <button class="ic" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="ic" id="shareBtn" aria-label="Share storefront"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+      </div>
+    </div>
+
+    <!-- profile -->
+    <div class="profile">
+      <div class="avatar"><img src="https://images.unsplash.com/photo-1607631568010-a87245c0daf8?w=200&q=72" alt="Marisol Vega"></div>
+      <div class="name">Marisol's Kitchen
+        <span class="verified"><svg viewBox="0 0 24 24"><path fill="#37C871" d="M12 2l2.2 1.6 2.7-.3 1.1 2.5 2.5 1.1-.3 2.7L22 12l-1.6 2.2.3 2.7-2.5 1.1-1.1 2.5-2.7-.3L12 22l-2.2-1.6-2.7.3-1.1-2.5-2.5-1.1.3-2.7L2 12l1.6-2.2-.3-2.7 2.5-1.1L7 3.3l2.7.3z"/><path fill="#0A0A0A" d="M10.4 14.2l-2-2 1.2-1.2.8.8 3-3 1.2 1.2z"/></svg></span>
+      </div>
+      <div class="handle">@marisolskitchen</div>
+      <p class="bio">Birria, barbacoa &amp; weekend tamales from my East End kitchen. Slow-cooked, family recipes. 🌿</p>
+
+      <!-- creator links -->
+      <div class="links">
+        <a class="link" href="https://instagram.com/marisolskitchen" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="#fff" stroke="none"/></svg>
+          Instagram
+        </a>
+        <a class="link" href="https://tiktok.com/@marisolskitchen" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="#fff"><path d="M16.5 3c.3 2.1 1.6 3.6 3.5 3.9v2.6c-1.3.1-2.5-.3-3.5-1v5.9c0 3.3-2.4 5.6-5.4 5.6-2.9 0-5.1-2.2-5.1-5 0-2.9 2.4-5 5.3-4.8v2.7c-.4-.1-.8-.2-1.2-.1-1.2.1-2 1-2 2.2 0 1.3.9 2.2 2.2 2.2 1.4 0 2.3-1 2.3-2.7V3z"/></svg>
+          TikTok
+        </a>
+        <a class="link web" href="https://marisolskitchen.com" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+          Website
+        </a>
+      </div>
+
+      <div class="meta">
+        <span class="rate"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>4.9</span>
+        <span class="dot"></span><span>East End · Houston</span>
+        <span class="dot"></span><span class="open">Open · til 9pm</span>
+      </div>
+
+      <!-- stats -->
+      <div class="stats">
+        <div class="stat">
+          <div class="v vibe"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>94</div>
+          <div class="l">Vibe Score</div>
+        </div>
+        <div class="stat">
+          <div class="v">312</div>
+          <div class="l">Orders</div>
+        </div>
+        <div class="stat">
+          <div class="v green">1.4k</div>
+          <div class="l">Fed</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="startOrderBtn"><svg viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" stroke-width="2"><path d="M6 2l1 5h12l-1 8H7L6 2z"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg>Start order</button>
+        <button class="btn ghost" id="messageBtn"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 01-12 7.7L3 21l1.8-6A8.5 8.5 0 1121 11.5z"/></svg>Message</button>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs">
+      <button class="tab on" data-tab="menu">Menu<span class="ct">5 plates</span></button>
+      <button class="tab" data-tab="catering">Catering<span class="ct">From $90</span></button>
+      <button class="tab" data-tab="reviews">Reviews<span class="ct">4.9 · 312</span></button>
+    </div>
+
+    <!-- menu panel -->
+    <div class="panel on" data-panel="menu">
+    <div class="menu-title">Today's plates</div>
+    <div id="menu">
+
+      <div class="plate" data-name="Birria Tacos (3)" data-price="14">
+        <div class="p-info">
+          <div class="p-name">Birria Tacos (3)</div>
+          <div class="p-desc">Slow-cooked beef, consommé for dipping, onion &amp; cilantro.</div>
+          <div class="p-price">$14</div>
+        </div>
+        <div class="p-thumb"><img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=300&q=68" alt="Photo of Birria Tacos by Marisol's Kitchen">
+          <button class="add" aria-label="Add Birria Tacos"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      </div>
+
+      <div class="plate" data-name="Barbacoa Bowl" data-price="13">
+        <div class="p-info">
+          <div class="p-name">Barbacoa Bowl</div>
+          <div class="p-desc">Rice, black beans, barbacoa, salsa verde &amp; lime.</div>
+          <div class="p-price">$13</div>
+        </div>
+        <div class="p-thumb"><img src="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=300&q=68" alt="Photo of Barbacoa Bowl by Marisol's Kitchen">
+          <button class="add" aria-label="Add Barbacoa Bowl"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      </div>
+
+      <div class="plate" data-name="Pork Tamales (6)" data-price="18">
+        <div class="p-info">
+          <div class="p-name">Pork Tamales (6)</div>
+          <div class="p-desc">Handmade masa, slow-braised pork. Weekend only.</div>
+          <div class="p-price">$18</div>
+        </div>
+        <div class="p-thumb"><img src="https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=300&q=68" alt="Photo of Pork Tamales by Marisol's Kitchen">
+          <button class="add" aria-label="Add Pork Tamales"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      </div>
+
+      <div class="plate" data-name="Horchata (32oz)" data-price="5">
+        <div class="p-info">
+          <div class="p-name">Horchata (32oz)</div>
+          <div class="p-desc">House-made cinnamon rice milk, lightly sweet.</div>
+          <div class="p-price">$5</div>
+        </div>
+        <div class="p-thumb"><img src="https://images.unsplash.com/photo-1497534446932-c925b458314a?w=300&q=68" alt="Photo of Horchata by Marisol's Kitchen">
+          <button class="add" aria-label="Add Horchata"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      </div>
+
+      <div class="plate" data-name="Elote Cup" data-price="6" data-out="1">
+        <div class="p-info">
+          <div class="p-name">Elote Cup</div>
+          <div class="p-desc">Street corn, cotija, chili-lime crema. Back Friday.</div>
+          <div class="p-price">$6</div>
+        </div>
+        <div class="p-thumb out"><span class="sold">Sold out</span><img src="https://images.unsplash.com/photo-1619221882266-0b89e1f7e3d5?w=300&q=68" alt="Photo of Elote Cup by Marisol's Kitchen"></div>
+      </div>
+
+    </div>
+    </div><!-- /menu panel -->
+
+    <!-- catering panel -->
+    <div class="panel" data-panel="catering">
+      <p class="cat-intro">Feeding a crowd? Marisol caters birthdays, office lunches &amp; backyard parties across the East End. Pick a package below or request a custom quote.</p>
+      <div class="cat-note">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        48-hour lead time · Delivery &amp; setup available
+      </div>
+
+      <div class="pkg" data-name="Birria Taco Bar" data-price="90">
+        <div class="pkg-info">
+          <div class="pkg-serves">Serves 8–10</div>
+          <div class="pkg-name">Birria Taco Bar</div>
+          <div class="pkg-desc">40 tacos, consommé, onions, cilantro, limes &amp; salsa trio.</div>
+          <div class="pkg-price">$90 <small>· $9/person</small></div>
+        </div>
+        <div class="pkg-thumb"><img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=300&q=68" alt="Birria taco bar catering"></div>
+      </div>
+
+      <div class="pkg" data-name="Barbacoa Family Tray" data-price="120">
+        <div class="pkg-info">
+          <div class="pkg-serves">Serves 10–12</div>
+          <div class="pkg-name">Barbacoa Family Tray</div>
+          <div class="pkg-desc">2 lbs barbacoa, rice, beans, tortillas, salsa verde &amp; lime.</div>
+          <div class="pkg-price">$120 <small>· $10/person</small></div>
+        </div>
+        <div class="pkg-thumb"><img src="https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=300&q=68" alt="Barbacoa family tray catering"></div>
+      </div>
+
+      <div class="pkg" data-name="Tamale Party Pack (3 dozen)" data-price="150">
+        <div class="pkg-info">
+          <div class="pkg-serves">Serves 12–15</div>
+          <div class="pkg-name">Tamale Party Pack</div>
+          <div class="pkg-desc">3 dozen handmade tamales — pork, chicken &amp; rajas con queso.</div>
+          <div class="pkg-price">$150 <small>· 36 tamales</small></div>
+        </div>
+        <div class="pkg-thumb"><img src="https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=300&q=68" alt="Tamale party pack catering"></div>
+      </div>
+
+      <button class="cat-cta" id="catCta">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Request a custom catering quote
+      </button>
+    </div><!-- /catering panel -->
+
+    <!-- reviews panel -->
+    <div class="panel" data-panel="reviews">
+      <div class="rev-top">
+        <div class="rev-score">
+          <div class="rev-big">4.9</div>
+          <div class="rev-stars">
+            <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg>
+          </div>
+          <div class="rev-count">312 orders</div>
+        </div>
+        <div class="rev-bars">
+          <div class="bar-row">5<div class="bar-track"><div class="bar-fill" style="width:94%"></div></div></div>
+          <div class="bar-row">4<div class="bar-track"><div class="bar-fill" style="width:5%"></div></div></div>
+          <div class="bar-row">3<div class="bar-track"><div class="bar-fill" style="width:1%"></div></div></div>
+          <div class="bar-row">2<div class="bar-track"><div class="bar-fill" style="width:0%"></div></div></div>
+          <div class="bar-row">1<div class="bar-track"><div class="bar-fill" style="width:0%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="review">
+        <div class="rev-head">
+          <img class="rev-av" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=70" alt="Destiny R.">
+          <div class="rev-who">
+            <div class="rev-name">Destiny R.</div>
+            <div class="rev-meta">
+              <span class="s"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg></span>
+              <span class="d">2 days ago</span>
+            </div>
+          </div>
+        </div>
+        <p class="rev-text">The birria is unreal — consommé was rich and the meat fell apart. Easily the best in the East End. Already ordered again.</p>
+        <span class="rev-plate">Birria Tacos (3)</span>
+      </div>
+
+      <div class="review">
+        <div class="rev-head">
+          <img class="rev-av" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=70" alt="Marcus T.">
+          <div class="rev-who">
+            <div class="rev-name">Marcus T.</div>
+            <div class="rev-meta">
+              <span class="s"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg></span>
+              <span class="d">1 week ago</span>
+            </div>
+          </div>
+        </div>
+        <p class="rev-text">Catered our office lunch with the taco bar — setup was clean, everyone went back for seconds. Will book again for the holidays.</p>
+        <span class="rev-plate">Birria Taco Bar · Catering</span>
+      </div>
+
+      <div class="review">
+        <div class="rev-head">
+          <img class="rev-av" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=70" alt="Yesenia M.">
+          <div class="rev-who">
+            <div class="rev-name">Yesenia M.</div>
+            <div class="rev-meta">
+              <span class="s"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7L12 17.8 5.8 21.2l1.6-7L2 9.5l7.1-.6z"/></svg></span>
+              <span class="d">2 weeks ago</span>
+            </div>
+          </div>
+        </div>
+        <p class="rev-text">Those weekend tamales taste exactly like my abuela's. Masa was perfect. Get there early, they sell out fast!</p>
+        <span class="rev-plate">Pork Tamales (6)</span>
+      </div>
+    </div><!-- /reviews panel -->
+  </div>
+
+  <!-- sticky cart -->
+  <div class="cart" id="cart">
+    <div class="inner">
+      <div class="l"><span class="count" id="cartCount">1</span> View order</div>
+      <div class="r" id="cartTotal">$14.00</div>
+    </div>
+  </div>
+
+  <!-- signup bottom sheet -->
+  <div class="scrim" id="scrim"></div>
+  <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Sign up to order">
+    <div class="grabber"></div>
+    <button class="sheet-close" id="sheetClose" aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+
+    <div class="step active" data-step="phone">
+      <h3>Order from Marisol 🌿</h3>
+      <p class="sub">Create a free account in seconds to place your order and message the creator.</p>
+      <input class="input" id="phoneInput" type="tel" inputmode="tel" placeholder="(713) 555-0199" aria-label="Phone number">
+      <button class="btn-full" id="sendCodeBtn" disabled>Send Code</button>
+      <p class="legal">By continuing you agree to our <a href="#">Terms of Service</a> &amp; <a href="#">Privacy Policy</a>.</p>
+      <p class="signin-link">Already have an account? <a href="#">Sign In</a></p>
+    </div>
+
+    <div class="step" data-step="otp">
+      <h3>Enter your code</h3>
+      <p class="sub">We texted a 6-digit code to <b id="phoneEcho" style="color:#fff">your phone</b>.</p>
+      <div class="otp-row" id="otpRow">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 1">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 2">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 3">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 4">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 5">
+        <input class="otp-box" maxlength="1" inputmode="numeric" aria-label="Digit 6">
+      </div>
+      <p class="resend">Didn't get it? <b id="resend">Resend in 0:30</b></p>
+    </div>
+
+    <div class="step" data-step="name">
+      <h3>You're verified ✓</h3>
+      <p class="sub">What should creators call you?</p>
+      <input class="input" id="nameInput" type="text" maxlength="30" placeholder="First name or nickname" aria-label="Your name">
+      <button class="btn-full" id="startBtn" disabled>Start Ordering</button>
+    </div>
+
+    <div class="step" data-step="complete">
+      <div class="done-wrap">
+        <div class="done-ring"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h3 style="margin-bottom:6px">All set! 🌿</h3>
+        <p class="sub" style="margin-bottom:0">Adding your plate &amp; taking you back…</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast">Storefront link copied 🌿</div>
+
+<script>
+(function(){
+  'use strict';
+  var $=function(s,r){return (r||document).querySelector(s);};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+
+  /* ---------- cart ---------- */
+  var cart=[], cartEl=$('#cart');
+  function fmt(n){return '$'+n.toFixed(2);}
+  function render(){
+    if(!cart.length){cartEl.classList.remove('show');return;}
+    cartEl.classList.add('show');
+    $('#cartCount').textContent=cart.length;
+    $('#cartTotal').textContent=fmt(cart.reduce(function(s,i){return s+i.price;},0));
+  }
+
+  /* ---------- auth gate ---------- */
+  var authed=false, pending=null;
+  function addToCart(name,price){
+    if(!authed){ pending={name:name,price:price}; openSheet(); return; }
+    cart.push({name:name,price:price}); render(); toast(name+' added 🌿');
+  }
+  $$('.plate').forEach(function(p){
+    var btn=p.querySelector('.add'); if(!btn) return;
+    btn.addEventListener('click',function(e){e.stopPropagation();addToCart(p.dataset.name,parseFloat(p.dataset.price));});
+  });
+
+  /* ---------- tabs ---------- */
+  $$('.tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      var id=t.dataset.tab;
+      $$('.tab').forEach(function(x){x.classList.toggle('on',x===t);});
+      $$('.panel').forEach(function(pn){pn.classList.toggle('on',pn.dataset.panel===id);});
+    });
+  });
+  function goTab(id){ var t=document.querySelector('.tab[data-tab="'+id+'"]'); if(t) t.click(); }
+
+  /* ---------- profile actions ---------- */
+  $('#startOrderBtn').addEventListener('click',function(){
+    goTab('menu');
+    var tabs=document.querySelector('.tabs'); if(tabs) tabs.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  $('#messageBtn').addEventListener('click',function(){
+    if(!authed){ pending=null; openSheet(); return; }
+    toast('Message sent to Marisol 🌿');
+  });
+  $('#catCta').addEventListener('click',function(){
+    if(!authed){ pending=null; openSheet(); return; }
+    toast('Catering request sent 🌿');
+  });
+
+  /* ---------- mini header on scroll ---------- */
+  var mini=$('#mini'), tabsEl=document.querySelector('.tabs');
+  window.addEventListener('scroll',function(){
+    if(window.scrollY>200){ mini.classList.add('show'); if(tabsEl) tabsEl.style.top='52px'; }
+    else { mini.classList.remove('show'); if(tabsEl) tabsEl.style.top='0px'; }
+  },{passive:true});
+
+  /* ---------- toast ---------- */
+  var toastT;
+  function toast(msg){
+    var t=$('#toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(function(){t.classList.remove('show');},2200);
+  }
+  $('#shareBtn').addEventListener('click',function(){
+    var link='kder.club/marisolskitchen';
+    if(navigator.clipboard) navigator.clipboard.writeText(link).catch(function(){});
+    toast('Storefront link copied 🌿');
+  });
+
+  /* ---------- signup sheet ---------- */
+  var scrim=$('#scrim'), sheet=$('#sheet');
+  function showStep(name){ $$('.step').forEach(function(s){s.classList.toggle('active',s.dataset.step===name);}); }
+  function openSheet(){ showStep('phone'); scrim.classList.add('show'); sheet.classList.add('show'); setTimeout(function(){$('#phoneInput').focus();},350); }
+  function closeSheet(){ scrim.classList.remove('show'); sheet.classList.remove('show'); }
+  $('#sheetClose').addEventListener('click',closeSheet);
+  scrim.addEventListener('click',closeSheet);
+
+  /* phone */
+  var phoneInput=$('#phoneInput'), sendBtn=$('#sendCodeBtn');
+  phoneInput.addEventListener('input',function(){ sendBtn.disabled=phoneInput.value.replace(/\D/g,'').length<10; });
+  sendBtn.addEventListener('click',function(){
+    if(sendBtn.disabled) return;
+    $('#phoneEcho').textContent=phoneInput.value||'your phone';
+    showStep('otp'); startResend();
+    setTimeout(function(){$$('#otpRow .otp-box')[0].focus();},350);
+  });
+
+  /* otp */
+  var otpBoxes=$$('#otpRow .otp-box');
+  otpBoxes.forEach(function(box,i){
+    box.addEventListener('input',function(){
+      box.value=box.value.replace(/\D/g,'').slice(0,1);
+      box.classList.toggle('filled',!!box.value);
+      if(box.value&&i<otpBoxes.length-1) otpBoxes[i+1].focus();
+      if(otpBoxes.every(function(b){return b.value;})){
+        setTimeout(function(){ showStep('name'); setTimeout(function(){$('#nameInput').focus();},300); },220);
+      }
+    });
+    box.addEventListener('keydown',function(e){ if(e.key==='Backspace'&&!box.value&&i>0) otpBoxes[i-1].focus(); });
+  });
+
+  /* resend */
+  var resendT;
+  function startResend(){
+    var s=30, el=$('#resend'); clearInterval(resendT);
+    el.textContent='Resend in 0:'+String(s).padStart(2,'0');
+    resendT=setInterval(function(){
+      s--;
+      if(s<=0){ clearInterval(resendT); el.textContent='Resend code'; el.style.cursor='pointer'; }
+      else el.textContent='Resend in 0:'+String(s).padStart(2,'0');
+    },1000);
+  }
+
+  /* name → complete */
+  var nameInput=$('#nameInput'), startBtn=$('#startBtn');
+  nameInput.addEventListener('input',function(){ startBtn.disabled=nameInput.value.trim().length<1; });
+  startBtn.addEventListener('click',function(){
+    if(startBtn.disabled) return;
+    showStep('complete'); authed=true;
+    setTimeout(function(){
+      closeSheet();
+      var nm=nameInput.value.trim();
+      if(pending){ cart.push(pending); render(); toast('Welcome, '+nm+'! '+pending.name+' added 🌿'); pending=null; }
+      else toast('Welcome to KDER, '+nm+'! 🌿');
+    },1400);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
