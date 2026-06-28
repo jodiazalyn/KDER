@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0A0A0A" />
+<title>KDER Club — Interactive Tour</title>
+<style>
+  :root{
+    --bg:#0A0A0A; --bg2:#121212; --panel:#161616; --ink:#fff;
+    --dim:rgba(255,255,255,.6); --faint:rgba(255,255,255,.36);
+    --line:rgba(255,255,255,.09); --green:#1B5E20; --lit:#37C871; --lit2:#4ADE80;
+    --blue:#635BFF; /* stripe */ --uber:#000;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text',sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100dvh}
+  a{color:inherit}
+
+  /* ---------- top bar ---------- */
+  .top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;
+    padding:14px 22px;background:rgba(10,10,10,.82);backdrop-filter:blur(20px) saturate(160%);
+    -webkit-backdrop-filter:blur(20px) saturate(160%);border-bottom:1px solid var(--line)}
+  .brand{font-size:20px;font-weight:900;letter-spacing:-.04em}
+  .brand .o{color:var(--lit)}
+  .brand small{display:block;font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--faint);text-transform:uppercase;margin-top:-2px}
+  .seg{display:flex;gap:4px;margin:0 auto;background:rgba(255,255,255,.06);border:1px solid var(--line);padding:4px;border-radius:99px}
+  .seg button{border:none;background:none;color:var(--dim);font-size:13.5px;font-weight:700;padding:8px 16px;border-radius:99px;cursor:pointer;
+    display:flex;align-items:center;gap:7px;transition:background .15s,color .15s}
+  .seg button .e{font-size:15px}
+  .seg button.on{background:var(--ink);color:#0A0A0A}
+  .restart{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--dim);font-size:12.5px;font-weight:700;
+    padding:9px 15px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .restart svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+  @media(max-width:760px){.top{flex-wrap:wrap;gap:10px;padding:12px 14px}.seg{order:3;width:100%;margin:0;justify-content:space-between}
+    .seg button{flex:1;justify-content:center;padding:9px 6px;font-size:12.5px}.restart{margin-left:auto}}
+
+  /* ---------- layout ---------- */
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 60px;display:grid;grid-template-columns:248px 1fr;gap:30px}
+  @media(max-width:920px){.wrap{grid-template-columns:1fr;gap:20px}}
+
+  /* ---------- TOC rail ---------- */
+  .rail{position:sticky;top:96px;align-self:start;background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:14px;max-height:calc(100dvh - 120px);overflow:auto}
+  .rail h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:800;padding:6px 8px 10px}
+  .toc{list-style:none;display:flex;flex-direction:column;gap:2px}
+  .toc li{display:flex;align-items:center;gap:11px;padding:10px 10px;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--dim);transition:background .14s,color .14s}
+  .toc li:hover{background:rgba(255,255,255,.04);color:var(--ink)}
+  .toc li.on{background:rgba(55,200,113,.13);color:var(--ink)}
+  .toc .num{flex:0 0 24px;height:24px;border-radius:99px;display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:800;background:rgba(255,255,255,.08);color:var(--dim)}
+  .toc li.on .num{background:var(--lit);color:#0A0A0A}
+  .toc li.done .num{background:rgba(55,200,113,.2);color:var(--lit)}
+  .toc li.done .num::after{content:"✓"}
+  .toc li.done .num span{display:none}
+  @media(max-width:920px){.rail{position:static;max-height:none;display:flex;flex-direction:column}
+    .toc{flex-direction:row;overflow:auto;gap:6px;padding-bottom:4px}
+    .toc li{flex:0 0 auto;white-space:nowrap}}
+
+  /* ---------- stage ---------- */
+  .stage{min-width:0}
+  .stage-grid{display:grid;grid-template-columns:300px 1fr;gap:34px;align-items:start}
+  @media(max-width:680px){.stage-grid{grid-template-columns:1fr;gap:24px;justify-items:center}}
+
+  /* phone */
+  .device{position:relative;width:300px;flex:0 0 300px;border-radius:42px;background:#000;
+    padding:11px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);margin:0 auto}
+  .notch{position:absolute;top:17px;left:50%;transform:translateX(-50%);width:120px;height:26px;background:#000;border-radius:99px;z-index:6}
+  .screen{position:relative;height:600px;border-radius:33px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+  .statusbar{height:40px;flex:0 0 40px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 6px;font-size:12px;font-weight:700}
+  .statusbar .r{display:flex;gap:5px;align-items:center;opacity:.9}
+  .statusbar .r svg{width:15px;height:11px;fill:#fff}
+  .view{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+  .view::-webkit-scrollbar{display:none}
+  .anim{animation:sIn .4s cubic-bezier(.2,.8,.2,1)}
+  @keyframes sIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  /* narration */
+  .narr{min-width:0}
+  .tag{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:6px 12px;border-radius:99px;background:rgba(55,200,113,.13);color:var(--lit);border:1px solid rgba(55,200,113,.3)}
+  .narr h2{font-size:29px;font-weight:850;letter-spacing:-.03em;line-height:1.1;margin:16px 0 0}
+  @media(max-width:680px){.narr h2{font-size:24px}}
+  .narr .lead{font-size:15.5px;line-height:1.6;color:rgba(255,255,255,.82);margin-top:14px}
+  .points{list-style:none;margin-top:20px;display:flex;flex-direction:column;gap:13px}
+  .points li{display:flex;gap:12px;font-size:14px;line-height:1.45;color:rgba(255,255,255,.86)}
+  .points li svg{flex:0 0 19px;width:19px;height:19px;margin-top:1px;stroke:var(--lit);fill:none;stroke-width:2.2}
+  .points li b{color:#fff;font-weight:700}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .mtag{font-size:11.5px;font-weight:700;color:var(--dim);background:rgba(255,255,255,.05);border:1px solid var(--line);padding:6px 11px;border-radius:99px}
+  .mtag.stripe{color:#a9a4ff;border-color:rgba(99,91,255,.35);background:rgba(99,91,255,.12)}
+  .preview{font-size:11px;font-weight:800;color:#f5c451;background:rgba(245,196,81,.1);border:1px solid rgba(245,196,81,.3);padding:6px 11px;border-radius:99px}
+
+  /* controls */
+  .controls{display:flex;align-items:center;gap:14px;margin-top:30px}
+  .nav-btn{display:flex;align-items:center;gap:8px;border:none;cursor:pointer;font-size:14.5px;font-weight:800;padding:13px 22px;border-radius:99px;transition:transform .15s,filter .15s,opacity .15s}
+  .nav-btn:active{transform:scale(.97)}
+  .nav-btn.next{background:var(--green);color:#fff;box-shadow:0 8px 22px rgba(27,94,32,.5)}
+  .nav-btn.back{background:rgba(255,255,255,.07);color:var(--ink);border:1px solid var(--line)}
+  .nav-btn[disabled]{opacity:.35;cursor:not-allowed}
+  .nav-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+  .dots{display:flex;gap:6px;margin-left:auto}
+  .dots i{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.18);transition:width .2s,background .2s}
+  .dots i.on{width:20px;background:var(--lit)}
+  @media(max-width:680px){.dots{display:none}}
+
+  /* ============ in-screen UI primitives ============ */
+  .s-pad{padding:18px 18px 30px}
+  .s-logo{font-size:24px;font-weight:900;letter-spacing:-.04em;text-align:center;margin:18px 0 6px}
+  .s-logo .o{color:var(--lit)}
+  .s-h{font-size:20px;font-weight:850;letter-spacing:-.02em;margin-top:14px}
+  .s-sub{font-size:12.5px;color:var(--dim);margin:14px 0 7px;font-weight:600}
+  .s-input{height:48px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--line);display:flex;align-items:center;padding:0 15px;font-size:15px;font-weight:600}
+  .s-input.ph{color:var(--faint)}
+  .otp{display:flex;gap:8px;margin:16px 0}
+  .otp span{flex:1;aspect-ratio:1/1.15;border-radius:12px;background:rgba(255,255,255,.07);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800}
+  .otp span.f{border-color:rgba(74,222,128,.55)}
+  .otp span.cur{border-color:var(--lit);box-shadow:0 0 0 3px rgba(55,200,113,.15)}
+  .s-btn{width:100%;height:50px;border-radius:99px;border:none;background:var(--green);color:#fff;font-size:15px;font-weight:800;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 22px rgba(27,94,32,.45);cursor:default}
+  .s-btn.lite{background:#fff;color:#0A0A0A;box-shadow:none}
+  .s-btn.stripe{background:var(--blue);box-shadow:0 8px 22px rgba(99,91,255,.4)}
+  .s-btn.dark{background:#000;border:1px solid rgba(255,255,255,.2);box-shadow:none}
+  .s-fine{font-size:11px;color:var(--faint);text-align:center;margin-top:14px;line-height:1.5}
+  .s-fine b{color:var(--dim)}
+
+  /* cover/profile (storefront) */
+  .s-cover{height:120px;position:relative;background:linear-gradient(135deg,#3a2a1a,#1a1a1a)}
+  .s-cover img{width:100%;height:100%;object-fit:cover}
+  .s-cover::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,rgba(10,10,10,.85))}
+  .s-prof{padding:0 16px;margin-top:-30px;position:relative;z-index:2}
+  .s-av{width:60px;height:60px;border-radius:99px;padding:2.5px;background:linear-gradient(135deg,var(--lit),var(--green))}
+  .s-av img,.s-av div{width:100%;height:100%;border-radius:99px;object-fit:cover;background:#2a2a2a;display:block}
+  .s-name{font-size:18px;font-weight:850;letter-spacing:-.02em;margin-top:9px;display:flex;align-items:center;gap:6px}
+  .s-name .v{width:15px;height:15px;flex:0 0 15px}
+  .s-handle{font-size:12px;color:var(--dim);margin-top:2px}
+  .s-meta{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);margin-top:9px;font-weight:600}
+  .s-meta .star{color:var(--lit);display:flex;align-items:center;gap:3px;font-weight:800}
+  .s-meta svg{width:12px;height:12px;fill:var(--lit)}
+  .s-meta .d{width:3px;height:3px;border-radius:99px;background:var(--faint)}
+  .s-links{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+  .s-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
+  .s-chip svg{width:12px;height:12px}
+
+  /* generic section label */
+  .s-lbl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:18px 16px 8px}
+
+  /* plate rows */
+  .plate-r{display:flex;gap:12px;padding:12px 16px;align-items:center}
+  .plate-r+.plate-r{border-top:1px solid var(--line)}
+  .pr-info{flex:1;min-width:0}
+  .pr-n{font-size:14px;font-weight:750;letter-spacing:-.01em}
+  .pr-d{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pr-p{font-size:13.5px;font-weight:800;margin-top:6px}
+  .pr-th{position:relative;flex:0 0 72px}
+  .pr-th img,.pr-th div{width:72px;height:72px;border-radius:14px;object-fit:cover;background:#2a2a2a}
+  .pr-add{position:absolute;right:-6px;bottom:-6px;width:28px;height:28px;border-radius:99px;background:#fff;color:#0A0A0A;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+  .pr-add svg{width:15px;height:15px;stroke:#0A0A0A;stroke-width:2.6;fill:none}
+  .badge{position:absolute;top:6px;left:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;padding:3px 7px;border-radius:7px;background:var(--green);color:#fff}
+
+  /* cards row (catering / recs) */
+  .pkg-c{margin:10px 16px;padding:13px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+  .pkg-c .sv{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--lit)}
+  .pkg-c .nm{font-size:14.5px;font-weight:800;margin-top:4px}
+  .pkg-c .ds{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.4}
+  .pkg-c .pc{font-size:14px;font-weight:850;margin-top:8px}
+  .pkg-c .pc small{color:var(--dim);font-weight:600}
+
+  /* checkout */
+  .ord-line{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;font-size:13.5px}
+  .ord-line+.ord-line{border-top:1px solid var(--line)}
+  .ord-line .q{color:var(--dim);font-weight:600}
+  .ord-line b{font-weight:800}
+  .ord-sum{margin:6px 16px;padding:13px 14px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+  .ord-sum .l{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);padding:4px 0}
+  .ord-sum .l.tot{color:#fff;font-weight:850;font-size:15px;border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
+  .terms{display:flex;align-items:center;gap:10px;padding:13px 16px;font-size:12px;color:var(--dim);line-height:1.4}
+  .terms .box{flex:0 0 20px;width:20px;height:20px;border-radius:6px;background:var(--green);display:flex;align-items:center;justify-content:center}
+  .terms .box svg{width:13px;height:13px;stroke:#fff;stroke-width:3;fill:none}
+  .terms a{color:var(--lit);text-decoration:underline}
+
+  /* delivery / uber direct */
+  .map{height:200px;position:relative;background:
+    radial-gradient(circle at 30% 35%,rgba(55,200,113,.18),transparent 40%),
+    linear-gradient(135deg,#16201a,#0e120f);overflow:hidden}
+  .map .route{position:absolute;left:20%;top:78%;width:60%;height:2px;background:repeating-linear-gradient(90deg,var(--lit) 0 8px,transparent 8px 16px);transform:rotate(-28deg);transform-origin:left}
+  .map .pin{position:absolute;width:30px;height:30px;border-radius:99px 99px 99px 0;transform:rotate(45deg);box-shadow:0 6px 14px rgba(0,0,0,.5)}
+  .map .pin.a{left:18%;top:70%;background:#fff}
+  .map .pin.b{right:18%;top:30%;background:var(--lit)}
+  .map .pin span{display:block;transform:rotate(-45deg);text-align:center;line-height:30px;font-size:13px}
+  .courier{margin:-26px 14px 0;position:relative;z-index:2;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+  .courier .ch{display:flex;align-items:center;gap:11px}
+  .courier .ca{width:42px;height:42px;border-radius:99px;background:#2a2a2a;flex:0 0 42px;overflow:hidden}
+  .courier .ca img{width:100%;height:100%;object-fit:cover}
+  .courier .cn{flex:1}
+  .courier .cn b{font-size:14px;font-weight:800}
+  .courier .cn span{display:block;font-size:11.5px;color:var(--dim);margin-top:1px}
+  .courier .eta{text-align:right}
+  .courier .eta b{font-size:18px;font-weight:850;color:var(--lit)}
+  .courier .eta span{display:block;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+  .steps-t{margin:14px 0 0;display:flex;flex-direction:column;gap:0}
+  .st-r{display:flex;gap:11px;align-items:flex-start;padding:8px 0;position:relative}
+  .st-r .dot{flex:0 0 16px;width:16px;height:16px;border-radius:99px;border:2px solid var(--line);margin-top:1px}
+  .st-r.ok .dot{background:var(--lit);border-color:var(--lit)}
+  .st-r.now .dot{border-color:var(--lit);box-shadow:0 0 0 4px rgba(55,200,113,.18)}
+  .st-r .tx b{font-size:13px;font-weight:750;display:block}
+  .st-r .tx span{font-size:11px;color:var(--faint)}
+  .uberbar{margin:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;color:var(--dim);font-weight:700}
+  .uberbar .ud{background:#000;border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:800;padding:4px 9px;border-radius:6px;font-size:11px}
+
+  /* rating */
+  .rate-head{text-align:center;padding:22px 18px 4px}
+  .rate-head .av{width:62px;height:62px;border-radius:99px;margin:0 auto 12px;background:#2a2a2a;overflow:hidden}
+  .rate-head .av img{width:100%;height:100%;object-fit:cover}
+  .rate-head h4{font-size:18px;font-weight:850}
+  .rate-head p{font-size:12px;color:var(--dim);margin-top:4px}
+  .rate-dim{padding:14px 18px;border-top:1px solid var(--line);margin-top:8px}
+  .rate-dim:first-of-type{border-top:none}
+  .rate-dim .dn{font-size:13.5px;font-weight:750;display:flex;justify-content:space-between}
+  .rate-dim .dn small{color:var(--faint);font-weight:600}
+  .stars{display:flex;gap:7px;margin-top:9px}
+  .stars svg{width:26px;height:26px;fill:var(--lit)}
+  .stars svg.off{fill:rgba(255,255,255,.14)}
+
+  /* chat (Mia) */
+  .chat-top{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .mia-av{width:38px;height:38px;border-radius:99px;background:linear-gradient(135deg,var(--lit2),var(--green));display:flex;align-items:center;justify-content:center;flex:0 0 38px}
+  .mia-av svg{width:20px;height:20px;fill:#0A0A0A}
+  .chat-top .ci b{font-size:14.5px;font-weight:850;display:flex;align-items:center;gap:6px}
+  .chat-top .ci span{font-size:11px;color:var(--lit);font-weight:700}
+  .chat-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+  .bub{max-width:82%;padding:11px 14px;border-radius:18px;font-size:13px;line-height:1.45}
+  .bub.u{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:5px}
+  .bub.m{align-self:flex-start;background:rgba(255,255,255,.07);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .bub.m b{color:var(--lit2)}
+  .rec{display:flex;gap:10px;align-self:flex-start;width:88%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:9px;margin-top:-2px}
+  .rec img,.rec .ph{width:46px;height:46px;border-radius:10px;object-fit:cover;flex:0 0 46px;background:#2a2a2a}
+  .rec .rn{font-size:12.5px;font-weight:800}
+  .rec .rd{font-size:10.5px;color:var(--dim);margin-top:2px}
+  .rec .rp{font-size:12px;font-weight:850;color:var(--lit);margin-top:4px}
+  .chips-row{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 14px}
+  .qchip{font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:99px;background:rgba(55,200,113,.1);border:1px solid rgba(55,200,113,.28);color:var(--lit)}
+
+  /* analytics (Cleopatra) */
+  .cleo-top{display:flex;align-items:center;gap:11px;padding:16px 16px 6px}
+  .cleo-av{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#f5c451,#b8862f);display:flex;align-items:center;justify-content:center;flex:0 0 40px}
+  .cleo-av svg{width:22px;height:22px;fill:#1a1206}
+  .cleo-top b{font-size:15px;font-weight:850;letter-spacing:-.01em;display:block}
+  .cleo-top span{font-size:11px;color:#f5c451;font-weight:700}
+  .kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px}
+  .kpi{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:13px;padding:11px 9px;text-align:center}
+  .kpi .v{font-size:17px;font-weight:850;letter-spacing:-.02em}
+  .kpi .v.g{color:var(--lit)}
+  .kpi .l{font-size:9.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+  .kpi .up{font-size:9.5px;color:var(--lit);font-weight:800;margin-top:3px}
+  .chart{margin:8px 16px;padding:14px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+  .chart .ct{font-size:11px;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  .bars{display:flex;align-items:flex-end;gap:7px;height:96px}
+  .bars .bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .bars .bc i{width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--lit),var(--green));display:block}
+  .bars .bc.hi i{background:linear-gradient(180deg,#f5c451,#b8862f)}
+  .bars .bc small{font-size:9px;color:var(--faint);font-weight:700}
+  .insight{margin:10px 16px 16px;padding:13px 14px;border-radius:14px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.25)}
+  .insight .ih{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:850;color:#f5c451;text-transform:uppercase;letter-spacing:.06em}
+  .insight .ih svg{width:13px;height:13px;fill:#f5c451}
+  .insight p{font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.88);margin-top:8px}
+  .insight p b{color:#fff}
+
+  /* payout (stripe) */
+  .bal{margin:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(99,91,255,.18),rgba(99,91,255,.05));border:1px solid rgba(99,91,255,.3)}
+  .bal .l{font-size:11px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .bal .v{font-size:34px;font-weight:900;letter-spacing:-.03em;margin-top:6px}
+  .bal .sub{font-size:11.5px;color:var(--dim);margin-top:6px}
+  .pay-row{display:flex;gap:9px;padding:0 16px;margin-top:4px}
+  .pay-row button{flex:1;height:46px;border-radius:13px;border:none;font-size:13px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:default}
+  .pay-row .inst{background:var(--blue);color:#fff}
+  .pay-row .inst small{font-size:9px;opacity:.85;font-weight:600}
+  .pay-row .std{background:rgba(255,255,255,.07);border:1px solid var(--line);color:#fff}
+  .pay-row .std small{font-size:9px;color:var(--faint);font-weight:600}
+  .ledger{margin:16px}
+  .ledger .lr{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--line)}
+  .ledger .lr:first-child{border-top:none}
+  .ledger .li{width:34px;height:34px;border-radius:10px;background:rgba(55,200,113,.14);display:flex;align-items:center;justify-content:center;flex:0 0 34px}
+  .ledger .li svg{width:16px;height:16px;stroke:var(--lit);fill:none;stroke-width:2}
+  .ledger .lt{flex:1}
+  .ledger .lt b{font-size:13px;font-weight:750;display:block}
+  .ledger .lt span{font-size:10.5px;color:var(--faint)}
+  .ledger .lv{font-weight:850;font-size:13.5px}
+  .ledger .lv.pos{color:var(--lit)}
+  .ledger .lv.neg{color:var(--faint)}
+
+  /* email */
+  .mailbox{padding:6px 0}
+  .mail-r{display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid var(--line);align-items:flex-start}
+  .mail-r .mi{width:34px;height:34px;border-radius:9px;flex:0 0 34px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;background:var(--green);color:#fff}
+  .mail-r.unread{background:rgba(55,200,113,.05)}
+  .mail-r .mc{flex:1;min-width:0}
+  .mail-r .mtop{display:flex;justify-content:space-between;gap:8px}
+  .mail-r .mfrom{font-size:13px;font-weight:800}
+  .mail-r .mt{font-size:10px;color:var(--faint);white-space:nowrap}
+  .mail-r .msub{font-size:12.5px;font-weight:650;margin-top:2px}
+  .mail-r .mprev{font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .mail-r .undot{width:8px;height:8px;border-radius:99px;background:var(--lit);flex:0 0 8px;margin-top:6px}
+
+  /* creator order mgmt */
+  .ord-card{margin:16px;border-radius:18px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+  .ord-card .oh{padding:13px 15px;display:flex;align-items:center;justify-content:space-between;background:rgba(55,200,113,.08);border-bottom:1px solid var(--line)}
+  .ord-card .oh b{font-size:12px;font-weight:850;color:var(--lit);text-transform:uppercase;letter-spacing:.06em}
+  .ord-card .oh .timer{font-size:12px;font-weight:800;color:#f5c451}
+  .ord-card .ob{padding:14px 15px}
+  .ord-card .cust{display:flex;align-items:center;gap:10px}
+  .ord-card .cust .ca{width:38px;height:38px;border-radius:99px;background:#2a2a2a;flex:0 0 38px;overflow:hidden}
+  .ord-card .cust .ca img{width:100%;height:100%;object-fit:cover}
+  .ord-card .cust b{font-size:14px;font-weight:800}
+  .ord-card .cust span{font-size:11px;color:var(--dim)}
+  .ord-items{margin:13px 0;padding:11px 13px;border-radius:12px;background:rgba(255,255,255,.04);font-size:13px}
+  .ord-items .it{display:flex;justify-content:space-between;padding:3px 0}
+  .ord-acts{display:flex;gap:9px}
+  .ord-acts button{flex:1;height:46px;border-radius:13px;border:none;font-size:14px;font-weight:850;cursor:default}
+  .ord-acts .acc{background:var(--green);color:#fff;flex:2}
+  .ord-acts .dec{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--dim)}
+  .reveal{margin:0 16px 16px;padding:12px 14px;border-radius:13px;background:rgba(55,200,113,.08);border:1px solid rgba(55,200,113,.25);display:flex;gap:10px;align-items:center;font-size:12px;color:rgba(255,255,255,.88)}
+  .reveal svg{width:17px;height:17px;stroke:var(--lit);fill:none;stroke-width:2;flex:0 0 17px}
+
+  /* list-plate form */
+  .photos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:14px 16px}
+  .photos .ph{aspect-ratio:1;border-radius:11px;background:rgba(255,255,255,.05);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .photos .ph img{width:100%;height:100%;object-fit:cover}
+  .photos .ph svg{width:18px;height:18px;stroke:var(--faint);fill:none;stroke-width:2}
+  .fld{padding:8px 16px}
+  .fld .fl{font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+  .fld .fv{height:42px;border-radius:11px;background:rgba(255,255,255,.06);border:1px solid var(--line);display:flex;align-items:center;padding:0 13px;font-size:14px;font-weight:650;margin-top:6px}
+  .fld2{display:flex;gap:9px}
+  .fld2 .fld{flex:1;padding-left:0;padding-right:0}
+  .pub{display:flex;align-items:center;justify-content:space-between;margin:8px 16px;padding:12px 14px;border-radius:13px;background:rgba(55,200,113,.08);border:1px solid rgba(55,200,113,.25)}
+  .pub b{font-size:13px;font-weight:800}
+  .pub .tg{width:42px;height:24px;border-radius:99px;background:var(--lit);position:relative}
+  .pub .tg::after{content:"";position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:99px;background:#fff}
+
+  /* checklist (restaurant onboard) */
+  .check{margin:14px 16px;display:flex;flex-direction:column;gap:0}
+  .ck{display:flex;gap:12px;align-items:center;padding:13px 0;border-top:1px solid var(--line)}
+  .ck:first-child{border-top:none}
+  .ck .cb{width:24px;height:24px;border-radius:99px;flex:0 0 24px;display:flex;align-items:center;justify-content:center}
+  .ck.ok .cb{background:var(--lit)}
+  .ck.ok .cb svg{width:14px;height:14px;stroke:#0A0A0A;stroke-width:3;fill:none}
+  .ck .cb.todo{border:2px solid var(--line)}
+  .ck .ct b{font-size:13.5px;font-weight:750;display:block}
+  .ck .ct span{font-size:11px;color:var(--faint)}
+  .ck.ok .ct b{color:#fff}
+  .ck.todo .ct b{color:var(--dim)}
+
+  /* bulk menu */
+  .bulk-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .bulk-top b{font-size:15px;font-weight:850}
+  .imp{font-size:11px;font-weight:800;color:var(--lit);background:rgba(55,200,113,.12);border:1px solid rgba(55,200,113,.3);padding:7px 11px;border-radius:99px;display:flex;align-items:center;gap:5px}
+  .imp svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.4}
+
+  /* completion */
+  .done-card{text-align:center;padding:40px 30px}
+  .done-card .ring{width:84px;height:84px;border-radius:99px;margin:0 auto 22px;display:flex;align-items:center;justify-content:center;background:rgba(55,200,113,.14);border:1.5px solid rgba(55,200,113,.5)}
+  .done-card .ring svg{width:40px;height:40px;stroke:var(--lit);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  .done-card h2{font-size:26px;font-weight:850;letter-spacing:-.02em}
+  .done-card p{font-size:14.5px;color:var(--dim);margin-top:10px;line-height:1.55}
+  .done-card .jump{display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+  .done-card .jump button{border:1px solid var(--line);background:rgba(255,255,255,.05);color:#fff;font-size:13px;font-weight:750;padding:11px 18px;border-radius:99px;cursor:pointer;display:flex;align-items:center;gap:7px}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="brand">KDER<span class="o">.</span>CLUB<small>Feed the city</small></div>
+    <div class="seg" id="seg">
+      <button data-p="member" class="on"><span class="e">🍽️</span>Foodie</button>
+      <button data-p="creator"><span class="e">👩🏽‍🍳</span>Creator</button>
+      <button data-p="restaurant"><span class="e">🏪</span>Restaurant</button>
+    </div>
+    <button class="restart" id="restart"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.3M3 4v4h4"/></svg>Restart</button>
+  </div>
+
+  <div class="wrap">
+    <aside class="rail">
+      <h3 id="railTitle">Foodie journey</h3>
+      <ul class="toc" id="toc"></ul>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-grid">
+        <div class="device">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="statusbar">
+              <span id="clock">9:41</span>
+              <span class="r"><svg viewBox="0 0 18 12"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4" y="4" width="3" height="8" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="12" rx="1" opacity=".4"/></svg>
+                <svg viewBox="0 0 18 12"><path d="M9 2.5C6 2.5 3.5 4 2 6c1.5 2 4 3.5 7 3.5S14.5 8 16 6c-1.5-2-4-3.5-7-3.5z" opacity=".5"/></svg>
+                <svg viewBox="0 0 24 12"><rect x="1" y="2" width="19" height="8" rx="2" fill="none" stroke="#fff" stroke-width="1"/><rect x="2.5" y="3.5" width="14" height="5" rx="1"/><rect x="21" y="4.5" width="2" height="3" rx="1"/></svg>
+              </span>
+            </div>
+            <div class="view" id="screenView"></div>
+          </div>
+        </div>
+
+        <div class="narr">
+          <span class="tag" id="stepTag">Step</span>
+          <h2 id="stepTitle">Title</h2>
+          <p class="lead" id="stepLead">Lead</p>
+          <ul class="points" id="stepPoints"></ul>
+          <div class="meta-row" id="stepMeta"></div>
+          <div class="controls">
+            <button class="nav-btn back" id="backBtn"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back</button>
+            <button class="nav-btn next" id="nextBtn">Next<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+            <div class="dots" id="dots"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script id="tourData">
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+
+  /* ---------- shared svg snippets ---------- */
+  const CHK   = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+  const PLUS  = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
+  const STAR  = '<svg viewBox="0 0 24 24"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>';
+  const VBADGE= '<svg class="v" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#37C871"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#0A0A0A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const IGI   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>';
+  const GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>';
+  const SPARK = '<svg viewBox="0 0 24 24"><path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6z"/></svg>';
+  const star5 = n => Array.from({length:5},(_,i)=>'<svg'+(i<n?'':' class="off"')+' viewBox="0 0 24 24"><path d="M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/></svg>').join('');
+
+  /* ---------- reusable in-phone screens ---------- */
+
+  // Cleopatra VII consumer food search (LIGHT theme — matches real /super consumer view)
+  function scCleoSearch(){return `
+    <div style="background:#F4F2EC;color:#1A1A1A;min-height:100%;font-weight:500">
+      <div style="padding:18px 16px 10px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <div class="cleo-av" style="width:34px;height:34px;border-radius:11px">${SPARK.replace('fill="#1a1206"','')}</div>
+          <div><b style="font-size:15px;font-weight:850;display:block;letter-spacing:-.01em">Cleopatra VII</b>
+          <span style="font-size:11px;color:#9a7b2a;font-weight:700">Find food in your neighborhood</span></div>
+        </div>
+        <div style="margin-top:14px;background:#fff;border:1px solid #e3ddd0;border-radius:16px;padding:13px 14px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.05)">
+          <span style="color:#1A1A1A">“i want a meal that is less than $12”</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#8a8475;font-weight:650">
+          <span style="width:30px;height:30px;border-radius:99px;background:#1B5E20;display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="#fff"><path d="M12 14a3 3 0 003-3V6a3 3 0 00-6 0v5a3 3 0 003 3zM7 11a5 5 0 0010 0M12 16v4"/></svg></span>
+          Tap to ask a follow-up
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#a59a7e;padding:14px 16px 6px">3 plates under $12 near East End</div>
+      ${[['Kder Bread','The Lymbar · East End','$10.00'],['Smoked Brisket Plate','The Lymbar · East End','$10.00'],['Birria Tacos (3)','Casa Marisol · Second Ward','$11.50']].map(p=>`
+      <div style="display:flex;gap:12px;padding:11px 16px;align-items:center">
+        <div style="width:62px;height:62px;border-radius:14px;background:#ddd6c6;flex:0 0 62px"></div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800">${p[0]}</div>
+          <div style="font-size:11.5px;color:#8a8475;margin-top:3px">${p[1]}</div>
+          <div style="font-size:13.5px;font-weight:850;margin-top:5px;color:#1B5E20">${p[2]}</div>
+        </div>
+      </div>`).join('')}
+    </div>`;}
+
+  // Public creator storefront (The Lymbar / @jodicook) — dark
+  function scStorefront(tab){
+    tab = tab||'plates';
+    const tabRow = ['PLATES','CATERING','REVIEWS'].map(t=>{
+      const on = t.toLowerCase()===tab;
+      return `<span style="flex:1;text-align:center;font-size:12px;font-weight:800;letter-spacing:.04em;padding:12px 0;color:${on?'#fff':'rgba(255,255,255,.5)'};border-bottom:2px solid ${on?'#37C871':'transparent'}">${t}</span>`;
+    }).join('');
+    let body='';
+    if(tab==='plates'){
+      body = `<div class="s-lbl">Available now</div>`+[
+        ['Kder Bread','Stone-baked sourdough, cultured butter. Baked fresh each morning.','$10.00','BESTSELLER'],
+        ['Smoked Brisket Plate','16-hr post-oak smoked brisket, two sides, pickles.','$10.00',''],
+      ].map(p=>`<div class="plate-r"><div class="pr-info"><div class="pr-n">${p[0]}</div><div class="pr-d">${p[1]}</div><div class="pr-p">${p[2]}</div></div>
+        <div class="pr-th"><div></div>${p[3]?`<span class="badge">${p[3]}</span>`:''}<span class="pr-add">${PLUS}</span></div></div>`).join('');
+    } else if(tab==='catering'){
+      body = `<div class="s-lbl">Catering packages</div>`+[
+        ['Brisket Spread','Serves 10–12','Post-oak brisket, two family sides, Kder bread, sauces.','$240','/ tray'],
+        ['Sunday Brunch','Serves 8','Shrimp & grits, biscuits, seasonal fruit, coffee service.','$185','/ tray'],
+      ].map(p=>`<div class="pkg-c"><div class="sv">${p[1]}</div><div class="nm">${p[0]}</div><div class="ds">${p[2]}</div><div class="pc">${p[3]} <small>${p[4]}</small></div></div>`).join('')
+      +`<div class="reveal" style="margin-top:14px">${CHK.replace('stroke="var(--lit)"','')}<span>Request a quote — pay a deposit to lock your date, balance auto-charges before the event.</span></div>`;
+    } else {
+      body = `<div class="rate-head" style="padding-top:18px"><h4>5.0 ★ · Vibe Score</h4><p>Based on completed orders</p></div>`
+      +[['Hospitality',5],['Authenticity',5],['Professionalism',5]].map(d=>`<div class="rate-dim"><div class="dn">${d[0]} <small>${d[1].toFixed(1)}</small></div><div class="stars">${star5(d[1])}</div></div>`).join('')
+      +`<div class="reveal" style="margin-top:14px"><span style="color:#f5c451;font-weight:700">Preview</span><span>The Vibe rating engine is rolling out — early orders aren't scored yet.</span></div>`;
+    }
+    return `<div class="s-cover"><div></div></div>
+      <div class="s-prof">
+        <div class="s-av"><div></div></div>
+        <div class="s-name">The Lymbar ${VBADGE}</div>
+        <div class="s-handle">@jodicook · 5.0 ★ · East End, Houston · Open</div>
+        <div class="s-meta"><span class="star">${STAR}5.0</span><span class="d"></span><span>312 orders</span><span class="d"></span><span>1.4k fed</span></div>
+        <div class="s-links">
+          <span class="s-chip">${IGI}@jodiandersonjrx</span>
+          <span class="s-chip">${GLOBE}thelymbar.com</span>
+        </div>
+        <div style="display:flex;gap:9px;margin-top:13px">
+          <span style="flex:2;height:42px;border-radius:12px;background:#1B5E20;color:#fff;font-weight:800;font-size:13.5px;display:flex;align-items:center;justify-content:center">Start order</span>
+          <span style="flex:1;height:42px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);font-weight:750;font-size:13px;display:flex;align-items:center;justify-content:center">Message</span>
+          <span style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span>
+        </div>
+      </div>
+      <div style="display:flex;margin-top:16px;border-bottom:1px solid var(--line)">${tabRow}</div>
+      ${body}<div style="height:20px"></div>`;
+  }
+
+  // No-friction checkout
+  function scCheckout(){return `<div class="s-pad" style="padding-top:8px">
+    <div class="s-h">Checkout</div>
+    <div class="ord-sum" style="margin:14px 0 6px">
+      <div class="l"><span>Kder Bread</span><span>$10.00</span></div>
+      <div class="l"><span>Smoked Brisket Plate</span><span>$10.00</span></div>
+      <div class="l tot"><span>Total</span><span>$20.00</span></div>
+    </div>
+    <div class="s-sub">Where do we send your receipt?</div>
+    <div class="s-input ph">Phone or email — no account needed</div>
+    <div class="terms" style="padding-left:0;padding-right:0"><span class="box">${CHK.replace('stroke="var(--lit)"','')}</span><span>I agree to the <a>Service Terms</a>. This order is a member-to-member service agreement.</span></div>
+    <div class="s-btn stripe"><svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><rect x="2" y="5" width="20" height="14" rx="3"/><rect x="2" y="9" width="20" height="2.5" fill="#635BFF"/></svg> Pay $20.00 with Stripe</div>
+    <div class="s-fine">Apple Pay · Google Pay · card · Link · fraud-screened by <b>Stripe Radar</b>. Creators keep 90% — KDER's 10% platform fee is handled server-side.</div>
+  </div>`;}
+
+  // Uber Direct delivery tracking
+  function scDelivery(){return `
+    <div class="map"><span class="route"></span><span class="pin a"><span>🍳</span></span><span class="pin b"><span>📍</span></span></div>
+    <div class="courier"><div class="ch"><div class="ca"><div style="width:100%;height:100%;background:#3a3a3a"></div></div>
+      <div class="cn"><b>Marcus D.</b><span>Uber Direct courier · Prius</span></div>
+      <div class="eta"><b>12 min</b><span>ETA</span></div></div>
+      <div class="steps-t">
+        <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Order accepted</b><span>Address revealed to courier</span></div></div>
+        <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Picked up</b><span>Hot & sealed from The Lymbar</span></div></div>
+        <div class="st-r now"><span class="dot"></span><div class="tx"><b>On the way to you</b><span>Live-tracked to your door</span></div></div>
+        <div class="st-r"><span class="dot"></span><div class="tx"><b>Delivered</b><span>—</span></div></div>
+      </div></div>
+    <div class="uberbar">Powered by <span class="ud">Uber Direct</span> · or choose free pickup</div>`;}
+
+  // Order tracking lifecycle
+  function scTrack(){return `<div class="s-pad" style="padding-top:8px">
+    <div class="ord-card" style="margin:8px 0">
+      <div class="oh"><b>Order accepted</b><span class="timer">#9486b73b</span></div>
+      <div class="ob">
+        <div class="reveal" style="margin:0 0 12px"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span><b style="color:#fff">2118 Polk St</b> — pickup address unlocks only after the creator accepts.</span></div>
+        <div class="steps-t">
+          <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Placed & paid</b><span>Confirmation emailed instantly</span></div></div>
+          <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Accepted</b><span>Address + details revealed</span></div></div>
+          <div class="st-r now"><span class="dot"></span><div class="tx"><b>Being prepared</b><span>You'll get a “Ready” alert</span></div></div>
+          <div class="st-r"><span class="dot"></span><div class="tx"><b>Completed</b><span>Receipt + rating prompt</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="s-fine">Auto-declines at 15 min → instant full refund. 30-minute refund window after ordering.</div>
+  </div>`;}
+
+  // Email inbox
+  function scEmails(){return `<div class="mailbox">
+    ${[['K','KDER','Order confirmed — #9486b73b','2 plates from The Lymbar · $20.00 paid. You will get an alert the moment it is accepted.','now',1],
+       ['K','KDER','Your order was accepted 🎉','Pickup unlocked: 2118 Polk St. Marcus is bringing it via Uber Direct.','2m',1],
+       ['K','KDER','Order ready for pickup','The Lymbar marked your order ready. ETA 12 min to your door.','—',0],
+       ['K','KDER','Receipt + rate your vibe','Thanks for ordering. Tap to rate Hospitality, Authenticity & Professionalism.','—',0]
+    ].map(m=>`<div class="mail-r ${m[5]?'unread':''}"><div class="mi">${m[0]}</div>
+      <div class="mc"><div class="mtop"><span class="mfrom">${m[1]}</span><span class="mt">${m[4]}</span></div>
+      <div class="msub">${m[2]}</div><div class="mprev">${m[3]}</div></div>${m[5]?'<span class="undot"></span>':''}</div>`).join('')}
+  </div>`;}
+
+  // Rating screen
+  function scRating(){return `<div>
+    <div class="rate-head"><div class="av"><div style="width:100%;height:100%;background:#3a3a3a"></div></div><h4>Rate The Lymbar</h4><p>How was your vibe? · <span style="color:#f5c451;font-weight:700">Preview feature</span></p></div>
+    ${[['Hospitality','Felt welcomed'],['Authenticity','Real & true to the food'],['Professionalism','Smooth & on time']].map(d=>`<div class="rate-dim"><div class="dn">${d[0]} <small>${d[1]}</small></div><div class="stars">${star5(5)}</div></div>`).join('')}
+    <div class="s-pad" style="padding-top:14px"><div class="s-btn">Submit vibe rating</div>
+    <div class="s-fine">Creators rate you back on Respect for Space & Punctuality. Scores roll up into a public Vibe Score.</div></div>
+  </div>`;}
+
+  // Creator: phone OTP signup
+  function scSignup(){return `<div class="s-pad">
+    <div class="s-logo">KDER<span class="o">.</span>CLUB</div>
+    <div class="s-h" style="text-align:center">Start earning in minutes</div>
+    <div class="s-sub">Your phone number</div>
+    <div class="s-input">(713) 555‑0142</div>
+    <div class="otp"><span class="f">4</span><span class="f">9</span><span class="f">2</span><span class="cur">8</span><span></span><span></span></div>
+    <div class="s-btn">Verify & continue</div>
+    <div class="pub" style="margin:18px 0 0"><div><b>List immediately</b><div style="font-size:11px;color:var(--dim);margin-top:2px">Payouts unlock after KYC — start posting plates now.</div></div><span class="tg"></span></div>
+    <div class="s-fine">One-tap OTP via <b>Twilio Verify</b>. No passwords, ever.</div>
+  </div>`;}
+
+  // Creator: list a plate w/ Mia AI Describe
+  function scListPlate(){return `<div style="padding-bottom:24px">
+    <div class="bulk-top"><b>New plate</b><span class="imp">${SPARK.replace('fill="#1a1206"','fill="none" stroke="currentColor" stroke-width="2"')}Mia: AI Describe</span></div>
+    <div class="photos"><div class="ph"><div style="width:100%;height:100%;background:#3a2a1a"></div></div><div class="ph"><div style="width:100%;height:100%;background:#2a2a2a"></div></div><div class="ph"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div class="fld"><div class="fl">Plate name</div><div class="fv">Jerk Chicken Plate</div></div>
+    <div class="fld"><div class="fl">Description · written by Mia</div><div class="fv" style="height:auto;padding:11px 13px;font-size:12.5px;line-height:1.45;color:var(--dim)">Slow-marinated jerk chicken with rice & peas, fried plantain, and house scotch-bonnet sauce. Smoky, bright, built to travel.</div></div>
+    <div class="fld2"><div class="fld"><div class="fl">Price</div><div class="fv">$14.00</div></div><div class="fld"><div class="fl">Qty / day</div><div class="fv">20</div></div></div>
+    <div class="pub"><b>Publish now</b><span class="tg"></span></div>
+    <div class="s-fine" style="text-align:left;padding:8px 16px 0">Plates default to <b>Draft</b> — nothing goes live until you flip Publish. Add a 60-sec video, allergen flags & availability windows.</div>
+  </div>`;}
+
+  // Mia concierge chat
+  function scMia(){return `<div>
+    <div class="chat-top"><div class="mia-av"><svg viewBox="0 0 24 24"><path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6z"/></svg></div>
+      <div class="ci"><b>Mia ${VBADGE.replace('class="v"','width="14" height="14"')}</b><span>Your KDER concierge</span></div></div>
+    <div class="chat-body">
+      <div class="bub u">What should I charge for jerk chicken plates?</div>
+      <div class="bub m">For East End, comparable jerk plates run <b>$13–$16</b>. Your portion + plantain justifies the top end. I'd list at <b>$14</b> with a $1 catering-size bump.</div>
+      <div class="bub u">How much does it cost to make 10?</div>
+      <div class="bub m">Roughly <b>$52 in ingredients</b> (~$5.20/plate). At $14 you keep <b>90%</b> — about <b>$11.20 a plate</b> after KDER's 10% fee, ~$6 profit. Want me to draft the listing?</div>
+    </div>
+    <div class="chips-row">
+      <span class="qchip">Write a plate description that sells</span>
+      <span class="qchip">Should I list plates or catering?</span>
+    </div>
+    <div class="s-pad" style="padding-top:0"><div class="s-input ph">What are you cooking with today?</div></div>
+  </div>`;}
+
+  // Creator: incoming order to accept
+  function scOrderMgmt(){return `<div>
+    <div class="ord-card">
+      <div class="oh"><b>New order · action needed</b><span class="timer">14:32 left</span></div>
+      <div class="ob">
+        <div class="cust"><div class="ca"><div style="width:100%;height:100%;background:#3a3a3a"></div></div><div><b>Dontayga R.</b><span>@tayga · East End</span></div></div>
+        <div class="ord-items"><div class="it"><span>1 × Jerk Chicken Plate</span><span>$14.00</span></div><div class="it"><span>1 × Kder Bread</span><span>$10.00</span></div></div>
+        <div class="ord-acts"><button class="acc">Accept</button><button class="dec">Decline</button></div>
+      </div>
+    </div>
+    <div class="reveal"><svg viewBox="0 0 24 24"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Accept from the <b style="color:#fff">push or SMS</b> — no app open needed. Your address reveals to the buyer only on accept.</span></div>
+  </div>`;}
+
+  // Catering pipeline
+  function scCatering(){return `<div class="s-pad" style="padding-top:10px">
+    <div class="s-h">Catering · Smith wedding</div>
+    <div class="steps-t" style="margin-top:14px">
+      <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Inquiry received</b><span>60 guests · Sat Jul 18 · brisket spread</span></div></div>
+      <div class="st-r ok"><span class="dot"></span><div class="tx"><b>Quote sent — $1,440</b><span>You set the menu, headcount price & terms</span></div></div>
+      <div class="st-r now"><span class="dot"></span><div class="tx"><b>Deposit paid — $432 (30%)</b><span>Date locked on your availability calendar</span></div></div>
+      <div class="st-r"><span class="dot"></span><div class="tx"><b>Balance auto-charges</b><span>$1,008 collected 48h before event</span></div></div>
+    </div>
+    <div class="reveal" style="margin-top:16px"><span style="color:var(--lit);font-weight:800">Blackout dates</span><span>Block days you're unavailable — KDER won't take bookings against them.</span></div>
+  </div>`;}
+
+  // Stripe payout / balance
+  function scPayout(){return `<div>
+    <div class="bal"><div class="l">Available to pay out</div><div class="v">$1,284.60</div><div class="sub">$340.00 pending · clears in 2 days</div></div>
+    <div class="pay-row"><button class="inst">Instant payout<small>~30 min · 1% fee</small></button><button class="std">Standard<small>2–3 days · free</small></button></div>
+    <div class="ledger">
+      ${[['Jerk Chicken Plate ×2','Order #c41a · accepted','+$26.60'],['Brisket catering balance','Smith wedding','+$1,008.00'],['KDER platform fee','10% · you keep 90%','−$103.46'],['Instant payout fee','1% · disclosed','−$12.84']].map(r=>`
+      <div class="lr"><div class="li"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+        <div class="lt"><b>${r[0]}</b><span>${r[1]}</span></div><div class="lv ${r[2].startsWith('+')?'pos':'neg'}">${r[2]}</div></div>`).join('')}
+    </div>
+    <div class="s-fine" style="text-align:left;padding:0 16px 18px">Powered by <b>Stripe Connect Express</b>. KYC via Stripe Identity, banks via Financial Connections, and your <b>1099</b> is filed automatically.</div>
+  </div>`;}
+
+  // Cleopatra VII Super Dashboard (creator/ops analytics — dark)
+  function scCleoDash(){return `<div style="padding-bottom:20px">
+    <div class="cleo-top"><div class="cleo-av">${SPARK}</div><div><b>Cleopatra VII</b><span>Super Dashboard · your data analyst</span></div></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v g">$8.2k</div><div class="l">GMV · 30d</div><div class="up">▲ 18%</div></div>
+      <div class="kpi"><div class="v">312</div><div class="l">Orders</div><div class="up">▲ 9%</div></div>
+      <div class="kpi"><div class="v">$26</div><div class="l">Avg order</div><div class="up">▲ 4%</div></div>
+    </div>
+    <div class="chart"><div class="ct">Orders by day</div><div class="bars">
+      ${[40,55,48,70,62,95,80].map((h,i)=>`<div class="bc ${i===5?'hi':''}"><i style="height:${h}%"></i><small>${'SMTWTFS'[i]}</small></div>`).join('')}
+    </div></div>
+    <div class="insight"><div class="ih">${SPARK} Cleo's read</div><p><b>Saturday brunch is your engine</b> — 40% of weekly GMV. She suggests adding a $4 mimosa add-on and opening 10 more slots. <b>Export CSV</b> for your books.</p></div>
+  </div>`;}
+
+  // Restaurant onboarding checklist
+  function scRestOnboard(){return `<div class="s-pad" style="padding-top:12px">
+    <div class="s-h">Get your kitchen live</div>
+    <div class="check">
+      ${[['ok','Business verified','EIN + food permit on file'],['ok','Identity (KYC)','Owner verified via Stripe Identity'],['ok','Stripe Connect Express','Bank linked — payouts ready'],['todo','Import your menu','Bulk-add plates & prices'],['todo','Publish storefront','Go live at kder.club/yourname']].map(c=>`
+      <div class="ck ${c[0]}"><div class="cb ${c[0]==='ok'?'':'todo'}">${c[0]==='ok'?CHK.replace('stroke="var(--lit)"',''):''}</div><div class="ct"><b>${c[1]}</b><span>${c[2]}</span></div></div>`).join('')}
+    </div>
+    <div class="s-fine" style="text-align:left;padding-top:6px">Restaurants list under the same M2M service framework — your full address stays private until each order is accepted.</div>
+  </div>`;}
+
+  // Restaurant bulk menu
+  function scBulkMenu(){return `<div>
+    <div class="bulk-top"><b>Menu · 24 items</b><span class="imp"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Import CSV</span></div>
+    ${[['Birria Tacos (3)','$11.50','Live'],['Al Pastor Plate','$13.00','Live'],['Elote','$6.00','Live'],['Horchata','$4.00','Draft'],['Family Taco Tray (20)','$48.00','Catering']].map(p=>`
+    <div class="plate-r"><div class="pr-info"><div class="pr-n">${p[0]}</div><div class="pr-p">${p[1]}</div></div>
+      <span style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:5px 9px;border-radius:8px;background:${p[2]==='Live'?'rgba(55,200,113,.14);color:#37C871':p[2]==='Catering'?'rgba(245,196,81,.14);color:#f5c451':'rgba(255,255,255,.07);color:rgba(255,255,255,.5)'}">${p[2]}</span></div>`).join('')}
+    <div class="s-fine" style="text-align:left;padding:14px 16px">Bulk-import from a spreadsheet, set live/draft per item, and tag catering trays in one pass.</div>
+  </div>`;}
+
+  // Completion screen
+  function scDone(label){return `<div class="done-card">
+    <div class="ring"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <h2>${label}</h2>
+    <p>That's the full loop. Switch personas up top to see KDER through another set of eyes — or restart this journey.</p>
+    <div class="jump"><button data-go="member">🍽️ Foodie</button><button data-go="creator">👩🏽‍🍳 Creator</button><button data-go="restaurant">🏪 Restaurant</button></div>
+  </div>`;}
+
+  /* ---------- helpers for narration ---------- */
+  const P = (html)=>({html});
+  const meta = (text,cls)=>({text,cls:cls||''});
+
+  /* ---------- TOURS ---------- */
+  const TOURS = {
+    member: {title:'Foodie journey', done:'You ordered like a local.', steps:[
+      {icon:'🔎',label:'Discover',tag:'Discover',title:'Ask Cleopatra what you\'re hungry for',
+        lead:'No menus to dig through. Tell KDER\'s AI analyst what you want in plain language and she finds real plates near you.',
+        points:[P('Natural-language search — <b>“a meal under $12”</b>, “something spicy nearby”'),P('Pulls from <b>live creator storefronts</b> in your Houston neighborhood'),P('Voice follow-ups to narrow it down')],
+        meta:[meta('Cleopatra VII'),meta('Neighborhood-aware')], screen:scCleoSearch()},
+      {icon:'🏠',label:'Storefront',tag:'Browse',title:'Every creator has a storefront',
+        lead:'Tap a result and you land on the creator\'s page — plates, catering, links and reputation. Fully browsable, no login required.',
+        points:[P('<b>Plates / Catering / Reviews</b> tabs'),P('Real <b>Instagram & website links</b> straight to the creator'),P('Browse freely — you only identify yourself at checkout')],
+        meta:[meta('@jodicook · The Lymbar'),meta('Public')], screen:scStorefront('plates')},
+      {icon:'🧾',label:'Checkout',tag:'Order',title:'Check out with no account',
+        lead:'Add plates, agree to the service terms, and pay. Just drop a phone or email for the receipt — KDER never forces a signup.',
+        points:[P('<b>Phone OR email</b> — no password, no account wall'),P('Pay with Apple Pay, Google Pay, card or Link via <b>Stripe</b>'),P('Every order is a <b>member-to-member service agreement</b> with a terms timestamp')],
+        meta:[meta('Stripe Checkout','stripe'),meta('Stripe Radar','stripe')], screen:scCheckout()},
+      {icon:'🚗',label:'Delivery',tag:'Get it',title:'Pickup or Uber Direct to your door',
+        lead:'Grab it yourself once it\'s ready, or let an Uber Direct courier bring it — booked automatically the moment the creator accepts.',
+        points:[P('<b>Live courier quote</b> shown before you pay'),P('Auto-dispatched courier, <b>live-tracked</b> to your door'),P('Free pickup always available')],
+        meta:[meta('Uber Direct'),meta('Sandbox','preview')], screen:scDelivery()},
+      {icon:'📍',label:'Track',tag:'Track',title:'Watch it move — address stays private',
+        lead:'Follow your order through every stage. The creator\'s pickup address only unlocks once they accept your order.',
+        points:[P('Lifecycle: <b>Placed → Accepted → Ready → Completed</b>'),P('Address revealed <b>only after acceptance</b>'),P('Auto-decline at 15 min → instant full refund')],
+        meta:[meta('30-min refund window')], screen:scTrack()},
+      {icon:'✉️',label:'Emails',tag:'Stay posted',title:'Receipts & alerts, handled',
+        lead:'Confirmation, acceptance, ready and receipt emails fire automatically — alongside push and SMS.',
+        points:[P('Instant <b>order confirmation + paid receipt</b>'),P('“Accepted”, “Ready” and delivery updates'),P('All transactional mail powered by your order events')],
+        meta:[meta('Email + Push + SMS')], screen:scEmails()},
+      {icon:'⭐',label:'Rate',tag:'Reputation',title:'Rate the vibe',
+        lead:'After completion you score the creator across three dimensions. Both sides rate each other — it builds a trusted Vibe Score.',
+        points:[P('<b>Hospitality · Authenticity · Professionalism</b>'),P('Creators rate you on Respect for Space & Punctuality'),P('Rolls into a public <b>Vibe Score</b>')],
+        meta:[meta('Vibe Engine','preview')], screen:scRating()},
+    ]},
+    creator: {title:'Creator journey', done:'Your kitchen is open for business.', steps:[
+      {icon:'⚡',label:'Sign up',tag:'Onboard',title:'List in minutes, no gatekeeping',
+        lead:'Verify a phone number and you\'re in. Start posting plates right away — payouts simply unlock once KYC is done.',
+        points:[P('One-tap <b>OTP signup</b> via Twilio Verify'),P('<b>List immediately</b> — payouts held until KYC clears'),P('Claim your handle: <b>kder.club/yourname</b>')],
+        meta:[meta('Twilio Verify')], screen:scSignup()},
+      {icon:'🍽️',label:'List a plate',tag:'Plates',title:'Post a plate — Mia writes the copy',
+        lead:'Add photos, set a price and quantity. Mia\'s AI Describe drafts a mouth-watering description so you don\'t stare at a blank box.',
+        points:[P('Up to 5 photos + a 60-sec video'),P('<b>Mia: AI Describe</b> writes the listing for you'),P('Defaults to <b>Draft</b> — publish when you\'re ready')],
+        meta:[meta('Mia · AI Describe')], screen:scListPlate()},
+      {icon:'🤖',label:'Mia',tag:'AI concierge',title:'Mia prices & coaches your business',
+        lead:'Your concierge runs real market research and the math — pricing, food cost, plates vs. catering — and can draft listings on command.',
+        points:[P('“What should I charge for jerk chicken plates?”'),P('Live <b>web-researched pricing</b> + true food-cost math'),P('Turns answers straight into <b>published plates</b>')],
+        meta:[meta('Mia concierge')], screen:scMia()},
+      {icon:'🔔',label:'Orders',tag:'Fulfill',title:'Accept orders without opening the app',
+        lead:'Orders arrive by push and SMS within seconds. Accept or decline right from the alert — your address only reveals on accept.',
+        points:[P('Accept/decline from <b>push or SMS reply</b>'),P('<b>15-minute</b> timer → auto-decline + refund'),P('Buyer details + notes on every order')],
+        meta:[meta('Push + SMS')], screen:scOrderMgmt()},
+      {icon:'🎉',label:'Catering',tag:'Catering',title:'Run catering like a pro',
+        lead:'Bigger jobs get a real pipeline: inquiry, your quote, a deposit to lock the date, then the balance auto-charges before the event.',
+        points:[P('<b>Inquiry → Quote → Deposit → Balance</b>'),P('Availability calendar with <b>blackout dates</b>'),P('Balance collected automatically before the event')],
+        meta:[meta('Catering pipeline')], screen:scCatering()},
+      {icon:'💸',label:'Get paid',tag:'Payouts',title:'Keep more, paid your way',
+        lead:'You keep 90% — a flat 10% platform fee, nothing else. Cash out standard for free or instantly for 1%. Stripe runs payouts, KYC and your taxes.',
+        points:[P('<b>Standard (free, 2–3 days)</b> or <b>Instant (1%, ~30 min)</b>'),P('You keep <b>90%</b> — flat <b>10% platform fee</b>, server-side'),P('<b>1099 filed automatically</b> by Stripe')],
+        meta:[meta('Stripe Connect','stripe'),meta('Auto 1099','stripe')], screen:scPayout()},
+      {icon:'📊',label:'Cleo VII',tag:'Analytics',title:'Cleopatra VII reads your numbers',
+        lead:'Your Super Dashboard turns orders into insight — what\'s selling, when, and what to do next. Export anytime for your books.',
+        points:[P('GMV, orders & average-order KPIs'),P('Plain-English <b>insights and next moves</b>'),P('<b>Export CSV</b> for accounting')],
+        meta:[meta('Cleopatra VII')], screen:scCleoDash()},
+    ]},
+    restaurant: {title:'Restaurant journey', done:'Your restaurant is live on KDER.', steps:[
+      {icon:'✅',label:'Onboard',tag:'Onboard',title:'Bring your kitchen online',
+        lead:'A guided checklist takes you from business verification to a live storefront — all under KDER\'s member-to-member service framework.',
+        points:[P('Business + <b>identity (KYC)</b> verification'),P('<b>Stripe Connect Express</b> for payouts'),P('Address stays private until each order is accepted')],
+        meta:[meta('Stripe Identity','stripe')], screen:scRestOnboard()},
+      {icon:'📋',label:'Bulk menu',tag:'Menu',title:'Import your whole menu at once',
+        lead:'Don\'t hand-type 24 items. Bulk-import from a spreadsheet, set each live or draft, and tag catering trays in one pass.',
+        points:[P('<b>CSV / spreadsheet import</b>'),P('Live / Draft toggle per item'),P('Tag plates vs. <b>catering trays</b>')],
+        meta:[meta('Bulk tools')], screen:scBulkMenu()},
+      {icon:'🏪',label:'Storefront',tag:'Go live',title:'Your branded storefront',
+        lead:'A shareable kder.club page with plates, catering, links and reputation — the same clean storefront creators get, built for volume.',
+        points:[P('Shareable <b>kder.club/yourname</b> link'),P('Plates, catering & social links in one place'),P('Public browsing, members-only ordering')],
+        meta:[meta('Public storefront')], screen:scStorefront('plates')},
+      {icon:'🔔',label:'Orders',tag:'Operate',title:'Handle orders at volume',
+        lead:'Every order hits the same fast accept/decline flow with the 15-minute timer — easy to run from the line during a rush.',
+        points:[P('Accept/decline from <b>push or SMS</b>'),P('Auto-decline + refund protects buyers'),P('Buyer notes & item breakdown per ticket')],
+        meta:[meta('Push + SMS')], screen:scOrderMgmt()},
+      {icon:'🎉',label:'Catering',tag:'Catering',title:'Catering & large orders',
+        lead:'Quote big jobs, take a deposit to lock the date, and let the balance auto-charge before the event — same pipeline, restaurant scale.',
+        points:[P('Quote → deposit → auto balance charge'),P('Availability calendar + <b>blackout dates</b>'),P('Catering trays tagged in your menu')],
+        meta:[meta('Catering pipeline')], screen:scCatering()},
+      {icon:'🚗',label:'Delivery',tag:'Delivery',title:'Delivery via Uber Direct',
+        lead:'Offer courier delivery without your own drivers. Uber Direct quotes at checkout and auto-dispatches when you accept.',
+        points:[P('<b>Live courier quotes</b> at checkout'),P('Auto-dispatch on accept, <b>live-tracked</b>'),P('Pickup always available too')],
+        meta:[meta('Uber Direct'),meta('Sandbox','preview')], screen:scDelivery()},
+      {icon:'💸',label:'Payouts',tag:'Payouts',title:'Payouts, fees & 1099',
+        lead:'Same Stripe rails: keep 90% on a flat 10% platform fee, free standard or 1% instant payouts, and automated tax forms for your business.',
+        points:[P('Keep <b>90%</b> — flat <b>10% platform fee</b>, server-side'),P('Standard (free) or <b>Instant (1%)</b>'),P('<b>1099 filed automatically</b>')],
+        meta:[meta('Stripe Connect','stripe'),meta('Auto 1099','stripe')], screen:scPayout()},
+      {icon:'📊',label:'Cleo VII',tag:'Analytics',title:'Ops analytics with Cleopatra VII',
+        lead:'See peak days, top items and revenue trends — then export for your accountant. Cleo flags what to do next.',
+        points:[P('GMV, order & AOV KPIs by period'),P('Peak-day & top-item insights'),P('<b>Export CSV</b> for your books')],
+        meta:[meta('Cleopatra VII')], screen:scCleoDash()},
+    ]}
+  };
+
+  /* ---------- state + render ---------- */
+  let persona='member', idx=0;
+
+  const view=$('#screenView'), toc=$('#toc'), railTitle=$('#railTitle'),
+        tag=$('#stepTag'), title=$('#stepTitle'), lead=$('#stepLead'),
+        pts=$('#stepPoints'), metaRow=$('#stepMeta'), dots=$('#dots'),
+        backBtn=$('#backBtn'), nextBtn=$('#nextBtn');
+
+  function buildTOC(){
+    const steps=TOURS[persona].steps;
+    railTitle.textContent=TOURS[persona].title;
+    toc.innerHTML=steps.map((s,i)=>`<li data-i="${i}"><span class="num"><span>${i+1}</span></span>${s.label}</li>`).join('');
+    toc.querySelectorAll('li').forEach(li=>li.addEventListener('click',()=>{idx=+li.dataset.i;render();}));
+  }
+
+  function render(){
+    const tour=TOURS[persona], steps=tour.steps, last=idx===steps.length;
+    // TOC states
+    toc.querySelectorAll('li').forEach((li,i)=>{
+      li.classList.toggle('on',i===idx);
+      li.classList.toggle('done',i<idx);
+    });
+    if(last){
+      // completion
+      tag.textContent='Complete'; title.textContent='You\'ve seen the whole flow';
+      lead.textContent=tour.done; pts.innerHTML=''; metaRow.innerHTML='';
+      view.className='view'; view.innerHTML=scDone(tour.done);
+      view.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{switchPersona(b.dataset.go);}));
+    } else {
+      const s=steps[idx];
+      tag.textContent=s.tag; title.textContent=s.title; lead.textContent=s.lead;
+      pts.innerHTML=s.points.map(p=>`<li>${CHK}<span>${p.html}</span></li>`).join('');
+      metaRow.innerHTML=s.meta.map(m=>`<span class="${m.cls==='preview'?'preview':'mtag '+m.cls}">${m.text}</span>`).join('');
+      view.className='view'; void view.offsetWidth; view.innerHTML='<div class="anim">'+s.screen+'</div>';
+    }
+    // dots
+    dots.innerHTML=steps.map((_,i)=>`<i class="${i===idx?'on':''}"></i>`).join('')+`<i class="${last?'on':''}"></i>`;
+    backBtn.disabled=idx===0;
+    nextBtn.innerHTML = last
+      ? 'Restart<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.3M3 4v4h4"/></svg>'
+      : 'Next<svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
+    view.scrollTop=0;
+  }
+
+  function switchPersona(p){
+    persona=p; idx=0;
+    document.querySelectorAll('#seg button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+    buildTOC(); render();
+  }
+
+  /* ---------- events ---------- */
+  document.querySelectorAll('#seg button').forEach(b=>b.addEventListener('click',()=>switchPersona(b.dataset.p)));
+  $('#restart').addEventListener('click',()=>{idx=0;render();});
+  backBtn.addEventListener('click',()=>{if(idx>0){idx--;render();}});
+  nextBtn.addEventListener('click',()=>{
+    const len=TOURS[persona].steps.length;
+    if(idx>=len){idx=0;} else {idx++;}
+    render();
+  });
+
+  // live clock
+  function tick(){const d=new Date();$('#clock').textContent=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}
+  tick(); setInterval(tick,30000);
+
+  buildTOC(); render();
+})();
+</script>
+</body>
+</html>
