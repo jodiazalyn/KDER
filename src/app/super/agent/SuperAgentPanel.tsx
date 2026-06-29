@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { X, Mic, ArrowUp, Loader2, Asterisk, ImagePlus } from "lucide-react";
 import type { PlateCard, CreatorCard } from "@/lib/admin/agent-tools";
 import { PlateResultCard, CreatorResultCard } from "./AgentCards";
-import { useVoiceInput } from "./useVoiceInput";
+import { useVoiceInput } from "@/lib/voice/useVoiceInput";
 
 /* ────────────────────────────────────────────────────────────────
  * Super Dashboard "Ask-the-data" analyst — styled to look and feel

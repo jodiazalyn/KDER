@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import { CalendarRange, ShoppingCart, UtensilsCrossed, Sparkles } from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import { CreatorReviews } from "@/components/storefront/CreatorReviews";
 import {
@@ -52,6 +52,17 @@ const CartSheet = dynamic(
   () => import("@/components/storefront/CartSheet").then((m) => m.CartSheet),
   { ssr: false }
 );
+// Drive Thru — the flagship voice/photo food concierge. Lazy: the voice +
+// streaming machinery only loads once a visitor actually opens it.
+const ConciergeSheet = dynamic(
+  () =>
+    import("@/components/storefront/ConciergeSheet").then(
+      (m) => m.ConciergeSheet
+    ),
+  { ssr: false }
+);
+type ConciergePlateCardT =
+  import("@/lib/concierge/concierge-tools").ConciergePlateCard;
 type CheckoutSheetOrderDetails =
   import("@/components/storefront/CheckoutSheet").OrderDetails;
 const CheckoutSheet = dynamic(
@@ -103,6 +114,7 @@ export function StorefrontClient({
   const [selectedPlate, setSelectedPlate] = useState<Listing | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [conciergeOpen, setConciergeOpen] = useState(false);
   // Track first-interaction with each lazily-loaded sheet so the dynamic
   // chunks stay out of the critical path until a user actually engages.
   const [hasOpenedCart, setHasOpenedCart] = useState(false);
@@ -146,6 +158,51 @@ export function StorefrontClient({
       tabStripRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, []);
+
+  // Bridge a Drive Thru concierge pick into a creator's EXISTING order flow.
+  // The concierge searches the whole marketplace, so a pick may belong to this
+  // creator (open the plate sheet inline) or another (navigate to their
+  // storefront with ?plate=<id> so the same sheet opens there). We never build
+  // a mixed cart — each order still pays out to exactly one creator.
+  const handlePickConciergePlate = useCallback(
+    (plate: ConciergePlateCardT) => {
+      const pickedHandle = (plate.creator.handle ?? "")
+        .replace(/^@/, "")
+        .toLowerCase();
+      const isThisCreator = pickedHandle === handle.toLowerCase();
+      if (isThisCreator) {
+        const listing = listings.find((l) => l.id === plate.id);
+        if (listing) {
+          setConciergeOpen(false);
+          setActiveTab("plates");
+          setSelectedPlate(listing);
+          return;
+        }
+      }
+      // Different creator (or not in this page's listings): hand off to that
+      // storefront and deep-link straight to the plate.
+      if (pickedHandle) {
+        setConciergeOpen(false);
+        router.push(`/@${pickedHandle}?plate=${encodeURIComponent(plate.id)}`);
+      }
+    },
+    [handle, listings, router]
+  );
+
+  // Consume a `?plate=<id>` deep-link (e.g. arriving from a concierge pick on
+  // another storefront): open that plate's detail sheet, then strip the param
+  // so a reload doesn't reopen it.
+  useEffect(() => {
+    const plateId = searchParams.get("plate");
+    if (!plateId) return;
+    const listing = listings.find((l) => l.id === plateId);
+    if (listing) {
+      setActiveTab("plates");
+      setSelectedPlate(listing);
+    }
+    router.replace(`/@${handle}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, listings]);
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -603,6 +660,30 @@ export function StorefrontClient({
           onStartOrder={handleStartOrder}
         />
 
+        {/* Drive Thru nudge — the flagship concierge, surfaced on EVERY
+            storefront. Lets a visitor describe / show what they want and
+            order from across the whole marketplace, not just this kitchen. */}
+        <button
+          type="button"
+          onClick={() => setConciergeOpen(true)}
+          className="group mx-4 mb-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/[0.04] px-4 py-3 text-left transition active:scale-[0.99]"
+        >
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
+            <Sparkles size={20} strokeWidth={2.3} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-foreground">
+              Ask Drive Thru
+            </span>
+            <span className="block truncate text-xs text-muted-foreground">
+              Tell me what you&apos;re craving — I&apos;ll find it across KDER.
+            </span>
+          </span>
+          <span className="flex-shrink-0 rounded-full bg-foreground/[0.06] px-3 py-1.5 text-xs font-bold text-foreground">
+            Tap to talk
+          </span>
+        </button>
+
         {/* Storefront paused banner */}
         {!creator.storefront_active && (
           <div className="glass-card mx-4 mb-4 border-amber-500/30 bg-amber-500/10 p-3 text-center">
@@ -993,6 +1074,30 @@ export function StorefrontClient({
           copy={COACHMARK_COPY["customer-catering-tab"]}
           targetRef={cateringTabRef}
           showDelayMs={600}
+        />
+      )}
+
+      {/* Drive Thru floating launcher — always reachable while scrolling, so
+          the flagship concierge is one tap away from anywhere on the page.
+          Sits bottom-right, clear of the centered cart/catering bars. Hidden
+          while the concierge is open. */}
+      {!conciergeOpen && (
+        <button
+          type="button"
+          onClick={() => setConciergeOpen(true)}
+          aria-label="Ask Drive Thru"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white shadow-[0_8px_28px_rgba(34,197,94,0.45)] transition-transform active:scale-90"
+        >
+          <Sparkles size={24} strokeWidth={2.3} />
+        </button>
+      )}
+
+      {/* Drive Thru concierge sheet — lazy-mounted on first open. */}
+      {conciergeOpen && (
+        <ConciergeSheet
+          open={conciergeOpen}
+          onClose={() => setConciergeOpen(false)}
+          onPickPlate={handlePickConciergePlate}
         />
       )}
     </main>

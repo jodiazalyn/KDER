@@ -76,7 +76,11 @@ export function MediaCarousel({
   return (
     <div
       className="relative overflow-hidden bg-black"
-      style={{ aspectRatio: hasVideo ? "9/16" : "16/10" }}
+      // Video plays in a compact YouTube-style 16:9 landscape player so it
+      // doesn't swallow the screen — the rest of the order flow (name, price,
+      // qty, reviews) reads beneath it like a YouTube watch page. Photo-only
+      // listings keep the taller 16:10 hero.
+      style={{ aspectRatio: hasVideo ? "16/9" : "16/10" }}
     >
       {/* Scroll container — CSS scroll-snap, no JS library */}
       <div
@@ -100,7 +104,10 @@ export function MediaCarousel({
                   muted={muted}
                   loop
                   playsInline
-                  className="h-full w-full object-cover"
+                  // contain (not cover) so a portrait clip shows whole inside
+                  // the 16:9 player, letterboxed on black — the YouTube look —
+                  // instead of being cropped to fill a giant box.
+                  className="h-full w-full object-contain"
                 />
                 <button
                   type="button"
