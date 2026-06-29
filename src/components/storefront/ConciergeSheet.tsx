@@ -516,8 +516,13 @@ export function ConciergeSheet({
       <div className="relative flex h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border border-border bg-background shadow-2xl sm:h-[85vh] sm:rounded-3xl">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-            <Sparkles size={18} strokeWidth={2.4} />
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/kder-logo.png"
+              alt="KDER"
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-foreground">
@@ -611,8 +616,13 @@ export function ConciergeSheet({
                 if (entry.kind === "assistant") {
                   return (
                     <div key={i} className="flex gap-2.5">
-                      <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-                        <Sparkles size={13} strokeWidth={2.4} />
+                      <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-0.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/icons/kder-logo.png"
+                          alt="KDER"
+                          className="h-full w-full object-contain"
+                        />
                       </div>
                       <p className="whitespace-pre-wrap pt-0.5 text-sm leading-relaxed text-foreground">
                         {entry.text}

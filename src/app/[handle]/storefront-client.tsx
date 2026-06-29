@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarRange, ShoppingCart, UtensilsCrossed, Sparkles } from "lucide-react";
+import { CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import { CreatorReviews } from "@/components/storefront/CreatorReviews";
 import {
@@ -668,8 +668,13 @@ export function StorefrontClient({
           onClick={() => setConciergeOpen(true)}
           className="group mx-4 mb-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/[0.04] px-4 py-3 text-left transition active:scale-[0.99]"
         >
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-            <Sparkles size={20} strokeWidth={2.3} />
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-1.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/kder-logo.png"
+              alt="KDER"
+              className="h-full w-full object-contain"
+            />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-bold text-foreground">
@@ -1086,9 +1091,14 @@ export function StorefrontClient({
           type="button"
           onClick={() => setConciergeOpen(true)}
           aria-label="Ask Drive Thru"
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white shadow-[0_8px_28px_rgba(34,197,94,0.45)] transition-transform active:scale-90"
+          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-2.5 shadow-[0_8px_28px_rgba(34,197,94,0.45)] transition-transform active:scale-90"
         >
-          <Sparkles size={24} strokeWidth={2.3} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icons/kder-logo.png"
+            alt="Ask Drive Thru"
+            className="h-full w-full object-contain"
+          />
         </button>
       )}
 
