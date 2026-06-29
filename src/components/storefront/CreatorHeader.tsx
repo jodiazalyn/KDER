@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import Image from "next/image";
-import { Globe, MessageCircle, Share2 } from "lucide-react";
+import { Globe, MessageCircle, Share2, Star, ShoppingBag } from "lucide-react";
 import type { CreatorProfile } from "@/lib/creator-store";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -10,21 +10,35 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 interface CreatorHeaderProps {
   creator: CreatorProfile;
   onMessageClick: () => void;
+  /** Jumps the buyer to the Menu tab + scrolls the tab strip into view.
+   *  Wired to the primary "Start order" action introduced by the redesign. */
+  onStartOrder: () => void;
 }
 
 /**
- * Instagram-style profile header for the public `/@handle` storefront.
+ * Storefront profile header — Uber-Eats structure, Instagram aesthetic.
  *
- * Layout, top-down:
- *   - Row: 80px circular avatar on the left, 3-column stats row on the right
- *     (Plates / Orders / Rating). Stats are dense and scannable.
- *   - Display name (bold), @handle (muted green), bio (two-line clamp).
- *   - CTA row: [Message] [Share] side-by-side.
+ * Redesign layout, top-down:
+ *   - Cover band (the creator's photo, blurred + darkened as an ambient
+ *     backdrop; branded gradient fallback when there's no photo). Share +
+ *     theme toggle float top-right over the cover.
+ *   - Profile block overlapping the cover: gradient-ringed avatar, name,
+ *     @handle, bio.
+ *   - Social link pills (Instagram / TikTok / Website / Facebook / WhatsApp).
+ *   - Meta row: rating · neighborhood.
+ *   - Stats strip: Vibe Score / Orders / Plates.
+ *   - Action row: [Start order] (primary) + [Message] (ghost).
  *
- * No hero banner, no gradient band. Sits on the page background — colours come
- * from theme tokens so the header tracks the active (light/dark) theme.
+ * Every colour comes from theme tokens (or the theme-aware glass utilities),
+ * so the whole header renders correctly in both light and dark mode. The only
+ * fixed-colour element is the cover overlay + its icon chips, which sit over
+ * photographic imagery in either theme.
  */
-export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
+export function CreatorHeader({
+  creator,
+  onMessageClick,
+  onStartOrder,
+}: CreatorHeaderProps) {
   const handleShare = useCallback(async () => {
     if (typeof window === "undefined") return;
     const url = window.location.href;
@@ -50,147 +64,224 @@ export function CreatorHeader({ creator, onMessageClick }: CreatorHeaderProps) {
     }
   }, [creator.display_name]);
 
+  const hasReviews = creator.review_count > 0 && creator.review_rating_avg != null;
+  const neighborhood = creator.neighborhoods[0]?.name ?? null;
+
   return (
-    <header className="px-4 pt-6 pb-5">
-      {/* Avatar + stats row */}
-      <div className="flex items-center gap-6">
-        {creator.photo_url ? (
+    <header>
+      {/* ---- Cover band ---- */}
+      <div className="relative h-[180px] w-full overflow-hidden bg-gradient-to-br from-primary/40 via-primary/15 to-background">
+        {creator.photo_url && (
           <Image
             src={creator.photo_url}
-            alt={creator.display_name}
-            width={80}
-            height={80}
-            className="h-20 w-20 flex-shrink-0 rounded-full border border-border object-cover"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="640px"
             priority
+            className="scale-110 object-cover opacity-70 blur-2xl"
           />
-        ) : (
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full border border-border bg-primary/15 text-3xl font-bold text-primary">
-            {creator.display_name.charAt(0).toUpperCase()}
-          </div>
         )}
+        {/* Legibility overlay — darkens the top (for the icon chips) and fades
+            the bottom into the page background so the profile block blends in. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-background" />
 
-        <div className="flex flex-1 justify-around">
-          <Stat value={creator.total_plates.toString()} label="Plates" />
-          <Stat
-            value={
-              creator.review_count > 0 && creator.review_rating_avg != null
-                ? `${creator.review_rating_avg.toFixed(1)}★`
-                : "New"
-            }
-            label={
-              creator.review_count > 0
-                ? `Rating · ${creator.review_count}`
-                : "Rating"
-            }
-          />
+        {/* Floating actions over the cover — share + theme toggle */}
+        <div className="absolute inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex items-center justify-end gap-2 px-4">
+          <button
+            type="button"
+            onClick={handleShare}
+            aria-label="Share profile"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/35 text-white backdrop-blur-md transition-transform active:scale-90"
+          >
+            <Share2 size={18} />
+          </button>
+          <ThemeToggle className="h-10 w-10 border border-white/15 !bg-black/35 text-white backdrop-blur-md" />
         </div>
       </div>
 
-      {/* Name + handle + bio */}
-      <div className="mt-4">
-        <h1 className="truncate text-lg font-bold leading-tight text-foreground">
+      {/* ---- Profile block (overlaps the cover) ---- */}
+      <div className="relative z-10 -mt-12 px-5">
+        {/* Gradient-ringed avatar */}
+        <div className="inline-block rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+          {creator.photo_url ? (
+            <Image
+              src={creator.photo_url}
+              alt={creator.display_name}
+              width={88}
+              height={88}
+              className="h-[88px] w-[88px] rounded-full border-[3px] border-background object-cover"
+              priority
+            />
+          ) : (
+            <div className="flex h-[88px] w-[88px] items-center justify-center rounded-full border-[3px] border-background bg-primary/15 text-3xl font-bold text-primary">
+              {creator.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+
+        {/* Name + handle + bio */}
+        <h1 className="mt-3 break-words text-2xl font-extrabold leading-tight tracking-[-0.02em] text-foreground">
           {creator.display_name}
         </h1>
-        <p className="truncate text-sm font-medium text-primary">
-          @{creator.handle}
-        </p>
+        <p className="mt-1 text-sm font-medium text-primary">@{creator.handle}</p>
         {creator.bio && (
-          <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-muted-foreground line-clamp-3">
+          <p className="mt-3 whitespace-pre-line break-words text-sm leading-relaxed text-foreground/80 line-clamp-3">
             {creator.bio}
           </p>
         )}
 
-        {/* Social links */}
-        {(creator.instagram_handle || creator.tiktok_handle || creator.website_url || creator.facebook_handle || creator.whatsapp_number) && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Social link pills */}
+        {(creator.instagram_handle ||
+          creator.tiktok_handle ||
+          creator.website_url ||
+          creator.facebook_handle ||
+          creator.whatsapp_number) && (
+          <div className="mt-4 flex flex-wrap gap-2">
             {creator.instagram_handle && (
-              <a
+              <LinkPill
                 href={`https://instagram.com/${creator.instagram_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <InstagramIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate max-w-[160px]">@{creator.instagram_handle}</span>
-              </a>
+                icon={<InstagramIcon className="h-[15px] w-[15px]" />}
+                label="Instagram"
+              />
             )}
             {creator.tiktok_handle && (
-              <a
+              <LinkPill
                 href={`https://tiktok.com/@${creator.tiktok_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <TikTokIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate max-w-[160px]">@{creator.tiktok_handle}</span>
-              </a>
+                icon={<TikTokIcon className="h-[15px] w-[15px]" />}
+                label="TikTok"
+              />
             )}
             {creator.website_url && (
-              <a
+              <LinkPill
                 href={creator.website_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Globe size={16} className="flex-shrink-0" />
-                <span className="truncate max-w-[160px]">{displayUrl(creator.website_url)}</span>
-              </a>
+                icon={<Globe size={15} className="text-primary" />}
+                label="Website"
+              />
             )}
             {creator.facebook_handle && (
-              <a
+              <LinkPill
                 href={`https://facebook.com/${creator.facebook_handle}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <FacebookIcon className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate max-w-[160px]">@{creator.facebook_handle}</span>
-              </a>
+                icon={<FacebookIcon className="h-[15px] w-[15px]" />}
+                label="Facebook"
+              />
             )}
             {creator.whatsapp_number && (
-              <a
+              <LinkPill
                 href={`https://wa.me/${creator.whatsapp_number.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <WhatsAppIcon className="h-4 w-4 flex-shrink-0" />
-                <span>WhatsApp</span>
-              </a>
+                icon={<WhatsAppIcon className="h-[15px] w-[15px]" />}
+                label="WhatsApp"
+              />
             )}
           </div>
         )}
-      </div>
 
-      {/* CTA row — Message + Share + theme toggle. Bumped 40→44px (Apple HIG)
-          and migrated to glass-btn-pill for the iOS Liquid Glass material
-          (now theme-aware: frosted-white on light, dark glass on dark). */}
-      <div className="mt-4 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onMessageClick}
-          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-foreground transition-all active:scale-[0.98]"
-        >
-          <MessageCircle size={15} />
-          Message
-        </button>
-        <button
-          type="button"
-          onClick={handleShare}
-          className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-1.5 text-sm font-semibold text-foreground transition-all active:scale-[0.98]"
-          aria-label="Share profile"
-        >
-          <Share2 size={15} />
-          Share
-        </button>
-        <ThemeToggle className="h-11 w-11 flex-shrink-0 text-foreground" />
+        {/* Meta row — rating · neighborhood */}
+        {(hasReviews || neighborhood) && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm font-medium text-muted-foreground">
+            {hasReviews && (
+              <span className="flex items-center gap-1 font-bold text-foreground">
+                <Star size={15} className="fill-primary text-primary" />
+                {creator.review_rating_avg!.toFixed(1)}
+              </span>
+            )}
+            {hasReviews && neighborhood && (
+              <span className="h-[3px] w-[3px] rounded-full bg-muted-foreground/50" />
+            )}
+            {neighborhood && <span>{neighborhood} · Houston</span>}
+          </div>
+        )}
+
+        {/* Stats strip — Vibe Score / Orders / Plates */}
+        <div className="mt-4 flex gap-2.5">
+          <StatTile
+            value={
+              <span className="inline-flex items-center gap-1">
+                <Star size={14} className="fill-primary text-primary" />
+                {creator.vibe_score != null ? Math.round(creator.vibe_score) : "—"}
+              </span>
+            }
+            label="Vibe Score"
+          />
+          <StatTile value={formatCount(creator.total_orders)} label="Orders" />
+          <StatTile
+            value={<span className="text-primary">{creator.total_plates}</span>}
+            label="Plates"
+          />
+        </div>
+
+        {/* Action row — Start order (primary) + Message (ghost) */}
+        <div className="mt-[18px] flex gap-2.5">
+          <button
+            type="button"
+            onClick={onStartOrder}
+            className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_6px_22px_rgba(34,197,94,0.4)] transition-transform active:scale-[0.98]"
+          >
+            <ShoppingBag size={16} />
+            Start order
+          </button>
+          <button
+            type="button"
+            onClick={onMessageClick}
+            className="glass-btn-pill flex h-11 flex-1 items-center justify-center gap-2 text-sm font-bold text-foreground transition-transform active:scale-[0.98]"
+          >
+            <MessageCircle size={16} />
+            Message
+          </button>
+        </div>
       </div>
     </header>
   );
 }
 
-function displayUrl(url: string) {
-  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+function LinkPill({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex h-[34px] items-center gap-2 rounded-full border border-border bg-foreground/[0.06] px-3.5 text-[13px] font-semibold text-foreground transition-colors hover:bg-foreground/[0.1]"
+    >
+      {icon}
+      <span>{label}</span>
+    </a>
+  );
+}
+
+function StatTile({
+  value,
+  label,
+}: {
+  value: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex-1 rounded-2xl border border-border bg-foreground/[0.04] px-2.5 py-3 text-center">
+      <div className="text-lg font-extrabold leading-none tracking-[-0.02em] text-foreground">
+        {value}
+      </div>
+      <div className="mt-1.5 text-[10.5px] uppercase tracking-[0.06em] text-muted-foreground">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+/** Compact count formatting — 1400 → "1.4k", 950 → "950". */
+function formatCount(n: number): string {
+  if (n >= 1000) {
+    const k = n / 1000;
+    return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+  }
+  return n.toString();
 }
 
 function InstagramIcon({ className }: { className?: string }) {
@@ -222,28 +313,5 @@ function WhatsAppIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
     </svg>
-  );
-}
-
-function Stat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-xl font-bold leading-tight text-foreground">
-        {value}
-      </span>
-      <span className="mt-0.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      {/* Subtle KDER flourish under each stat so the column doesn't feel bare.
-          Low opacity + small size keeps the number and label as the focal point. */}
-      <Image
-        src="/icons/kder-logo.png"
-        alt=""
-        width={16}
-        height={16}
-        aria-hidden="true"
-        className="mt-1.5 h-4 w-4 opacity-30"
-      />
-    </div>
   );
 }

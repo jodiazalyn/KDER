@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Grid3x3, CalendarRange, ShoppingCart, UtensilsCrossed, Star } from "lucide-react";
+import { CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import { CreatorReviews } from "@/components/storefront/CreatorReviews";
 import {
@@ -136,6 +136,16 @@ export function StorefrontClient({
   // Coachmark anchor for the CATERING tab — fires once the first time
   // a visitor lands on a creator that has catering listings.
   const cateringTabRef = useRef<HTMLButtonElement>(null);
+  // Scroll target for the "Start order" action in the redesigned header.
+  // Tapping Start order activates the Menu tab and brings the (sticky) tab
+  // strip to the top of the viewport so the plate list is immediately in view.
+  const tabStripRef = useRef<HTMLDivElement>(null);
+  const handleStartOrder = useCallback(() => {
+    setActiveTab("plates");
+    requestAnimationFrame(() => {
+      tabStripRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   // Subscribe to auth changes so signup-while-on-storefront propagates
   // (e.g. customer taps "Buy now" → auth flow → returns to this page).
@@ -474,24 +484,53 @@ export function StorefrontClient({
   );
 
   // Tab strip config. Plates + Reviews are always shown; Catering is
-  // inserted between them only when the creator offers catering.
-  const storefrontTabs = useMemo(
-    () =>
-      [
-        { key: "plates" as const, label: "Plates", Icon: Grid3x3 },
-        ...(cateringListings.length > 0
-          ? [
-              {
-                key: "catering" as const,
-                label: "Catering",
-                Icon: CalendarRange,
-              },
-            ]
-          : []),
-        { key: "reviews" as const, label: "Reviews", Icon: Star },
-      ],
-    [cateringListings.length]
-  );
+  // inserted between them only when the creator offers catering. Each tab
+  // carries a small count sublabel (redesign): plate count, catering
+  // entry price, and the review rating · count.
+  const storefrontTabs = useMemo(() => {
+    const plateCount = plateListings.length;
+    const minCateringPrice =
+      cateringListings.length > 0
+        ? Math.min(...cateringListings.map((l) => l.price))
+        : null;
+    const reviewSub =
+      creator?.review_count && creator.review_count > 0 && creator.review_rating_avg != null
+        ? `${creator.review_rating_avg.toFixed(1)} · ${creator.review_count}`
+        : "New";
+    return [
+      {
+        key: "plates" as const,
+        label: "Menu",
+        count: `${plateCount} ${plateCount === 1 ? "plate" : "plates"}`,
+      },
+      ...(cateringListings.length > 0
+        ? [
+            {
+              key: "catering" as const,
+              label: "Catering",
+              count:
+                minCateringPrice != null
+                  ? `From $${
+                      Number.isInteger(minCateringPrice)
+                        ? minCateringPrice
+                        : minCateringPrice.toFixed(2)
+                    }`
+                  : "",
+            },
+          ]
+        : []),
+      {
+        key: "reviews" as const,
+        label: "Reviews",
+        count: reviewSub,
+      },
+    ];
+  }, [
+    plateListings.length,
+    cateringListings,
+    creator?.review_count,
+    creator?.review_rating_avg,
+  ]);
 
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
@@ -556,8 +595,13 @@ export function StorefrontClient({
           </div>
         )}
 
-        {/* Instagram-style profile header (avatar + stats row + CTAs) */}
-        <CreatorHeader creator={creator} onMessageClick={handleMessageClick} />
+        {/* Redesigned storefront header (cover + floating profile + stats +
+            Start order / Message actions). */}
+        <CreatorHeader
+          creator={creator}
+          onMessageClick={handleMessageClick}
+          onStartOrder={handleStartOrder}
+        />
 
         {/* Storefront paused banner */}
         {!creator.storefront_active && (
@@ -572,13 +616,13 @@ export function StorefrontClient({
             are always present; Catering only appears when the creator
             has ≥1 catering listing. */}
         <div
+          ref={tabStripRef}
           role="tablist"
           aria-label="Storefront sections"
-          className="flex items-stretch border-y border-border"
+          className="sticky top-0 z-10 flex gap-1.5 border-b border-border bg-background/85 px-3.5 py-3 backdrop-blur-md"
         >
           {storefrontTabs.map((tab) => {
             const isActive = activeTab === tab.key;
-            const Icon = tab.Icon;
             return (
               <button
                 key={tab.key}
@@ -588,14 +632,23 @@ export function StorefrontClient({
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "flex h-12 flex-1 items-center justify-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-colors",
+                  "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-sm font-bold transition-colors",
                   isActive
-                    ? "border-b-2 border-primary text-foreground"
-                    : "border-b-2 border-transparent text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground/[0.06] text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <Icon size={14} />
                 {tab.label}
+                {tab.count && (
+                  <span
+                    className={cn(
+                      "text-[11px] font-semibold",
+                      isActive ? "text-primary" : "text-muted-foreground/70"
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                )}
               </button>
             );
           })}
