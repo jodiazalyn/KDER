@@ -118,6 +118,12 @@ export function ConciergeSheet({
   const voiceModeRef = useRef(false);
   const prevPendingRef = useRef(false);
   const lastAssistantRef = useRef("");
+  // Mic gesture state — distinguishes a quick TAP (hands-free toggle) from a
+  // PRESS-AND-HOLD (push-to-talk: listen while held, send on release). Mirrors
+  // the founders' Cleopatra VII voice button exactly.
+  const pressStartRef = useRef<number | null>(null);
+  const startedOnPressRef = useRef(false);
+  const pointerHandledRef = useRef(false);
 
   const started = entries.length > 0;
 
@@ -374,6 +380,129 @@ export function ConciergeSheet({
 
   if (!open) return null;
 
+  // The large mic is the primary way to talk to Drive Thru — shown big on the
+  // empty state and pinned above the composer mid-conversation, so a follow-up
+  // is always one tap away. One mic, two gestures: a quick TAP toggles the
+  // hands-free loop (tap to start, tap again to send); a PRESS-AND-HOLD is
+  // push-to-talk (listen while held, send on release). Pointer capture keeps
+  // the release on the button even if the finger drifts off.
+  const HOLD_MS = 350;
+  const onMicPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    pointerHandledRef.current = true;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // setPointerCapture can throw on some engines — non-fatal.
+    }
+    pressStartRef.current = Date.now();
+    if (!voice.listening) {
+      startedOnPressRef.current = true;
+      voiceModeRef.current = true;
+      voice.start();
+    } else {
+      startedOnPressRef.current = false;
+    }
+  };
+  const endMicPress = () => {
+    if (pressStartRef.current == null) return;
+    const held = Date.now() - pressStartRef.current;
+    pressStartRef.current = null;
+    if (held >= HOLD_MS) {
+      voice.stop(); // push-to-talk release → finalize + send
+    } else if (!startedOnPressRef.current) {
+      voice.stop(); // quick tap while already listening → send
+    }
+    // else: a quick tap that just opened the mic → stay in hands-free mode.
+  };
+  const onMicClick = () => {
+    // Keyboard (Enter/Space) fires click with no pointer events; pointer
+    // gestures are handled above, so swallow their trailing synthetic click.
+    if (pointerHandledRef.current) {
+      pointerHandledRef.current = false;
+      return;
+    }
+    voiceModeRef.current = true;
+    voice.toggle();
+  };
+
+  const bigMic = (variant: "hero" | "footer") => {
+    if (!voice.supported) return null;
+    const hero = variant === "hero";
+    const counting = voice.countdownProgress > 0;
+    const idle = !voice.listening && !counting;
+    // SVG ring circumference for r=46 in a 100×100 viewBox.
+    const RING = 2 * Math.PI * 46;
+    return (
+      <div className={`flex flex-col items-center ${hero ? "gap-3" : "gap-1.5"}`}>
+        <button
+          type="button"
+          onPointerDown={onMicPointerDown}
+          onPointerUp={endMicPress}
+          onPointerCancel={endMicPress}
+          onClick={onMicClick}
+          disabled={pending}
+          aria-label={voice.listening ? "Stop and send" : "Speak to Drive Thru"}
+          className={`relative flex items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white transition-all active:scale-95 disabled:opacity-50 ${
+            hero ? "h-24 w-24" : "h-16 w-16"
+          } ${
+            voice.listening
+              ? "shadow-[0_8px_36px_rgba(34,197,94,0.55)]"
+              : "shadow-[0_6px_28px_rgba(34,197,94,0.4)]"
+          }`}
+        >
+          {/* Pulse while actively listening; swap to the countdown ring once
+              they go quiet so they can see (and cancel) the pending send. */}
+          {voice.listening && !counting ? (
+            <span className="absolute inset-0 animate-ping rounded-full bg-[#22C55E]/40" />
+          ) : null}
+          {counting ? (
+            <svg
+              className="absolute inset-0 h-full w-full -rotate-90"
+              viewBox="0 0 100 100"
+            >
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth="6"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="46"
+                fill="none"
+                stroke="white"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={RING}
+                strokeDashoffset={RING * (1 - voice.countdownProgress)}
+              />
+            </svg>
+          ) : null}
+          <Mic size={hero ? 40 : 28} className="relative" strokeWidth={2} />
+        </button>
+        <p
+          className={`font-medium text-foreground ${hero ? "text-sm" : "text-xs"}`}
+        >
+          {counting
+            ? "Sending… keep talking to cancel"
+            : voice.listening
+              ? "Listening… tap to send"
+              : hero
+                ? "Tap to ask out loud"
+                : "Tap to ask a follow-up"}
+        </p>
+        {idle ? (
+          <p className={`text-muted-foreground ${hero ? "text-xs" : "text-[11px]"}`}>
+            Tap for hands-free · hold to push-to-talk
+          </p>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
       {/* Scrim */}
@@ -387,8 +516,13 @@ export function ConciergeSheet({
       <div className="relative flex h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-t-3xl border border-border bg-background shadow-2xl sm:h-[85vh] sm:rounded-3xl">
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-            <Sparkles size={18} strokeWidth={2.4} />
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icons/kder-logo.png"
+              alt="KDER"
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-foreground">
@@ -423,17 +557,23 @@ export function ConciergeSheet({
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
           {!started ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-                <Sparkles size={30} strokeWidth={2.2} />
-              </div>
-              <h3 className="text-lg font-extrabold text-foreground">
+              <h3 className="mb-1 text-lg font-extrabold text-foreground">
                 Tell me what you&apos;re craving
               </h3>
-              <p className="mt-1 max-w-xs text-sm text-muted-foreground">
+              <p className="mb-6 max-w-xs text-sm text-muted-foreground">
                 I&apos;ll search every kitchen on KDER — by diet, budget, or
                 vibe. Talk to me, type, or snap a photo of a dish.
               </p>
-              <div className="mt-5 flex w-full flex-col gap-2">
+
+              {/* Big voice button — the primary way in, same as Cleopatra. */}
+              {voice.supported ? bigMic("hero") : null}
+
+              <div className="mt-7 flex w-full flex-col gap-2">
+                {voice.supported && (
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
+                    or tap an idea
+                  </p>
+                )}
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
@@ -476,8 +616,13 @@ export function ConciergeSheet({
                 if (entry.kind === "assistant") {
                   return (
                     <div key={i} className="flex gap-2.5">
-                      <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] text-white">
-                        <Sparkles size={13} strokeWidth={2.4} />
+                      <div className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-0.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/icons/kder-logo.png"
+                          alt="KDER"
+                          className="h-full w-full object-contain"
+                        />
                       </div>
                       <p className="whitespace-pre-wrap pt-0.5 text-sm leading-relaxed text-foreground">
                         {entry.text}
@@ -520,8 +665,21 @@ export function ConciergeSheet({
           )}
         </div>
 
+        {/* Big follow-up mic — pinned above the composer mid-conversation so a
+            spoken follow-up is always one tap away (no hunting for a tiny
+            inline icon), matching Cleopatra's footer mic. */}
+        {started && voice.supported && (
+          <div className="flex justify-center border-t border-border pt-3">
+            {bigMic("footer")}
+          </div>
+        )}
+
         {/* Composer */}
-        <div className="border-t border-border px-3 py-3">
+        <div
+          className={`px-3 py-3 ${
+            started && voice.supported ? "" : "border-t border-border"
+          }`}
+        >
           {attachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {attachments.map((a) => (
@@ -584,26 +742,6 @@ export function ConciergeSheet({
               }
               className="max-h-28 min-h-[24px] flex-1 resize-none bg-transparent py-1 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
-
-            {voice.supported && (
-              <button
-                onClick={() => voice.toggle()}
-                aria-label={voice.listening ? "Stop listening" : "Talk"}
-                className={`relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition ${
-                  voice.listening
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground"
-                }`}
-              >
-                {voice.listening && (
-                  <span
-                    className="absolute inset-0 rounded-full ring-2 ring-primary/60"
-                    style={{ opacity: 0.3 + voice.countdownProgress * 0.7 }}
-                  />
-                )}
-                <Mic size={17} />
-              </button>
-            )}
 
             <button
               onClick={handleSubmit}
