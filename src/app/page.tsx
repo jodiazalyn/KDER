@@ -18,6 +18,7 @@ import { PayoutShowcase } from "@/components/landing/PayoutShowcase";
 import { PricingAgentCTA } from "@/components/landing/PricingAgentCTA";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { TrustStrip } from "@/components/landing/TrustStrip";
+import { VoiceOrderAgent } from "@/components/landing/VoiceOrderAgent";
 
 /**
  * KDER public landing page.
@@ -104,6 +105,7 @@ export default function LandingPage() {
         <TrustStrip />
         <HowItWorks />
         <ListingShowcase />
+        <VoiceOrderAgent />
         <CreatorProgram />
         <PayoutShowcase />
         <BuiltForHouston />

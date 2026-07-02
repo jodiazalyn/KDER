@@ -26,10 +26,10 @@ export function MissionAnchor() {
           id="mission-heading"
           className="text-balance text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] text-kder-ink sm:text-5xl lg:text-7xl"
         >
-          Home chefs cooking for their neighborhood.
+          Home cooks make food for their block.
           <br />
           <span className="text-kder-green">
-            Neighbors eating like members.
+            Neighbors eat like family.
           </span>
         </h2>
       </div>

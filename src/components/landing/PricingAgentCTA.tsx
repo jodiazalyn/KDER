@@ -22,7 +22,7 @@ export function PricingAgentCTA() {
     >
       <div className="mx-auto max-w-3xl">
         <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
-          Meet Mia · your KDER concierge
+          Meet Mia · your KDER helper
         </p>
 
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
@@ -50,10 +50,9 @@ export function PricingAgentCTA() {
               selling your food?
             </h2>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-neutral-700">
-              Mia helps Houston home cooks get set up on KDER — pick
-              what to make, work out what to charge, and write a
-              listing that lands the first orders. Free to try. No
-              account needed.
+              Mia helps Houston cooks start on KDER. She helps you pick
+              what to make, set a fair price, and write a post that gets
+              your first orders. Free to try. No sign-up needed.
             </p>
 
             <Link

@@ -19,11 +19,14 @@ export function BuiltForHouston() {
   return (
     <section
       aria-labelledby="built-for-houston-heading"
-      className="bg-kder-cream px-6 py-24 lg:py-32"
+      className="bg-kder-cream px-5 py-16 sm:px-6 sm:py-24 lg:py-32"
     >
-      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[40px] border border-kder-line">
-        {/* Full-bleed Houston photo */}
-        <div className="relative aspect-[16/9] w-full lg:aspect-[16/7]">
+      {/* Mobile: photo stacked ABOVE the text so nothing is clipped.
+          lg: the text card floats over a full-bleed photo (the
+          original overlay treatment). */}
+      <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[28px] border border-kder-line bg-kder-paper sm:rounded-[40px]">
+        {/* Houston photo */}
+        <div className="relative aspect-[16/10] w-full sm:aspect-[16/9] lg:aspect-[16/7]">
           <Image
             src="/images/community-houston.jpg"
             alt="Houston skyline at golden hour"
@@ -32,36 +35,36 @@ export function BuiltForHouston() {
             className="object-cover"
             priority={false}
           />
-          {/* Soft cream-to-transparent gradient — much lighter than
-              the previous heavy green wash. The photo carries the
-              vibe; the gradient just keeps the text card legible. */}
+          {/* Gradient blends the photo into the text: bottom-up on
+              mobile (text sits below), left-to-right on lg (text
+              overlays the left side). */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-kder-cream/95 via-kder-cream/60 to-transparent"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-kder-paper via-kder-paper/30 to-transparent lg:bg-gradient-to-r lg:from-kder-cream/95 lg:via-kder-cream/60 lg:to-transparent"
           />
         </div>
 
-        {/* Translucent white text card overlaid on the photo */}
-        <div className="absolute inset-y-0 left-0 flex max-w-2xl items-center px-6 lg:px-12">
-          <div className="rounded-3xl border border-kder-line bg-kder-paper/85 p-7 shadow-[0_12px_40px_rgba(15,15,15,0.08)] backdrop-blur-md lg:p-10">
+        {/* Text: normal flow below the photo on mobile; absolutely
+            positioned overlay card on lg. */}
+        <div className="p-6 sm:p-8 lg:absolute lg:inset-y-0 lg:left-0 lg:flex lg:max-w-2xl lg:items-center lg:p-12">
+          <div className="lg:rounded-3xl lg:border lg:border-kder-line lg:bg-kder-paper/85 lg:p-10 lg:shadow-[0_12px_40px_rgba(15,15,15,0.08)] lg:backdrop-blur-md">
             <span className="mb-3 inline-block text-[11px] font-semibold uppercase tracking-[0.22em] text-kder-green">
               Community Choice
             </span>
             <h2
               id="built-for-houston-heading"
-              className="text-3xl font-extrabold leading-[1.05] tracking-[-0.03em] text-kder-ink lg:text-5xl"
+              className="text-2xl font-extrabold leading-[1.08] tracking-[-0.03em] text-kder-ink sm:text-3xl lg:text-5xl"
             >
               Built for Houston. Backed by the block.
             </h2>
-            <p className="mt-5 text-sm leading-relaxed text-kder-ink-muted lg:text-base">
-              Every order on KDER stays in your neighborhood. We launched
-              here because Houston cooks deserve a marketplace built
-              for them &mdash; one that isn&rsquo;t taking 30% off the
-              top of every plate.
+            <p className="mt-4 text-sm leading-relaxed text-kder-ink-muted sm:mt-5 lg:text-base">
+              Every order on KDER stays close to home. We started here
+              because Houston cooks deserve better &mdash; not an app that
+              takes 30% of every plate.
             </p>
             <Link
               href="/signup"
-              className="mt-7 inline-flex h-12 items-center gap-1.5 rounded-full bg-kder-green px-7 text-sm font-bold text-white transition-transform active:scale-95 hover:bg-[#207024]"
+              className="mt-6 inline-flex h-12 items-center gap-1.5 rounded-full bg-kder-green px-7 text-sm font-bold text-white transition-transform active:scale-95 hover:bg-[#207024] sm:mt-7"
             >
               Claim your handle
               <ArrowRight size={16} />
