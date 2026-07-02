@@ -1,6 +1,23 @@
-import Link from "next/link";
+"use client";
+
+import { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Bike, Mic, Search, Star } from "lucide-react";
 import { PhoneFrame } from "./PhoneFrame";
+
+// The real, in-product Drive Thru concierge — the exact same voice/photo
+// agent that opens from a creator storefront. Lazy (ssr:false): the voice +
+// streaming machinery only loads once a visitor actually taps "Try Drive Thru".
+const ConciergeSheet = dynamic(
+  () =>
+    import("@/components/storefront/ConciergeSheet").then(
+      (m) => m.ConciergeSheet
+    ),
+  { ssr: false }
+);
+type ConciergePlateCardT =
+  import("@/lib/concierge/concierge-tools").ConciergePlateCard;
 
 /**
  * Drive Thru — the consumer (foodie) side of the marketplace.
@@ -100,6 +117,27 @@ function DriveThruPhoneScreen() {
 }
 
 export function VoiceOrderAgent() {
+  const router = useRouter();
+  const [conciergeOpen, setConciergeOpen] = useState(false);
+
+  // Bridge a Drive Thru pick into the picked creator's normal order flow —
+  // the SAME handoff the storefront concierge uses. The concierge searches
+  // the whole marketplace, so a pick can belong to any creator; we deep-link
+  // to their storefront with ?plate=<id>, which opens that plate's detail
+  // sheet → add to cart → checkout (name / phone / email), exactly like
+  // ordering from their food link directly. Nothing new is built here.
+  const handlePickPlate = useCallback(
+    (plate: ConciergePlateCardT) => {
+      const pickedHandle = (plate.creator.handle ?? "")
+        .replace(/^@/, "")
+        .toLowerCase();
+      if (!pickedHandle) return;
+      setConciergeOpen(false);
+      router.push(`/@${pickedHandle}?plate=${encodeURIComponent(plate.id)}`);
+    },
+    [router]
+  );
+
   return (
     <section
       aria-labelledby="voice-agent-heading"
@@ -152,24 +190,42 @@ export function VoiceOrderAgent() {
             ))}
           </ul>
 
-          <Link
-            href="/signup"
+          <button
+            type="button"
+            onClick={() => setConciergeOpen(true)}
             className="mt-10 inline-flex h-12 items-center gap-1.5 rounded-full bg-kder-green px-7 text-sm font-bold text-white transition-transform active:scale-95 hover:bg-[#207024]"
           >
             Try Drive Thru
             <ArrowRight size={16} />
-          </Link>
+          </button>
         </div>
 
         {/* Right — phone mock of a Drive Thru voice order. Visible on
             mobile too (centered, scaled down) so the eater story lands
-            on phones, where most people will read this. */}
-        <div className="relative mx-auto flex w-full max-w-[240px] justify-center sm:max-w-[280px] lg:max-w-none">
+            on phones, where most people will read this. Tapping it opens
+            the real concierge, so the mock doubles as a launcher. */}
+        <button
+          type="button"
+          onClick={() => setConciergeOpen(true)}
+          aria-label="Try Drive Thru"
+          className="relative mx-auto flex w-full max-w-[240px] justify-center transition-transform active:scale-[0.98] sm:max-w-[280px] lg:max-w-none"
+        >
           <PhoneFrame variant="primary" className="rotate-[3deg]">
             <DriveThruPhoneScreen />
           </PhoneFrame>
-        </div>
+        </button>
       </div>
+
+      {/* The real, in-product Drive Thru concierge — same voice agent, same
+          whole-marketplace search, same pick → creator-checkout flow that
+          runs on a storefront. Lazy-mounted on first open. */}
+      {conciergeOpen && (
+        <ConciergeSheet
+          open={conciergeOpen}
+          onClose={() => setConciergeOpen(false)}
+          onPickPlate={handlePickPlate}
+        />
+      )}
     </section>
   );
 }

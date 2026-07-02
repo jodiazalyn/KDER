@@ -68,19 +68,36 @@ function LinkedInIcon({ className }: IconProps) {
 }
 
 /**
- * Social profiles. Icons are wired to `#` placeholders — replace each
- * `href` with the real profile URL when they're live.
+ * Social profiles. Instagram, Facebook, TikTok, and LinkedIn point at
+ * the live KDER accounts; X (Twitter) is still a `#` placeholder until
+ * that account is live.
  */
 const SOCIAL_LINKS: {
   label: string;
   href: string;
   Icon: (props: IconProps) => ReactElement;
 }[] = [
-  { label: "Instagram", href: "#", Icon: InstagramIcon },
-  { label: "Facebook", href: "#", Icon: FacebookIcon },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/kder.club",
+    Icon: InstagramIcon,
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/share/194czuznYq/?mibextid=wwXIfr",
+    Icon: FacebookIcon,
+  },
   { label: "X", href: "#", Icon: XIcon },
-  { label: "TikTok", href: "#", Icon: TikTokIcon },
-  { label: "LinkedIn", href: "#", Icon: LinkedInIcon },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@kder.club",
+    Icon: TikTokIcon,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/kder-club/",
+    Icon: LinkedInIcon,
+  },
 ];
 
 export function MarketingFooter() {
