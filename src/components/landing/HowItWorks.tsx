@@ -26,21 +26,21 @@ const STEPS: Step[] = [
     number: "01",
     eyebrow: "Claim",
     title: "Pick @yourhandle",
-    body: "We check it live as you type. Yours forever — your storefront URL becomes kder.club/@yourhandle.",
+    body: "We check your name as you type. It's yours to keep. Your page lives at kder.club/@yourhandle.",
     icon: Hash,
   },
   {
     number: "02",
     eyebrow: "List",
     title: "Snap, price, publish",
-    body: "Take a photo of your plate, set a price, and hit publish. You're live in 60 seconds.",
+    body: "Take a photo of your food, set a price, and post it. You're live in 60 seconds.",
     icon: ImagePlus,
   },
   {
     number: "03",
     eyebrow: "Earn",
     title: "Get paid next day",
-    body: "Customers order at your link. Stripe deposits 90% to your bank by the next business day.",
+    body: "People order from your link. You get 90% in your bank as soon as the next day.",
     icon: Wallet,
   },
 ];
@@ -50,7 +50,7 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       aria-labelledby="how-it-works-heading"
-      className="bg-kder-cream px-6 py-24 lg:py-32"
+      className="bg-kder-cream px-5 py-16 sm:px-6 sm:py-24 lg:py-32"
     >
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 max-w-2xl">
@@ -61,31 +61,38 @@ export function HowItWorks() {
             id="how-it-works-heading"
             className="text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] text-kder-ink lg:text-6xl"
           >
-            Three steps. One handle. Your food, your terms.
+            Three steps. Your food. Your rules.
           </h2>
         </div>
 
-        <ol className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
           {STEPS.map(({ number, eyebrow, title, body, icon: Icon }) => (
             <li
               key={number}
               className="relative overflow-hidden rounded-3xl border border-kder-line bg-kder-paper p-8"
             >
               {/* Giant ghost number — the section's anchor visual,
-                  very faint so the title still holds the eye. */}
+                  very faint so the title still holds the eye.
+                  `tabular-nums` forces equal digit advance widths so
+                  "01" (with its narrow "1") lines up identically to
+                  "02"/"03"; without it the narrower "01" shifts right
+                  and the icon no longer overlaps the ghost "0". */}
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute -right-4 -top-6 select-none text-[180px] font-extrabold leading-none text-kder-mint"
+                className="pointer-events-none absolute -right-4 -top-6 select-none text-[180px] font-extrabold leading-none tabular-nums text-kder-mint"
               >
                 {number}
               </span>
 
               <div className="relative">
-                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-kder-mint text-kder-green">
+                {/* Block-level icon on its own row — was inline-flex, which
+                    let it (and the eyebrow/title) collapse onto one cramped
+                    line on mobile. */}
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-kder-mint text-kder-green">
                   <Icon size={24} strokeWidth={2} />
                 </div>
 
-                <span className="mb-2 inline-block text-[11px] font-semibold uppercase tracking-[0.22em] text-kder-green">
+                <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.22em] text-kder-green">
                   {eyebrow}
                 </span>
 

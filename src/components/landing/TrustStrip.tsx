@@ -35,11 +35,11 @@ export function TrustStrip() {
 
   return (
     <section
-      aria-label="Trusted by Houston's home-kitchen community"
+      aria-label="Loved by Houston home cooks"
       className="border-y border-kder-line bg-kder-cream py-8"
     >
       <p className="mb-5 text-center text-xs font-semibold uppercase tracking-[0.22em] text-kder-ink-muted">
-        Trusted by Houston&rsquo;s home-kitchen community
+        Loved by Houston home cooks
       </p>
       <div
         className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"

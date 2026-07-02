@@ -11,12 +11,12 @@ import { Lock } from "lucide-react";
  * Sources:
  *   - apple-pay, google-pay, visa, mastercard, amex, discover —
  *     gilbarbara/logos GitHub repo (CC BY 4.0)
- *   - cashapp, zelle, klarna, afterpay, dinersclub —
+ *   - cashapp, zelle, klarna, afterpay, dinersclub, paypal —
  *     Wikimedia Commons (mostly CC BY-SA / public-domain trademark
  *     marks used here for compatibility identification)
  *
  * The supported list (per Jodi):
- *   - Wallets: Apple Pay, Google Pay
+ *   - Wallets: Apple Pay, Google Pay, PayPal
  *   - Card networks: Visa, Mastercard, American Express, Discover,
  *     Diners Club
  *   - P2P / cash-style: Cash App, Zelle
@@ -47,6 +47,7 @@ const METHODS: MethodTileProps[] = [
   { label: "American Express", src: "/brand/payments/amex.svg", width: 36, height: 28 },
   { label: "Discover", src: "/brand/payments/discover.svg", width: 80, height: 16 },
   { label: "Diners Club", src: "/brand/payments/dinersclub.svg", width: 36, height: 28 },
+  { label: "PayPal", src: "/brand/payments/paypal.svg", width: 80, height: 20 },
 ];
 
 function MethodTile({ label, src, width, height }: MethodTileProps) {
@@ -81,12 +82,11 @@ export function PaymentMethods() {
             id="payment-methods-heading"
             className="text-4xl font-extrabold leading-[1.05] tracking-[-0.03em] text-kder-ink lg:text-6xl"
           >
-            We accept what your neighbors carry.
+            Pay the way you already do.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-kder-ink-muted lg:text-lg">
-            Tap to pay, scan to pay, or just use your card. Every checkout
-            is processed by Stripe — the same payment infrastructure
-            behind Shopify, Lyft, and Instacart.
+            Tap, scan, or use your card. Stripe handles every payment — the
+            same tool used by Shopify, Lyft, and Instacart.
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export function PaymentMethods() {
 
         <p className="mt-8 inline-flex items-center gap-2 text-xs text-kder-ink-muted">
           <Lock size={12} className="text-kder-green" />
-          PCI-compliant. No card data ever touches KDER&rsquo;s servers.
+          Safe and secure. KDER never sees your card number.
         </p>
       </div>
     </section>

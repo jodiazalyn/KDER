@@ -49,10 +49,9 @@ export function CreatorCards() {
           Your earnings, in your pocket.
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/85 lg:text-lg">
-          Top KDER creators get a metal debit card linked directly to
-          their earnings balance. Restock supplies at the warehouse
-          club, pay your kitchen team, or grocery on Sunday — your
-          money moves the moment a plate ships.
+          Top KDER cooks get a metal debit card tied right to their
+          earnings. Buy supplies, pay your helpers, or shop on Sunday —
+          your money is ready the moment a plate sells.
         </p>
 
         <ul className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 text-left md:grid-cols-3">
@@ -60,17 +59,17 @@ export function CreatorCards() {
             {
               icon: Wallet,
               title: "No payout wait",
-              body: "Spend straight from your KDER balance. No 1-3 day bank transfer, no instant-payout fee.",
+              body: "Spend right from your KDER money. No waiting days. No cash-out fee.",
             },
             {
               icon: ShoppingBag,
               title: "Built for kitchens",
-              body: "Every swipe categorizes automatically. Groceries, gas, supplies — your books reconcile themselves.",
+              body: "Every swipe sorts itself. Food, gas, supplies — your records stay tidy on their own.",
             },
             {
               icon: TrendingUp,
               title: "Grow with the city",
-              body: "Top earners unlock cashback on kitchen supplies and discounts with KDER's neighborhood partners.",
+              body: "Top cooks get cash back on supplies and deals with local KDER partners.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <li

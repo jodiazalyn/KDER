@@ -43,10 +43,9 @@ export function PayoutShowcase() {
             Get paid like a pro.
           </h2>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-kder-ink-muted lg:text-lg">
-            KDER deposits 90% of every plate directly to your bank — usually
-            by the next business day. Need it now? Push to your debit card
-            in minutes. Watch your balance grow in real time, right from
-            your phone.
+            KDER sends 90% of every sale to your bank, often by the next day.
+            Need it now? Send it to your debit card in minutes. Watch your
+            money grow right on your phone.
           </p>
 
           {/* Three pill features — mirrors Stooty's
@@ -57,17 +56,17 @@ export function PayoutShowcase() {
               {
                 icon: Banknote,
                 title: "90% to you",
-                body: "10% platform fee covers Stripe processing and keeps KDER running. No subscription, no listing fees, no hidden cuts.",
+                body: "KDER keeps just 10% to run the app and cover fees. No monthly cost. No listing fees. No surprise cuts.",
               },
               {
                 icon: Clock3,
-                title: "Next-day standard payouts",
-                body: "Stripe Connect Express deposits sweep to your bank by the next business day. Set a weekly or daily schedule.",
+                title: "Money by the next day",
+                body: "Your sales land in your bank by the next work day. Pick a daily or weekly payout.",
               },
               {
                 icon: Zap,
-                title: "Instant payouts in minutes",
-                body: "Push your balance to a debit card on demand. Small Stripe fee, but the cash hits in ~30 minutes — perfect for a Friday night.",
+                title: "Cash out in minutes",
+                body: "Send your money to a debit card any time. A small fee, but it lands in about 30 minutes — great for a busy Friday night.",
               },
             ].map(({ icon: Icon, title, body }) => (
               <li key={title} className="flex gap-4">

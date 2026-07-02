@@ -37,8 +37,8 @@ export function ListingShowcase() {
             One link. Every plate.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-kder-ink-muted lg:text-lg">
-            This is what your customers see when they tap your handle. A
-            clean, branded storefront that lives at{" "}
+            This is what people see when they tap your name. One clean page
+            for all your food, at{" "}
             <span className="font-mono text-kder-ink">kder.club/@yourhandle</span>.
           </p>
         </div>

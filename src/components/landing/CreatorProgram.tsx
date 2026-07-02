@@ -35,8 +35,8 @@ export function CreatorProgram() {
             KDER Creator Program.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-kder-ink-muted lg:text-lg">
-            Refer another Houston cook to KDER. When they ship their first
-            plate, you both earn. Passive income, by community.
+            Tell another Houston cook about KDER. When they sell their first
+            plate, you both get paid. Earn while you help friends.
           </p>
         </div>
 
@@ -45,17 +45,17 @@ export function CreatorProgram() {
             {
               icon: Users,
               title: "Bring your circle",
-              body: "Drop your unique referral link in the group chat. Every cook who joins becomes part of your network.",
+              body: "Share your link in the group chat. Every cook who joins is part of your team.",
             },
             {
               icon: TrendingUp,
               title: "Earn on every plate",
-              body: "When your referrals sell, you get a share of the platform's cut — not theirs. They keep their full 90%.",
+              body: "When your cooks sell, you get a bonus from KDER's share. They still keep their full 90%.",
             },
             {
               icon: Sparkles,
               title: "Stack the rewards",
-              body: "Hit milestone tiers (5, 10, 25 cooks) and unlock founder badges, featured placement, and bonuses.",
+              body: "Bring 5, 10, or 25 cooks to unlock badges, top spots, and bonuses.",
             },
           ].map(({ icon: Icon, title, body }) => (
             <li

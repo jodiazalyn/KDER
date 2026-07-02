@@ -198,12 +198,12 @@ export function HandleClaimInput({
         aria-live="polite"
       >
         {status === "idle" && handle.length > 0 && handle.length < 3 && (
-          <span>3–30 characters · letters, numbers, underscores</span>
+          <span>3 to 30 letters, numbers, or _</span>
         )}
         {status === "checking" && (
           <span className="inline-flex items-center gap-1.5">
             <Loader2 size={12} className="animate-spin" />
-            Checking availability…
+            Checking…
           </span>
         )}
         {status === "available" && (
@@ -211,8 +211,8 @@ export function HandleClaimInput({
             className={`inline-flex items-center gap-1.5 ${statusOkColor}`}
           >
             <Check size={12} />
-            <strong className="font-semibold">@{handle}</strong> is yours.
-            Click claim to continue.
+            <strong className="font-semibold">@{handle}</strong> is open! Tap
+            Claim to grab it.
           </span>
         )}
         {status === "taken" && (
@@ -220,8 +220,8 @@ export function HandleClaimInput({
             className={`inline-flex items-center gap-1.5 ${statusErrColor}`}
           >
             <X size={12} />
-            <strong className="font-semibold">@{handle}</strong> is already
-            taken. Try another.
+            <strong className="font-semibold">@{handle}</strong> is taken. Try
+            a new one.
           </span>
         )}
       </div>
