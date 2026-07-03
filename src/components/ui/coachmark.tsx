@@ -125,42 +125,59 @@ export function Coachmark({
     };
   }, [uid, dismissed]);
 
-  // Measure the target element. Only attempts to measure once we're
-  // the active coachmark — earlier-queue items haven't reached us
-  // yet, so the bubble shouldn't have laid out either. The setState
-  // calls here all live inside callbacks (rAF / setTimeout / event
-  // handlers), never synchronously in the effect body — satisfies
-  // the react-hooks/set-state-in-effect lint rule.
+  // Track the target element's geometry continuously while active, so
+  // the spotlight highlight stays mapped onto it. A single measurement
+  // isn't enough: coachmarks frequently fire on an element inside a
+  // Radix Dialog/Sheet that slides/zooms in, or on content that shifts
+  // as data loads. Measuring once catches the target mid-animation and
+  // leaves the green ring floating off-target. Instead we run a rAF
+  // loop that re-reads getBoundingClientRect every frame and updates
+  // state ONLY when the geometry actually changes — so the ring follows
+  // the element/modal into place (and tracks scroll, resize, and layout
+  // shifts) without thrashing React on idle frames.
+  //
+  // Only runs once we're the active coachmark — earlier-queue items
+  // haven't reached us yet. All setState calls live inside callbacks
+  // (rAF / setTimeout), never synchronously in the effect body —
+  // satisfies the react-hooks/set-state-in-effect lint rule.
   useEffect(() => {
     if (dismissed || !isActive) return;
     const el = targetRef.current;
     if (!el) return;
 
-    const update = () => {
-      setRect(el.getBoundingClientRect());
+    let rafId = 0;
+    let startTimer: ReturnType<typeof setTimeout> | undefined;
+    // Last geometry we pushed to state — compared each frame so we only
+    // re-render when the target has actually moved or resized.
+    let last: { top: number; left: number; width: number; height: number } | null =
+      null;
+
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (
+        !last ||
+        r.top !== last.top ||
+        r.left !== last.left ||
+        r.width !== last.width ||
+        r.height !== last.height
+      ) {
+        last = { top: r.top, left: r.left, width: r.width, height: r.height };
+        setRect(r);
+      }
+      rafId = requestAnimationFrame(measure);
     };
 
     if (showDelayMs > 0) {
-      const timer = setTimeout(() => {
-        update();
-        window.addEventListener("resize", update);
-        window.addEventListener("scroll", update, true);
+      startTimer = setTimeout(() => {
+        rafId = requestAnimationFrame(measure);
       }, showDelayMs);
-      return () => {
-        clearTimeout(timer);
-        window.removeEventListener("resize", update);
-        window.removeEventListener("scroll", update, true);
-      };
+    } else {
+      rafId = requestAnimationFrame(measure);
     }
 
-    // Measure on next frame so the target has finished layout.
-    const raf = requestAnimationFrame(update);
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
     return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
+      if (startTimer) clearTimeout(startTimer);
+      cancelAnimationFrame(rafId);
     };
   }, [dismissed, isActive, targetRef, showDelayMs]);
 
