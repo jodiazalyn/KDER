@@ -101,11 +101,11 @@ export default function LandingPage() {
       <main>
         <Hero />
         <PricingAgentCTA />
+        <VoiceOrderAgent />
         <MissionAnchor />
         <TrustStrip />
         <HowItWorks />
         <ListingShowcase />
-        <VoiceOrderAgent />
         <CreatorProgram />
         <PayoutShowcase />
         <BuiltForHouston />
