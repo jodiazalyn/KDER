@@ -56,5 +56,13 @@ export function rowToOrder(row: any): Order {
       (Array.isArray(joinedListing?.photos) && joinedListing.photos.length > 0
         ? joinedListing.photos[0]
         : null),
+    // Pass through the full per-line items snapshot (name, qty, price, photo,
+    // and — crucially — the customer's chosen `extras`). Without this the
+    // creator's order detail + inbox cards never saw the add-ons a customer
+    // ordered, because <OrderExtrasList> reads `order.items[].extras` and this
+    // serializer previously only pulled `items[0]` for the plate name/photo and
+    // dropped the array. Legacy pre-018 orders have no `items` → undefined,
+    // which the render path already treats as "no extras".
+    items: Array.isArray(row.items) ? row.items : undefined,
   };
 }
