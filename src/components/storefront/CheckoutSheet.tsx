@@ -8,6 +8,7 @@ import {
   MapPin,
   Truck,
   AlertCircle,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -154,6 +155,9 @@ export function CheckoutSheet({
   const [guestPhoneRaw, setGuestPhoneRaw] = useState("");
   const guestPhoneDigits = guestPhoneRaw.replace(/\D/g, "");
   const [email, setEmail] = useState("");
+  // Promo code (migration 024). Validated + applied server-side at
+  // checkout; we just collect the raw string here and pass it along.
+  const [promoCode, setPromoCode] = useState("");
 
   // Reset guest fields when the sheet closes so a stale entry doesn't
   // leak into the next purchase on a shared device.
@@ -162,6 +166,7 @@ export function CheckoutSheet({
       setGuestName("");
       setGuestPhoneRaw("");
       setEmail("");
+      setPromoCode("");
     }
   }, [open]);
 
@@ -471,6 +476,10 @@ export function CheckoutSheet({
           notes: notes.trim(),
           creator_handle: creatorHandle,
           customer_email: email.trim() || null,
+          // Promo code (migration 024). Server validates against the
+          // creator's own code list and recomputes the discount — an
+          // invalid/expired code comes back as a 400 surfaced via toast.
+          discount_code: promoCode.trim() || null,
           // Delivery-only fields. The checkout API uses these to:
           //   - persist dropoff_address on the order
           //   - add uber_fee_cents to the Stripe PaymentIntent
@@ -845,6 +854,27 @@ export function CheckoutSheet({
                 </span>
               </div>
             )}
+            {/* Promo code (migration 024). The discount is applied +
+                validated server-side, so the final reduced amount shows
+                on the Stripe checkout page and receipt. We keep the
+                input compact here; an invalid code surfaces as a toast
+                after the customer hits Pay. */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <Tag size={14} className="shrink-0 text-muted-foreground" />
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) =>
+                  setPromoCode(
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20)
+                  )
+                }
+                placeholder="Promo code"
+                autoComplete="off"
+                autoCapitalize="characters"
+                className="glass-input h-9 flex-1 rounded-lg px-3 text-xs font-semibold tracking-wide text-foreground placeholder:font-normal placeholder:tracking-normal placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              />
+            </div>
             <div className="h-px bg-border" />
             <div className="flex justify-between">
               <span className="text-sm font-bold text-foreground">Total</span>

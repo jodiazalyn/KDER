@@ -5,6 +5,7 @@
 
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import { createClient } from "@/lib/supabase/client";
+import type { DiscountCode } from "@/types";
 
 export interface CreatorProfile {
   display_name: string;
@@ -38,6 +39,10 @@ export interface CreatorProfile {
   website_url: string | null;
   facebook_handle: string | null;
   whatsapp_number: string | null;
+  /** Creator-owned promo codes (migration 024). Empty array when the
+   *  creator hasn't defined any. Only populated on the authed Supabase
+   *  path; the sessionStorage fallbacks return []. */
+  discount_codes: DiscountCode[];
 }
 
 /**
@@ -63,7 +68,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("creators")
-          .select("service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address")
+          .select("service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes")
           .eq("member_id", user.id)
           .single(),
       ]);
@@ -99,6 +104,9 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           website_url: member.website_url || null,
           facebook_handle: member.facebook_handle || null,
           whatsapp_number: member.whatsapp_number || null,
+          discount_codes: Array.isArray(creator?.discount_codes)
+            ? creator.discount_codes
+            : [],
         };
       }
     }
@@ -146,6 +154,7 @@ export function getCreatorProfile(): CreatorProfile {
     website_url: profile.website_url || null,
     facebook_handle: profile.facebook_handle || null,
     whatsapp_number: profile.whatsapp_number || null,
+    discount_codes: [],
   };
 }
 
@@ -188,5 +197,6 @@ function defaultProfile(): CreatorProfile {
     website_url: null,
     facebook_handle: null,
     whatsapp_number: null,
+    discount_codes: [],
   };
 }

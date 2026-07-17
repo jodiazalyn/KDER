@@ -11,6 +11,8 @@ import { FloatingActionBar } from "@/components/ui/floating-action-bar";
 import { getCreatorProfileAsync } from "@/lib/creator-store";
 import { resolveZipToNeighborhood } from "@/data/houston-zips";
 import { cn } from "@/lib/utils";
+import { DiscountCodesEditor } from "@/components/settings/DiscountCodesEditor";
+import type { DiscountCode } from "@/types";
 
 const NAME_MAX = 40;
 const BIO_MAX = 160;
@@ -38,6 +40,7 @@ interface ProfileFormState {
   website_url: string;
   facebook_handle: string;
   whatsapp_number: string;
+  discount_codes: DiscountCode[];
 }
 
 function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): ProfileFormState {
@@ -54,6 +57,7 @@ function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): Pro
     website_url: p.website_url || "",
     facebook_handle: p.facebook_handle || "",
     whatsapp_number: p.whatsapp_number || "",
+    discount_codes: p.discount_codes || [],
   };
 }
 
@@ -180,6 +184,10 @@ export default function SettingsPage() {
           website_url: form.website_url.trim() || null,
           facebook_handle: form.facebook_handle.trim() || null,
           whatsapp_number: form.whatsapp_number.trim() || null,
+          // Promo codes (migration 024). Drop rows with a blank code so a
+          // half-filled row the creator never named isn't persisted; the
+          // server re-sanitizes (uppercase, dedupe, clamps) regardless.
+          discount_codes: form.discount_codes.filter((c) => c.code.trim()),
         }),
       });
       const body = await res.json();
@@ -559,6 +567,13 @@ export default function SettingsPage() {
             className="glass-input h-12 w-full px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
           />
         </section>
+
+        {/* Promo codes (migration 024) — storefront-wide discount codes
+            customers enter at checkout. */}
+        <DiscountCodesEditor
+          codes={form.discount_codes}
+          onChange={(next) => setForm({ ...form, discount_codes: next })}
+        />
 
         {/* Handle is shown read-only so users know what their URL is */}
         <section className="glass-card p-5 space-y-2">

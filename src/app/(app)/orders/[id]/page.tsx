@@ -311,6 +311,21 @@ export default function OrderDetailPage({
                 </span>
               </div>
 
+              {/* Promo code (migration 024). Shown when a discount was
+                  applied — total_amount + payout already reflect it; this
+                  line just tells the creator which code the customer used
+                  and how much came off. */}
+              {order.discount_cents != null && order.discount_cents > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Promo{order.discount_code ? ` (${order.discount_code})` : ""}
+                  </span>
+                  <span className="text-red-600 dark:text-red-400">
+                    -${(order.discount_cents / 100).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
               {/* Platform fee */}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">KDER fee (10%)</span>

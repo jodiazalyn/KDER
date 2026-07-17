@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError } from "@/lib/api";
+import { sanitizeDiscountCodes } from "@/lib/discount-codes";
 
 // Loose RFC-5322-ish check, deliberately matching the client-side
 // validator in src/app/onboarding/profile/page.tsx. SendGrid bounces
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
       email,
       zips,
       pickup_address,
+      discount_codes,
       instagram_handle,
       tiktok_handle,
       website_url,
@@ -104,18 +106,22 @@ export async function POST(request: NextRequest) {
       return apiError("Failed to save profile.", 500);
     }
 
-    // Upsert creator record
+    // Upsert creator record. `discount_codes` (migration 024) is only
+    // written when the caller actually supplied the key — onboarding
+    // flows that omit it must not wipe an existing code list to [].
+    const creatorPatch: Record<string, unknown> = {
+      member_id: user.id,
+      service_zip_codes: zips || [],
+      pickup_address: pickup_address?.trim()?.replace(/<[^>]*>/g, "") || null,
+    };
+    if (discount_codes !== undefined) {
+      creatorPatch.discount_codes = sanitizeDiscountCodes(discount_codes);
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: creator, error: creatorError } = await (supabase as any)
       .from("creators")
-      .upsert(
-        {
-          member_id: user.id,
-          service_zip_codes: zips || [],
-          pickup_address: pickup_address?.trim()?.replace(/<[^>]*>/g, "") || null,
-        },
-        { onConflict: "member_id" }
-      )
+      .upsert(creatorPatch, { onConflict: "member_id" })
       .select("id")
       .single();
 

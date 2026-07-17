@@ -32,7 +32,7 @@ export async function loadCreatorProfile(
     (supabase as any)
       .from("creators")
       .select(
-        "service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address"
+        "service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes"
       )
       .eq("member_id", userId)
       .single(),
@@ -76,5 +76,8 @@ export async function loadCreatorProfile(
     website_url: member?.website_url || null,
     facebook_handle: member?.facebook_handle || null,
     whatsapp_number: member?.whatsapp_number || null,
+    discount_codes: Array.isArray(creator?.discount_codes)
+      ? creator.discount_codes
+      : [],
   };
 }
