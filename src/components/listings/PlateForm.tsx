@@ -24,10 +24,12 @@ import {
   type CateringInclusionGroups,
   type FulfillmentType,
   type ListingExtra,
+  type ListingOptionGroup,
   type ListingStatus,
 } from "@/types";
 import { CateringInclusionsEditor } from "./CateringInclusionsEditor";
 import { PlateExtrasEditor } from "./PlateExtrasEditor";
+import { OptionGroupsEditor } from "./OptionGroupsEditor";
 import { AskCoachInline } from "@/components/coach/AskCoachInline";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -60,6 +62,9 @@ interface DraftData {
   // Plate-only optional add-ons (migration 018). Optional so old
   // drafts in sessionStorage still parse without it.
   extras?: ListingExtra[];
+  // Plate-only required choice groups (migration 023). Optional for
+  // the same back-compat reason as extras.
+  optionGroups?: ListingOptionGroup[];
   savedAt: string;
 }
 
@@ -243,6 +248,12 @@ export function PlateForm({ listing }: PlateFormProps) {
     listing?.extras ?? restored?.extras ?? []
   );
 
+  // Plate-only required choice groups (migration 023) — "choose
+  // exactly one" sets like Protein. Separate from optional extras.
+  const [optionGroups, setOptionGroups] = useState<ListingOptionGroup[]>(
+    listing?.option_groups ?? restored?.optionGroups ?? []
+  );
+
   // Uber Direct pickup address (migration 019). Required at the
   // API layer before a delivery-eligible listing can be active.
   // We capture two fields: a single-line street address Uber
@@ -415,6 +426,7 @@ export function PlateForm({ listing }: PlateFormProps) {
       cateringInclusions,
       cateringInclusionGroups,
       extras,
+      optionGroups,
       savedAt: new Date().toISOString(),
     });
     setAutoSaved(true);
@@ -425,7 +437,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
     cateringLeadDays, cateringLeadHoursPart,
     cateringFulfillment, cateringInclusions, cateringInclusionGroups,
-    extras,
+    extras, optionGroups,
     isEditing,
   ]);
   // The second useEffect (autosave timer) needs the same deps as
@@ -451,7 +463,7 @@ export function PlateForm({ listing }: PlateFormProps) {
     cateringPricingMode, cateringMinGuests, cateringMaxGuests,
     cateringLeadDays, cateringLeadHoursPart,
     cateringFulfillment, cateringInclusions, cateringInclusionGroups,
-    extras,
+    extras, optionGroups,
     isEditing, doAutoSave,
   ]);
 
@@ -533,6 +545,29 @@ export function PlateForm({ listing }: PlateFormProps) {
               price_cents: Math.max(0, Math.floor(e.price_cents)),
             }))
             .filter((e) => e.name.length > 0)
+        : [],
+    // Plate-only required choice groups (migration 023). Trim option
+    // names and drop blanks; drop any group that ends up with fewer
+    // than two real options (the server does the same, but sending a
+    // clean payload avoids a confusing silent-drop on save). Catering
+    // always sends [].
+    option_groups:
+      kind === "plate"
+        ? optionGroups
+            .map((g) => ({
+              id: g.id,
+              title: g.title.trim(),
+              required: true,
+              min: 1,
+              max: 1,
+              options: g.options
+                .map((o) => ({
+                  name: o.name.trim(),
+                  price_cents: Math.max(0, Math.floor(o.price_cents)),
+                }))
+                .filter((o) => o.name.length > 0),
+            }))
+            .filter((g) => g.title.length > 0 && g.options.length >= 2)
         : [],
     // Plate-only pickup address (migration 019). Only sent when
     // fulfillment includes delivery; explicit null clears any
@@ -1384,6 +1419,38 @@ export function PlateForm({ listing }: PlateFormProps) {
                   />
                 </details>
               )}
+            </section>
+          )}
+
+          {/* Plate-only: Required choices (migration 023). "Choose
+              exactly one" groups like Protein — the customer MUST pick
+              one option to order. Distinct from the optional Extras
+              below. Placed first because a required decision logically
+              precedes optional add-ons. Catering uses quote fee_items
+              for both roles and doesn't need this surface. */}
+          {kind === "plate" && (
+            <section aria-labelledby="option-groups-label">
+              <div className="mb-2 flex items-center justify-between">
+                <span
+                  id="option-groups-label"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Required choices
+                  <span className="ml-1.5 text-[11px] font-normal text-muted-foreground/60">
+                    (pick exactly one)
+                  </span>
+                </span>
+              </div>
+              <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+                Sets where the customer must choose one option before
+                ordering — like Protein (2 Beef Patties vs 2 Black Bean
+                Patties) or Bread. Not an add-on: it&rsquo;s a required
+                pick.
+              </p>
+              <OptionGroupsEditor
+                value={optionGroups}
+                onChange={setOptionGroups}
+              />
             </section>
           )}
 

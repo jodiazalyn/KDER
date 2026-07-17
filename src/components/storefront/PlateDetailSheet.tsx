@@ -62,12 +62,17 @@ export function PlateDetailSheet({
   // fresh. Stored as a Map keyed by extra.name (extras are looked
   // up by name throughout the cart pipeline).
   const [extraQtys, setExtraQtys] = useState<Record<string, number>>({});
+  // Required-choice selections (migration 023). Keyed by group id →
+  // the chosen option name. Single-select, so exactly one name per
+  // group. Reset alongside extras on open.
+  const [groupChoices, setGroupChoices] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => {
       setQty(1);
       setExtraQtys({});
+      setGroupChoices({});
     }, 0);
     return () => clearTimeout(t);
   }, [open, listing?.id]);
@@ -98,18 +103,51 @@ export function PlateDetailSheet({
         ? "Pickup"
         : "Delivery";
 
-  // Build the selected-extras payload for the cart based on the
+  // Required choice groups (migration 023). The customer must pick
+  // exactly one option in each before they can order.
+  const optionGroups = listing.option_groups ?? [];
+  const requiredGroups = optionGroups.filter((g) => g.required);
+  const allRequiredSatisfied = requiredGroups.every((g) =>
+    Boolean(groupChoices[g.id])
+  );
+
+  // Snapshot the required picks as cart extras, tagged with their
+  // group title so the creator sees "Protein: 2 Beef Patties" on the
+  // order. qty 1 — a required choice is one-per-plate, matching the
+  // flat (non-qty-multiplied) way extras already work. Snapshots the
+  // option's current price so a later listing edit can't shift this
+  // customer's cart.
+  const requiredExtras = requiredGroups.flatMap((g) => {
+    const chosenName = groupChoices[g.id];
+    if (!chosenName) return [];
+    const opt = g.options.find((o) => o.name === chosenName);
+    if (!opt) return [];
+    return [
+      {
+        name: opt.name,
+        price_cents: opt.price_cents,
+        qty: 1,
+        group: g.title,
+      },
+    ];
+  });
+
+  // Build the optional add-on payload for the cart based on the
   // current picks. Filter out zero-qty entries — they're not on
   // the order. Each entry snapshots the listing's current
   // name/price_cents so a creator editing the listing later
   // doesn't shift this customer's cart.
-  const selectedExtras = (listing.extras ?? [])
+  const optionalExtras = (listing.extras ?? [])
     .map((ex) => ({
       name: ex.name,
       price_cents: ex.price_cents,
       qty: extraQtys[ex.name] ?? 0,
     }))
     .filter((ex) => ex.qty > 0);
+
+  // Combined payload handed to the cart: required picks first, then
+  // optional add-ons.
+  const selectedExtras = [...requiredExtras, ...optionalExtras];
 
   const extrasSubtotalCents = selectedExtras.reduce(
     (sum, ex) => sum + ex.price_cents * ex.qty,
@@ -193,6 +231,78 @@ export function PlateDetailSheet({
               <p className="mt-3 text-2xl font-bold text-primary">
                 ${listing.price.toFixed(2)}
               </p>
+
+              {/* Required choices (migration 023) — radio groups the
+                  customer must pick exactly one from. Rendered above
+                  the optional extras so the required decision comes
+                  first. Each group shows "Required · Select 1"; a
+                  missing pick blocks Add to Cart / Buy Now below. */}
+              {!soldOut &&
+                requiredGroups.map((g) => {
+                  const chosen = groupChoices[g.id];
+                  return (
+                    <fieldset
+                      key={g.id}
+                      className="mt-4 rounded-2xl border border-border bg-muted/40 p-3"
+                    >
+                      <legend className="flex items-center gap-1.5 px-1 text-sm font-bold text-foreground">
+                        {g.title}
+                      </legend>
+                      <p className="mb-2 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider">
+                        <span className="text-primary">Required</span>
+                        <span className="text-muted-foreground/60">
+                          · Select 1
+                        </span>
+                      </p>
+                      <ul className="space-y-1">
+                        {g.options.map((opt) => {
+                          const isChosen = chosen === opt.name;
+                          const isFree = opt.price_cents === 0;
+                          return (
+                            <li key={opt.name}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setGroupChoices((prev) => ({
+                                    ...prev,
+                                    [g.id]: opt.name,
+                                  }))
+                                }
+                                aria-pressed={isChosen}
+                                className="flex w-full items-center gap-3 rounded-xl px-1 py-2 text-left active:scale-[0.99] transition-transform"
+                              >
+                                {/* Radio dot */}
+                                <span
+                                  className={cn(
+                                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                                    isChosen
+                                      ? "border-primary"
+                                      : "border-muted-foreground/40"
+                                  )}
+                                >
+                                  {isChosen && (
+                                    <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                                  )}
+                                </span>
+                                <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                                  {opt.name}
+                                </span>
+                                {!isFree && (
+                                  <span className="shrink-0 text-[11px] font-semibold text-muted-foreground">
+                                    +$
+                                    {(opt.price_cents / 100).toFixed(
+                                      opt.price_cents % 100 === 0 ? 0 : 2
+                                    )}
+                                  </span>
+                                )}
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </fieldset>
+                  );
+                })}
 
               {/* Extras picker — only when the creator defined any.
                   Sits between price and tags so the customer sees
@@ -342,7 +452,9 @@ export function PlateDetailSheet({
 
                   <button
                     type="button"
+                    disabled={!allRequiredSatisfied}
                     onClick={() => {
+                      if (!allRequiredSatisfied) return;
                       onAddToCart(
                         listing,
                         qty,
@@ -350,7 +462,7 @@ export function PlateDetailSheet({
                       );
                     }}
                     className={cn(
-                      "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-bold transition-all active:scale-95",
+                      "flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full border text-sm font-bold transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
                       cartQty > 0
                         ? "!border-primary/30 !bg-primary/15 text-primary"
                         : "border-border bg-muted text-foreground hover:bg-muted/70"
@@ -394,16 +506,32 @@ export function PlateDetailSheet({
             checkout form, skipping the view-cart step. */}
         {!soldOut && (
           <div className="flex-shrink-0 border-t border-border bg-background/80 px-4 pb-5 pt-3 backdrop-blur-[24px] backdrop-saturate-[180%]">
+            {/* Nudge when a required choice is still unpicked — the
+                buttons are disabled, so tell the customer why. */}
+            {!allRequiredSatisfied && (
+              <p className="mb-2 text-center text-xs font-medium text-muted-foreground">
+                Pick your{" "}
+                <span className="font-semibold text-foreground">
+                  {requiredGroups
+                    .filter((g) => !groupChoices[g.id])
+                    .map((g) => g.title)
+                    .join(" & ")}
+                </span>{" "}
+                to continue
+              </p>
+            )}
             <button
               type="button"
-              onClick={() =>
+              disabled={!allRequiredSatisfied}
+              onClick={() => {
+                if (!allRequiredSatisfied) return;
                 onBuyNow(
                   listing,
                   qty,
                   selectedExtras.length > 0 ? selectedExtras : undefined
-                )
-              }
-              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-base font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98]"
+                );
+              }}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-base font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
             >
               <Zap size={18} className="fill-white" />
               Buy Now · ${totalForQty}

@@ -64,7 +64,12 @@ function mergeExtras(
   const out: CartItemExtra[] = existing ? existing.map((e) => ({ ...e })) : [];
   for (const inc of incoming) {
     if (!inc.name || inc.qty <= 0) continue;
-    const found = out.find((e) => e.name === inc.name);
+    // Match on name AND group so a required "Protein: Beef" pick never
+    // collapses into an optional add-on that happens to share a name,
+    // and two groups offering same-named options stay distinct.
+    const found = out.find(
+      (e) => e.name === inc.name && e.group === inc.group
+    );
     if (found) {
       found.qty = Math.min(found.qty + inc.qty, MAX_QTY_PER_EXTRA);
       // Latest snapshot wins for price — covers the rare case where
@@ -75,6 +80,9 @@ function mergeExtras(
         name: inc.name,
         price_cents: Math.max(0, Math.floor(inc.price_cents)),
         qty: Math.min(inc.qty, MAX_QTY_PER_EXTRA),
+        // Preserve the required-choice group label (migration 023) so
+        // it reaches the order snapshot. Undefined for optional add-ons.
+        ...(inc.group ? { group: inc.group } : {}),
       });
     }
   }

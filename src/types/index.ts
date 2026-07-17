@@ -140,6 +140,14 @@ export interface Listing {
    *  listings — they use fee_items on quotes for the same role. */
   extras: ListingExtra[];
 
+  /** Plate-only REQUIRED choice groups (migration 023) — distinct
+   *  from optional `extras`. Each group forces the customer to pick
+   *  exactly one option (e.g. "Protein": 2 Beef Patties vs 2 Black
+   *  Bean Patties). Always an empty array for catering listings and
+   *  for plates that don't use required choices — those render
+   *  exactly as before. */
+  option_groups: ListingOptionGroup[];
+
   /** Plate-only pickup address for Uber Direct delivery orders
    *  (migration 019). NULL on pickup-only listings + on catering
    *  (catering has its own pickup model via inquiries/bookings).
@@ -159,13 +167,46 @@ export interface ListingExtra {
   price_cents: number;
 }
 
+/** One selectable option inside a required option group. Same shape
+ *  as a ListingExtra — a name plus an optional upcharge. price_cents
+ *  0 = "Included" (no upcharge for choosing this option). */
+export interface ListingOptionChoice {
+  name: string;
+  price_cents: number;
+}
+
+/** A creator-defined REQUIRED choice group on a plate listing
+ *  (migration 023). The customer must pick exactly one option to
+ *  order — e.g. "Protein" → 2 Beef Patties / 2 Black Bean Patties.
+ *  Contrast with `ListingExtra`, which is an OPTIONAL multi-select
+ *  add-on. `min`/`max` are persisted so a future "choose up to N"
+ *  variant needs no schema change; v1 fixes required=true, min=1,
+ *  max=1 (choose exactly one). */
+export interface ListingOptionGroup {
+  /** Stable client-generated id — used as a React key and to map a
+   *  customer's selection back to its group. Never a DB row id. */
+  id: string;
+  title: string;
+  required: boolean;
+  min: number;
+  max: number;
+  options: ListingOptionChoice[];
+}
+
 /** A customer's pick of an extra inside a cart line. Snapshots both
  *  the name and price at add-time so a creator editing the listing
- *  later doesn't retroactively shift pending carts. */
+ *  later doesn't retroactively shift pending carts.
+ *
+ *  `group` labels which REQUIRED option group this pick came from
+ *  (migration 023), e.g. "Protein". Undefined for optional add-ons
+ *  (the classic `extras` picks), which have no group. Carried into
+ *  the order snapshot so the creator sees "Protein: 2 Beef Patties"
+ *  on the order. */
 export interface CartItemExtra {
   name: string;
   price_cents: number;
   qty: number;
+  group?: string;
 }
 
 /** A creator's calendar blackout. `one_off` blocks a specific date;
@@ -449,9 +490,17 @@ export interface OrderItemSnapshot {
   price: number; // dollars (legacy)
   quantity: number;
   photo: string | null;
-  /** Optional add-ons the customer picked at checkout. Each row:
-   *  {name, price_cents, qty}. Omitted on pre-018 orders. */
-  extras?: Array<{ name: string; price_cents: number; qty: number }>;
+  /** Add-ons AND required-choice picks the customer made at checkout.
+   *  Each row: {name, price_cents, qty, group?}. `group` is set for a
+   *  required option-group pick (migration 023, e.g. "Protein") and
+   *  undefined for an optional add-on. Omitted entirely on pre-018
+   *  orders. */
+  extras?: Array<{
+    name: string;
+    price_cents: number;
+    qty: number;
+    group?: string;
+  }>;
 }
 
 // --- Message types ---
