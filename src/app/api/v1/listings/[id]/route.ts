@@ -28,6 +28,67 @@ function sanitizeExtras(
   return out;
 }
 
+/** Same shape + rules as the POST route's helper for required option
+ *  groups (migration 023). Duplicated to keep route handlers
+ *  self-contained. Forces required/min/max server-side and drops
+ *  degenerate (<2 option) groups. */
+function sanitizeOptionGroups(
+  raw: unknown
+): Array<{
+  id: string;
+  title: string;
+  required: boolean;
+  min: number;
+  max: number;
+  options: Array<{ name: string; price_cents: number }>;
+}> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{
+    id: string;
+    title: string;
+    required: boolean;
+    min: number;
+    max: number;
+    options: Array<{ name: string; price_cents: number }>;
+  }> = [];
+  for (const g of raw) {
+    if (!g || typeof g !== "object") continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gr = g as any;
+    const title =
+      typeof gr.title === "string" ? gr.title.trim().slice(0, 60) : "";
+    if (!title) continue;
+
+    const rawOptions = Array.isArray(gr.options) ? gr.options : [];
+    const options: Array<{ name: string; price_cents: number }> = [];
+    const seen = new Set<string>();
+    for (const o of rawOptions) {
+      if (!o || typeof o !== "object") continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const or = o as any;
+      const name =
+        typeof or.name === "string" ? or.name.trim().slice(0, 60) : "";
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const price_cents = Math.max(0, Math.floor(Number(or.price_cents) || 0));
+      options.push({ name, price_cents });
+      if (options.length >= 20) break;
+    }
+    if (options.length < 2) continue;
+
+    const id =
+      typeof gr.id === "string" && gr.id.trim()
+        ? gr.id.trim().slice(0, 40)
+        : `g_${Math.random().toString(36).slice(2, 10)}`;
+
+    out.push({ id, title, required: true, min: 1, max: 1, options });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 /** Same shape as the POST route's helper — duplicated rather than
  *  reexported to keep these route handlers self-contained. */
 function sanitizeInclusionGroups(
@@ -205,6 +266,11 @@ export async function PATCH(
     // a malformed payload becomes [] rather than poisoning the row.
     if (body.extras !== undefined) {
       allowed.extras = sanitizeExtras(body.extras);
+    }
+    // Required option groups (migration 023). Same defensive
+    // sanitize-or-empty as extras.
+    if (body.option_groups !== undefined) {
+      allowed.option_groups = sanitizeOptionGroups(body.option_groups);
     }
     // Pickup address (migration 019). Free text capped at the
     // form limit; explicit null clears any prior value if the

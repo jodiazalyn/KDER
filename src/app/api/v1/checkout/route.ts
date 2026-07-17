@@ -6,6 +6,11 @@ interface CheckoutItemExtra {
   name: string;
   price_cents: number;
   qty: number;
+  /** Set when this pick came from a REQUIRED option group (migration
+   *  023), e.g. "Protein". The server verifies it against the
+   *  listing's `option_groups` (not `extras`) and enforces that every
+   *  required group has a valid pick. Undefined for optional add-ons. */
+  group?: string;
 }
 
 interface CheckoutItem {
@@ -152,26 +157,45 @@ export async function POST(request: NextRequest) {
     // Pull `extras` too so we can verify customer-supplied add-on
     // prices server-side instead of trusting whatever the client
     // posts. Migration 018.
+    type ListingOptionGroupRow = {
+      id: string;
+      title: string;
+      required: boolean;
+      min: number;
+      max: number;
+      options: Array<{ name: string; price_cents: number }>;
+    };
     type ListingRow = {
       id: string;
       price: number;
       name: string;
       status: string;
       extras: Array<{ name: string; price_cents: number }> | null;
+      // Required choice groups (migration 023). Verified + enforced
+      // server-side just like extras.
+      option_groups: ListingOptionGroupRow[] | null;
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: listings } = await (supabase as any)
       .from("listings")
-      .select("id, price, name, status, extras")
+      .select("id, price, name, status, extras, option_groups")
       .in("id", listingIds) as { data: ListingRow[] | null };
 
     if (!listings || listings.length !== items.length) {
       return apiError("One or more items are no longer available", 400);
     }
 
+    // A required group is verified by title → (option name → price).
+    type RequiredGroup = { title: string; options: Map<string, number> };
     const priceMap = new Map<
       string,
-      { price: number; name: string; status: string; extras: Map<string, number> }
+      {
+        price: number;
+        name: string;
+        status: string;
+        extras: Map<string, number>;
+        requiredGroups: RequiredGroup[];
+      }
     >(
       listings.map((l) => [
         l.id,
@@ -182,6 +206,19 @@ export async function POST(request: NextRequest) {
           extras: new Map(
             (l.extras ?? []).map((e) => [e.name, Math.max(0, Math.floor(e.price_cents))])
           ),
+          // Only groups flagged required participate in enforcement.
+          // Each carries a name→price map for server-side price rewrite.
+          requiredGroups: (l.option_groups ?? [])
+            .filter((g) => g && g.required && Array.isArray(g.options))
+            .map((g) => ({
+              title: g.title,
+              options: new Map(
+                g.options.map((o) => [
+                  o.name,
+                  Math.max(0, Math.floor(o.price_cents)),
+                ])
+              ),
+            })),
         },
       ])
     );
@@ -196,36 +233,78 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use server-side prices, not client-supplied. Same for extras:
-    // we look each up by name against the listing's current `extras`
-    // and use the server-side price_cents. Unknown extra names are
-    // silently dropped — that protects creators from a tampered
-    // client trying to inject $0 add-ons or unknown SKUs.
-    const verifiedItems = items.map((item) => {
+    // Use server-side prices, not client-supplied. For picks we look
+    // each up server-side and rewrite price_cents:
+    //   - optional add-ons (no `group`) → verified against `extras`;
+    //     unknown names are silently dropped (protects creators from a
+    //     tampered client injecting $0 add-ons or unknown SKUs).
+    //   - required choices (`group` set) → verified against
+    //     `option_groups`; unknown group/option names are dropped.
+    // After verifying, we ENFORCE that every required group got exactly
+    // one valid pick — a tampered client can't skip a required choice.
+    type VerifiedExtra = {
+      name: string;
+      price_cents: number;
+      qty: number;
+      group?: string;
+    };
+    const verifiedItems: Array<
+      CheckoutItem & { extras: VerifiedExtra[] }
+    > = [];
+    for (const item of items) {
       const listing = priceMap.get(item.listing_id)!;
       const rawExtras = Array.isArray(item.extras) ? item.extras : [];
-      const verifiedExtras: Array<{
-        name: string;
-        price_cents: number;
-        qty: number;
-      }> = [];
+      const verifiedExtras: VerifiedExtra[] = [];
+      // Track which required groups received a valid pick (by title).
+      const satisfiedGroups = new Set<string>();
+
       for (const e of rawExtras) {
         if (!e || typeof e !== "object") continue;
         const name = typeof e.name === "string" ? e.name : "";
         const qty = Math.max(0, Math.min(99, Math.floor(Number(e.qty) || 0)));
         if (!name || qty <= 0) continue;
-        const serverPrice = listing.extras.get(name);
-        if (serverPrice === undefined) continue; // unknown extra
-        verifiedExtras.push({ name, price_cents: serverPrice, qty });
+        const group = typeof e.group === "string" ? e.group : "";
+
+        if (group) {
+          // Required-choice pick — verify against option_groups.
+          const rg = listing.requiredGroups.find((g) => g.title === group);
+          if (!rg) continue; // unknown group
+          const serverPrice = rg.options.get(name);
+          if (serverPrice === undefined) continue; // unknown option
+          verifiedExtras.push({
+            name,
+            price_cents: serverPrice,
+            qty,
+            group,
+          });
+          satisfiedGroups.add(group);
+        } else {
+          // Optional add-on — verify against extras.
+          const serverPrice = listing.extras.get(name);
+          if (serverPrice === undefined) continue; // unknown extra
+          verifiedExtras.push({ name, price_cents: serverPrice, qty });
+        }
       }
-      return {
+
+      // Enforce required groups: every one must have a valid pick.
+      const missing = listing.requiredGroups.find(
+        (g) => !satisfiedGroups.has(g.title)
+      );
+      if (missing) {
+        return apiError(
+          `Please choose a ${missing.title} for "${listing.name}".`,
+          400
+        );
+      }
+
+      verifiedItems.push({
         ...item,
         price: listing.price,
         name: listing.name,
         quantity: Math.min(Math.max(1, Math.round(item.quantity)), 99),
         extras: verifiedExtras,
-      };
-    });
+      });
+    }
 
     // Build line items for Stripe using verified prices. Each extra
     // gets its own Stripe line so the customer's Stripe receipt

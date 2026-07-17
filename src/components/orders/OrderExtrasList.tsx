@@ -28,10 +28,14 @@ export function OrderExtrasList({
   // above this component.)
   const rows = items.flatMap((it) =>
     (it.extras ?? []).map((e) => ({
-      key: `${it.listing_id}-${e.name}`,
+      key: `${it.listing_id}-${e.group ?? ""}-${e.name}`,
       name: e.name,
       qty: e.qty,
       price_cents: e.price_cents,
+      // Required-choice picks (migration 023) carry their group label
+      // (e.g. "Protein") and read as "Protein: 2 Beef Patties" rather
+      // than the "+ {qty} {name}" add-on format.
+      group: e.group,
     }))
   );
   if (rows.length === 0) return null;
@@ -54,7 +58,20 @@ export function OrderExtrasList({
           }
         >
           <span className={tight ? "" : "min-w-0 truncate"}>
-            + {r.qty} {r.name}
+            {r.group ? (
+              // Required choice — "Protein: 2 Beef Patties". No "+qty"
+              // prefix: it's a single required pick, not a stacked add-on.
+              <>
+                <span className="font-medium text-foreground/80">
+                  {r.group}:
+                </span>{" "}
+                {r.name}
+              </>
+            ) : (
+              <>
+                + {r.qty} {r.name}
+              </>
+            )}
           </span>
           {!tight && showPrices && r.price_cents > 0 && (
             <span className="shrink-0 tabular-nums text-muted-foreground/80">

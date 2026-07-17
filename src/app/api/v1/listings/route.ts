@@ -31,6 +31,77 @@ function sanitizeExtras(
   return out;
 }
 
+/** Sanitize an `option_groups` payload (migration 023). Plate-only
+ *  REQUIRED choice groups (choose-exactly-one), distinct from the
+ *  optional `extras` above. Never trust client shape:
+ *   - reject anything that isn't an array; cap at 10 groups
+ *   - per group: `title` = non-empty string trimmed to 60 chars;
+ *     `id` = string (regenerated if missing/blank); `options` =
+ *     array of {name, price_cents} sanitized like extras, deduped
+ *     by case-insensitive name, capped at 20 per group
+ *   - drop any group with fewer than 2 options — a "choose one"
+ *     with 0/1 options is meaningless and would just block checkout
+ *   - v1 forces required=true, min=1, max=1 regardless of input, so
+ *     a tampered client can't smuggle a different selection rule */
+function sanitizeOptionGroups(
+  raw: unknown
+): Array<{
+  id: string;
+  title: string;
+  required: boolean;
+  min: number;
+  max: number;
+  options: Array<{ name: string; price_cents: number }>;
+}> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{
+    id: string;
+    title: string;
+    required: boolean;
+    min: number;
+    max: number;
+    options: Array<{ name: string; price_cents: number }>;
+  }> = [];
+  for (const g of raw) {
+    if (!g || typeof g !== "object") continue;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const gr = g as any;
+    const title =
+      typeof gr.title === "string" ? gr.title.trim().slice(0, 60) : "";
+    if (!title) continue;
+
+    const rawOptions = Array.isArray(gr.options) ? gr.options : [];
+    const options: Array<{ name: string; price_cents: number }> = [];
+    const seen = new Set<string>();
+    for (const o of rawOptions) {
+      if (!o || typeof o !== "object") continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const or = o as any;
+      const name =
+        typeof or.name === "string" ? or.name.trim().slice(0, 60) : "";
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const price_cents = Math.max(0, Math.floor(Number(or.price_cents) || 0));
+      options.push({ name, price_cents });
+      if (options.length >= 20) break;
+    }
+    // A required "choose exactly one" needs at least two real options
+    // to be a choice at all — drop degenerate groups.
+    if (options.length < 2) continue;
+
+    const id =
+      typeof gr.id === "string" && gr.id.trim()
+        ? gr.id.trim().slice(0, 40)
+        : `g_${Math.random().toString(36).slice(2, 10)}`;
+
+    out.push({ id, title, required: true, min: 1, max: 1, options });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 /** Sanitize a catering_inclusion_groups payload: drop unknown keys,
  *  drop non-string items, cap each item at 60 chars. Never trust the
  *  shape of incoming JSONB. */
@@ -293,6 +364,10 @@ export async function POST(request: NextRequest) {
           : null,
       // Plate-only extras (migration 018). Catering always empty.
       extras: kind === "plate" ? sanitizeExtras(body.extras) : [],
+      // Plate-only required option groups (migration 023). Catering
+      // always empty — it uses structured quote fee_items instead.
+      option_groups:
+        kind === "plate" ? sanitizeOptionGroups(body.option_groups) : [],
       // Uber Direct pickup address (migration 019). Plate-only;
       // catering uses its own pickup model via the inquiry/
       // booking flow. Stored as free text — Uber server-side-
