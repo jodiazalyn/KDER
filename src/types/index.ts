@@ -51,11 +51,20 @@ export interface AvailabilityWindow {
   end_time: string;
 }
 
+/** A creator-owned promo code (migration 024). Lives on the creator
+ *  (creators.discount_codes), applied per-cart at checkout — the cart
+ *  is per-creator so a code scopes to that creator's whole storefront.
+ *  A dormant per-listing `Listing.discount_codes` field predates this
+ *  and is intentionally unused. */
 export interface DiscountCode {
+  /** Uppercase, A–Z0–9, unique per creator. What the customer types. */
   code: string;
   type: "percentage" | "fixed";
+  /** For "percentage": 1–100 (percent off). For "fixed": CENTS off. */
   value: number;
+  /** Minimum food subtotal in CENTS to qualify, or null for no minimum. */
   min_order: number | null;
+  /** ISO date string; null = never expires. */
   expires_at: string | null;
 }
 
@@ -472,6 +481,11 @@ export interface Order {
   member_photo: string | null;
   listing_name: string;
   listing_photo: string | null;
+  /** Promo code applied at checkout (migration 024), or null. Uppercase.
+   *  `discount_cents` is the amount taken off the food subtotal in cents.
+   *  total_amount / creator_payout already reflect the reduction. */
+  discount_code?: string | null;
+  discount_cents?: number;
   /** Full JSONB items array snapshotted at checkout (migration 018+).
    *  Each row: {listing_id, name, price, quantity, photo, extras?}.
    *  Older orders omit `extras` per row — render path treats

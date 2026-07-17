@@ -48,6 +48,10 @@ export function rowToOrder(row: any): Order {
     customer_email: row.customer_email ?? null,
     member_name: row.member_name ?? "Customer",
     member_photo: null,
+    // Promo code applied at checkout (migration 024). Null / 0 on
+    // orders placed without a code or predating the feature.
+    discount_code: row.discount_code ?? null,
+    discount_cents: Number(row.discount_cents ?? 0),
     listing_name: firstItem?.name ?? joinedListing?.name ?? "Plate",
     listing_photo:
       // Prefer the snapshotted photo from items JSONB so legacy listing

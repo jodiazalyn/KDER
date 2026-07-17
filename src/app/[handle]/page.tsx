@@ -170,6 +170,9 @@ async function loadStorefrontUncached(handle: string): Promise<{
     website_url: member.website_url,
     facebook_handle: member.facebook_handle,
     whatsapp_number: member.whatsapp_number,
+    // Promo codes are validated server-side at checkout; never surface the
+    // creator's code list on the public storefront payload.
+    discount_codes: [],
   };
 
   return { creator, listings };
