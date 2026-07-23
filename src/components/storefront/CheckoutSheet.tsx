@@ -157,6 +157,16 @@ export function CheckoutSheet({
     }
   }, [open]);
 
+  // Prefill the receipt email from the authed user's account email so
+  // they don't retype it — email is now required for every order (the
+  // receipt is never optional). Only seed when the field is still empty
+  // so we don't clobber a manual edit. Guests type their own below.
+  useEffect(() => {
+    if (open && currentUser?.email) {
+      setEmail((prev) => prev || currentUser.email);
+    }
+  }, [open, currentUser?.email]);
+
   const total = getCartTotal(items);
 
   /** Best-effort parse of the customer's free-text address into the
@@ -278,12 +288,12 @@ export function CheckoutSheet({
     serviceZips.length === 0 || serviceZips.includes(dropoffZip);
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
   // Contact validation for guest orders. Name is always required
-  // (keeps the creator's inbox personal). Notification channel:
-  //   - delivery → phone REQUIRED (Uber's courier needs a number
-  //     to reach the customer at the door)
-  //   - pickup   → phone OR email (one channel is enough; this
-  //     removes the "I don't share my phone" friction for
-  //     pickup-only orders)
+  // (keeps the creator's inbox personal). Email is OPTIONAL — a
+  // phone-first, low-friction checkout. Notification channel:
+  //   - delivery → phone REQUIRED (the creator needs a number to
+  //     reach the customer at the door)
+  //   - pickup   → phone OR email (one channel is enough; removes the
+  //     "I don't share my phone" friction for pickup-only orders)
   const emailValid = /\S+@\S+\.\S+/.test(email.trim());
   const phoneValid = guestPhoneDigits.length === 10;
   const guestFieldsValid =
@@ -542,8 +552,9 @@ export function CheckoutSheet({
             </div>
           )}
 
-          {/* Email — optional add-on for authed users (they may
-              not have one on file). Hidden for guests because the
+          {/* Email — optional add-on for authed users (they may not have
+              one on file). Prefilled from their account email when one
+              exists (see the effect above). Hidden for guests because the
               contact-info block above already collects it. */}
           {currentUser && (
             <div>

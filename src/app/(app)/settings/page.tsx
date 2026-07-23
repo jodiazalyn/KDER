@@ -100,12 +100,12 @@ export default function SettingsPage() {
     return JSON.stringify(form) !== JSON.stringify(initial);
   }, [form, initial]);
 
-  // Email is editable here. If the creator has one, edits must remain
-  // a valid format; if it's blank (legacy account before email collection
-  // landed), we let them save without one but the dashboard banner will
-  // keep nudging until they add it.
+  // Email is REQUIRED here — it's how the creator gets new-order alerts,
+  // so we can't let them save without a valid one. Legacy accounts that
+  // predate email collection will be nudged to add one the next time they
+  // save any change (enforced going forward).
   const emailTrimmed = form?.email.trim().toLowerCase() ?? "";
-  const isEmailValid = emailTrimmed === "" || EMAIL_RE.test(emailTrimmed);
+  const isEmailValid = EMAIL_RE.test(emailTrimmed);
 
   const canSave =
     !!form &&
@@ -330,7 +330,7 @@ export default function SettingsPage() {
               htmlFor="settings-email"
               className="mb-2 block text-sm font-medium text-muted-foreground"
             >
-              Email
+              Email <span className="text-primary">*</span>
             </label>
             <input
               id="settings-email"

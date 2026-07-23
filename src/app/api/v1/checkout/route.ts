@@ -74,10 +74,14 @@ export async function POST(request: NextRequest) {
       delivery_address,
     } = body;
 
-    const customerEmail =
+    let customerEmail =
       typeof body.customer_email === "string" && body.customer_email.trim()
         ? body.customer_email.trim().toLowerCase().slice(0, 254)
         : null;
+    // Loose deliverability sanity check — the receipt is mandatory, so a
+    // malformed address is worse than none (it silently bounces). Mirrors
+    // the client-side validator in CheckoutSheet.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // ── Uber Direct delivery fields (Phase 2, migration 019) ─────
     // We only honor these when fulfillment_type is "delivery" — for
@@ -142,17 +146,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Contact requirements split by fulfillment:
-    //   - delivery → name + phone REQUIRED (Uber's courier needs
-    //     a number to reach the customer at the door)
-    //   - pickup   → name + (phone OR email) — one notification
-    //     channel is enough so we don't gate the order on a
-    //     number the customer doesn't want to share
+    //   - delivery → name + phone REQUIRED (the creator needs a number
+    //     to reach the customer at the door)
+    //   - pickup   → name + (phone OR email) — one notification channel
+    //     is enough so we don't gate the order on a number the customer
+    //     doesn't want to share (phone-first, low-friction checkout)
+    // Email itself is OPTIONAL for the customer; when supplied we
+    // validate the format and send a receipt, but it's never mandatory.
+    // (The creator's own order emails are guaranteed separately, via a
+    // required creator email at onboarding/settings.)
     if (!member_name) {
       return apiError("Name is required.", 400);
     }
     if (isDelivery && !member_phone) {
       return apiError(
-        "Phone is required for delivery — the courier needs to reach you at the door.",
+        "Phone is required for delivery so the creator can reach you at the door.",
         400
       );
     }
@@ -161,6 +169,9 @@ export async function POST(request: NextRequest) {
         "Enter a phone number or email so we can send order updates.",
         400
       );
+    }
+    if (customerEmail && !EMAIL_RE.test(customerEmail)) {
+      return apiError("Enter a valid email for your receipt.", 400);
     }
 
     // Require authenticated customer. The client-side gate should have
@@ -174,6 +185,30 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) {
       return apiError("Sign in to place an order.", 401);
+    }
+
+    // Customer email is optional (phone-first checkout). But when the
+    // caller didn't type one, best-effort fall back to the member's
+    // account email (then the Supabase auth email) so an authed customer
+    // with an email on file still gets a receipt without re-entering it.
+    // No hard-fail — a phone-only order is allowed.
+    if (!customerEmail) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: memberRow } = await (supabase as any)
+        .from("members")
+        .select("email")
+        .eq("id", user.id)
+        .single() as { data: { email: string | null } | null };
+      const fallback =
+        (typeof memberRow?.email === "string" && memberRow.email.trim()
+          ? memberRow.email
+          : null) ||
+        (typeof user.email === "string" && user.email.trim()
+          ? user.email
+          : null);
+      if (fallback && EMAIL_RE.test(fallback.trim().toLowerCase())) {
+        customerEmail = fallback.trim().toLowerCase().slice(0, 254);
+      }
     }
 
     const listingIds = items.map((i) => i.listing_id);
