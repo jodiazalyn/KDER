@@ -110,12 +110,29 @@ export async function POST(request: NextRequest) {
         ? body.dropoff.zip_code.trim().slice(0, 10)
         : null;
 
-    // Delivery orders without a quote or structured dropoff can't
-    // be fulfilled — block the order at checkout rather than
-    // letting it succeed and silently fail at delivery booking.
-    if (isDelivery && (!uberQuoteId || !uberFeeCents || !dropoffZip)) {
+    // Two delivery modes:
+    //   * Uber Direct (dormant): a client-supplied uber_quote_id +
+    //     uber_fee_cents means a courier will be dispatched. Fee is a
+    //     pass-through to KDER (added to the application fee).
+    //   * Self-delivery (migration 025): NO uber_quote_id — the creator
+    //     drives the order themselves. Fee is a flat per-storefront charge
+    //     read server-side from creators.delivery_fee_cents and paid out to
+    //     the creator. ZIP-gated to their service_zip_codes.
+    // We infer self-delivery from the absence of an Uber quote so the
+    // existing Uber path stays intact for when it's re-enabled.
+    const isSelfDelivery = isDelivery && !uberQuoteId;
+
+    // Every delivery order needs a dropoff ZIP (address). The Uber path
+    // additionally requires its quote + fee; self-delivery does not.
+    if (isDelivery && !dropoffZip) {
       return apiError(
-        "Delivery details are incomplete. Pick a dropoff address and wait for the quote, or switch to pickup.",
+        "Enter a delivery address (including ZIP), or switch to pickup.",
+        400
+      );
+    }
+    if (isDelivery && !isSelfDelivery && !uberFeeCents) {
+      return apiError(
+        "Delivery details are incomplete. Wait for the quote, or switch to pickup.",
         400
       );
     }
@@ -445,13 +462,15 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: creatorRow } = await (supabase as any)
       .from("creators")
-      .select("id, stripe_connect_id, kyc_status, members!inner(handle)")
+      .select("id, stripe_connect_id, kyc_status, delivery_fee_cents, service_zip_codes, members!inner(handle)")
       .eq("members.handle", creator_handle)
       .single() as {
         data: {
           id: string;
           stripe_connect_id: string | null;
           kyc_status: string | null;
+          delivery_fee_cents: number | null;
+          service_zip_codes: string[] | null;
         } | null;
       };
 
@@ -469,16 +488,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Grand total = discounted food + delivery (delivery is 0 on
-    // pickup). Any promo code (migration 024) already reduced
-    // discountedSubtotalCents, and the platform fee was recomputed on
-    // that reduced base, so the split stays proportional.
-    const grandTotalCents = discountedSubtotalCents + uberFeeCents;
+    // ── Self-delivery fee + ZIP gate (migration 025) ────────────────
+    // For self-delivery orders the fee is the creator's flat rate, read
+    // server-side so a tampered client can't lower it. It's ZIP-gated to
+    // the creator's service area (when they've defined one) and, because
+    // the creator is driving, added to their payout — never the platform
+    // application fee. Uber orders keep selfDeliveryFeeCents = 0.
+    let selfDeliveryFeeCents = 0;
+    if (isSelfDelivery) {
+      const serviceZips = Array.isArray(creatorRow.service_zip_codes)
+        ? creatorRow.service_zip_codes
+        : [];
+      // Gate only when the creator has actually restricted a service
+      // area. dropoffZip is guaranteed present here (checked above).
+      const zip5 = (dropoffZip ?? "").slice(0, 5);
+      if (serviceZips.length > 0 && !serviceZips.includes(zip5)) {
+        return apiError(
+          "This creator doesn't deliver to that ZIP code. Try pickup instead.",
+          400
+        );
+      }
+      selfDeliveryFeeCents =
+        typeof creatorRow.delivery_fee_cents === "number" &&
+        creatorRow.delivery_fee_cents > 0
+          ? Math.floor(creatorRow.delivery_fee_cents)
+          : 0;
+
+      // Surface the self-delivery fee as its own Stripe line so the
+      // customer's receipt breaks it out ("Delivery $X") rather than
+      // folding it into a higher total. Free delivery adds no line.
+      if (selfDeliveryFeeCents > 0) {
+        line_items.push({
+          price_data: {
+            currency: "usd",
+            product_data: { name: "Delivery" },
+            unit_amount: selfDeliveryFeeCents,
+          },
+          quantity: 1,
+        });
+      }
+    }
+
+    // Grand total = discounted food + delivery. Delivery is 0 on pickup;
+    // it's the Uber pass-through on Uber orders, or the creator's flat
+    // self-delivery fee (migration 025) on self-delivery orders. Any promo
+    // code (migration 024) already reduced discountedSubtotalCents, and the
+    // platform fee was recomputed on that reduced base, so the split stays
+    // proportional.
+    const grandTotalCents =
+      discountedSubtotalCents + uberFeeCents + selfDeliveryFeeCents;
     const totalAmount = grandTotalCents / 100;
     const platformFee = platformFeeCents / 100;
-    // Creator nets discounted food minus the platform fee. The
-    // delivery slice never touches their payout.
-    const creatorPayout = (discountedSubtotalCents - platformFeeCents) / 100;
+    // Creator nets discounted food minus the platform fee, PLUS the
+    // self-delivery fee (they're the one driving). The Uber pass-through
+    // slice never touches their payout.
+    const creatorPayout =
+      (discountedSubtotalCents - platformFeeCents + selfDeliveryFeeCents) / 100;
 
     // Let Postgres generate the UUID via DEFAULT gen_random_uuid()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -504,6 +569,11 @@ export async function POST(request: NextRequest) {
         // request payload.
         uber_quote_id: uberQuoteId,
         uber_fee_cents: uberFeeCents || null,
+        // Self-delivery context (migration 025). self_delivery marks that
+        // the creator is driving; delivery_fee_cents is the flat fee they
+        // charged (already folded into total_amount + creator_payout).
+        self_delivery: isSelfDelivery,
+        delivery_fee_cents: isSelfDelivery ? selfDeliveryFeeCents : null,
         dropoff_address: dropoffStreet,
         dropoff_instructions:
           isDelivery && dropoffCity && dropoffState && dropoffZip

@@ -32,7 +32,7 @@ export async function loadCreatorProfile(
     (supabase as any)
       .from("creators")
       .select(
-        "service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes"
+        "service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes, delivery_fee_cents"
       )
       .eq("member_id", userId)
       .single(),
@@ -71,6 +71,10 @@ export async function loadCreatorProfile(
     total_orders: 0,
     total_plates: 0,
     pickup_address: creator?.pickup_address || null,
+    delivery_fee_cents:
+      typeof creator?.delivery_fee_cents === "number"
+        ? creator.delivery_fee_cents
+        : 0,
     instagram_handle: member?.instagram_handle || null,
     tiktok_handle: member?.tiktok_handle || null,
     website_url: member?.website_url || null,

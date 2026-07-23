@@ -50,6 +50,7 @@ interface CreatorRow {
   vibe_score: number | string | null;
   review_rating_avg: number | string | null;
   review_count: number | null;
+  delivery_fee_cents: number | null;
 }
 
 function resolveZips(zips: string[]) {
@@ -84,7 +85,7 @@ async function loadStorefrontUncached(handle: string): Promise<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: creatorRow } = (await (supabase as any)
     .from("creators")
-    .select("id, storefront_active, service_zip_codes, vibe_score, review_rating_avg, review_count")
+    .select("id, storefront_active, service_zip_codes, vibe_score, review_rating_avg, review_count, delivery_fee_cents")
     .eq("member_id", member.id)
     .single()) as { data: CreatorRow | null };
 
@@ -165,6 +166,12 @@ async function loadStorefrontUncached(handle: string): Promise<{
     total_orders: completedOrdersCount ?? 0,
     total_plates: listings.length,
     pickup_address: null,
+    // Self-delivery flat fee (migration 025). Safe to expose publicly —
+    // the customer needs to see the delivery cost when choosing delivery.
+    delivery_fee_cents:
+      typeof creatorRow.delivery_fee_cents === "number"
+        ? creatorRow.delivery_fee_cents
+        : 0,
     instagram_handle: member.instagram_handle,
     tiktok_handle: member.tiktok_handle,
     website_url: member.website_url,

@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       email,
       zips,
       pickup_address,
+      delivery_fee_cents,
       discount_codes,
       instagram_handle,
       tiktok_handle,
@@ -116,6 +117,16 @@ export async function POST(request: NextRequest) {
     };
     if (discount_codes !== undefined) {
       creatorPatch.discount_codes = sanitizeDiscountCodes(discount_codes);
+    }
+    // Self-delivery flat fee (migration 025). Only written when the caller
+    // supplied the key so other flows don't reset it. Clamp to a
+    // non-negative integer, capped at $100 to catch fat-finger entries.
+    if (delivery_fee_cents !== undefined) {
+      const raw = Number(delivery_fee_cents);
+      creatorPatch.delivery_fee_cents =
+        Number.isFinite(raw) && raw > 0
+          ? Math.min(Math.floor(raw), 100_00)
+          : 0;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

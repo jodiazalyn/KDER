@@ -266,25 +266,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pre-order × delivery mutual exclusion (Uber Direct v1
-    // decision). Uber dispatches couriers immediately on
-    // delivery creation; we don't yet have a scheduled-
-    // dispatch cron that could honor a future pre-order date.
-    // Until we do, pre-order plates are pickup-only. Enforced
-    // server-side so an API-only client can't bypass the
-    // client-side guard.
-    if (
-      body.kind === "plate" &&
-      typeof body.pre_order_available_date === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(body.pre_order_available_date) &&
-      (body.fulfillment_type === "delivery" ||
-        body.fulfillment_type === "both")
-    ) {
-      return apiError(
-        "Pre-order plates are pickup-only for now.",
-        400
-      );
-    }
+    // Pre-order × delivery is now supported via self-delivery (migration
+    // 025) — the creator delivers on the pre-order date themselves, so the
+    // old Uber-courier "immediate dispatch" restriction no longer applies.
+    // The prior pickup-only guard has been removed.
 
     // Normalize photo: accept single photo_url or photos[] array, store as photos[]
     const photos: string[] = Array.isArray(body.photos)
