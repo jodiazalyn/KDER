@@ -474,6 +474,12 @@ export interface Order {
   delivery_address: string | null;
   delivery_zip: string | null;
   pickup_address: string | null; // creator's address, revealed after accept
+  /** Self-delivery (migration 025). `self_delivery` is true when the
+   *  creator drives the order themselves (no Uber courier).
+   *  `delivery_fee_cents` is the flat fee charged for it — included in
+   *  creator_payout, not platform_fee. Null/false for pickup + Uber. */
+  self_delivery?: boolean;
+  delivery_fee_cents?: number | null;
   member_phone: string | null;
   customer_email: string | null;
   // Denormalized for display

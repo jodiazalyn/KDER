@@ -905,6 +905,8 @@ export function StorefrontClient({
           items={cart}
           creatorHandle={handle}
           creatorName={creator.display_name}
+          deliveryFeeCents={creator.delivery_fee_cents}
+          serviceZips={creator.neighborhoods.map((n) => n.zip)}
           onPlaceOrder={handlePlaceOrder}
         />
       )}

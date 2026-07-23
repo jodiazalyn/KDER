@@ -35,6 +35,9 @@ interface ProfileFormState {
   handle: string; // kept for round-trip only; not editable here
   zips: ZipEntry[];
   pickup_address: string;
+  /** Flat self-delivery fee, held as a dollar string for the input
+   *  (e.g. "3.50"). Empty / "0" = free delivery. */
+  delivery_fee: string;
   instagram_handle: string;
   tiktok_handle: string;
   website_url: string;
@@ -52,6 +55,7 @@ function toFormState(p: Awaited<ReturnType<typeof getCreatorProfileAsync>>): Pro
     handle: p.handle || "",
     zips: (p.neighborhoods || []).map((n) => ({ zip: n.zip, neighborhood: n.name })),
     pickup_address: p.pickup_address || "",
+    delivery_fee: p.delivery_fee_cents > 0 ? (p.delivery_fee_cents / 100).toFixed(2) : "",
     instagram_handle: p.instagram_handle || "",
     tiktok_handle: p.tiktok_handle || "",
     website_url: p.website_url || "",
@@ -179,6 +183,9 @@ export default function SettingsPage() {
           email: emailTrimmed || null,
           zips: form.zips.map((z) => z.zip),
           pickup_address: form.pickup_address.trim() || null,
+          // Self-delivery flat fee (migration 025). Dollars → cents. Blank
+          // or non-numeric = free ($0). Server clamps + caps regardless.
+          delivery_fee_cents: Math.round((parseFloat(form.delivery_fee) || 0) * 100),
           instagram_handle: form.instagram_handle.trim() || null,
           tiktok_handle: form.tiktok_handle.trim() || null,
           website_url: form.website_url.trim() || null,
@@ -547,6 +554,50 @@ export default function SettingsPage() {
           ) : (
             <p className="text-sm text-muted-foreground">No zip codes added yet.</p>
           )}
+        </section>
+
+        {/* Delivery fee section (migration 025) — flat self-delivery fee.
+            The creator drives the order themselves; this fee is added to
+            the customer's total and paid out to the creator. Blank = free
+            delivery. Gated to the service-area ZIPs above. */}
+        <section className="glass-card p-5 space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Delivery fee
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Flat fee you charge to deliver an order yourself, in your
+              service area. Leave blank for free delivery. Customers see this
+              when they pick delivery at checkout.
+            </p>
+          </div>
+          <div className="relative">
+            <span className="absolute inset-y-0 left-4 flex items-center text-muted-foreground/60 text-base select-none">
+              $
+            </span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={form.delivery_fee}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  // Allow digits + a single decimal point, max 2 decimals.
+                  delivery_fee: e.target.value
+                    .replace(/[^\d.]/g, "")
+                    .replace(/(\..*)\./g, "$1")
+                    .replace(/^(\d*\.\d{2}).*$/, "$1"),
+                })
+              }
+              placeholder="0.00"
+              className="glass-input h-12 w-full pl-8 pr-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {form.delivery_fee && parseFloat(form.delivery_fee) > 0
+              ? `Customers pay $${(parseFloat(form.delivery_fee) || 0).toFixed(2)} for delivery.`
+              : "Delivery is free for customers."}
+          </p>
         </section>
 
         {/* Pickup address section */}

@@ -34,6 +34,10 @@ export interface CreatorProfile {
   total_orders: number;
   total_plates: number;
   pickup_address: string | null;
+  /** Flat self-delivery fee in cents (migration 025). 0 = free delivery.
+   *  Charged when the creator delivers the order themselves (no Uber
+   *  courier) and paid out to the creator, not the platform. */
+  delivery_fee_cents: number;
   instagram_handle: string | null;
   tiktok_handle: string | null;
   website_url: string | null;
@@ -68,7 +72,7 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("creators")
-          .select("service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes")
+          .select("service_zip_codes, storefront_active, vibe_score, review_rating_avg, review_count, pickup_address, discount_codes, delivery_fee_cents")
           .eq("member_id", user.id)
           .single(),
       ]);
@@ -99,6 +103,10 @@ export async function getCreatorProfileAsync(): Promise<CreatorProfile> {
           total_orders: 0,
           total_plates: 0,
           pickup_address: creator?.pickup_address || null,
+          delivery_fee_cents:
+            typeof creator?.delivery_fee_cents === "number"
+              ? creator.delivery_fee_cents
+              : 0,
           instagram_handle: member.instagram_handle || null,
           tiktok_handle: member.tiktok_handle || null,
           website_url: member.website_url || null,
@@ -149,6 +157,10 @@ export function getCreatorProfile(): CreatorProfile {
     total_orders: 0,
     total_plates: 0,
     pickup_address: profile.pickup_address || null,
+    delivery_fee_cents:
+      typeof profile.delivery_fee_cents === "number"
+        ? profile.delivery_fee_cents
+        : 0,
     instagram_handle: profile.instagram_handle || null,
     tiktok_handle: profile.tiktok_handle || null,
     website_url: profile.website_url || null,
@@ -192,6 +204,7 @@ function defaultProfile(): CreatorProfile {
     total_orders: 0,
     total_plates: 0,
     pickup_address: null,
+    delivery_fee_cents: 0,
     instagram_handle: null,
     tiktok_handle: null,
     website_url: null,

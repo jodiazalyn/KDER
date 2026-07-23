@@ -322,21 +322,10 @@ export async function PATCH(
       // for now we trust the form's client-side guard to fire.
     }
 
-    // Pre-order × delivery mutual exclusion (Uber Direct v1).
-    // Only checks when BOTH fields are present in this patch —
-    // a creator can switch one then the other across two
-    // requests. The combined-shape enforcement on the row
-    // itself happens at the form layer.
-    if (
-      willOfferDelivery &&
-      typeof allowed.pre_order_available_date === "string" &&
-      /^\d{4}-\d{2}-\d{2}$/.test(allowed.pre_order_available_date)
-    ) {
-      return apiError(
-        "Pre-order plates are pickup-only for now.",
-        400
-      );
-    }
+    // Pre-order × delivery is now supported via self-delivery (migration
+    // 025) — the creator delivers on the pre-order date themselves, so the
+    // old Uber-courier "immediate dispatch" restriction no longer applies.
+    // The prior pickup-only guard has been removed.
 
     allowed.updated_at = new Date().toISOString();
 
