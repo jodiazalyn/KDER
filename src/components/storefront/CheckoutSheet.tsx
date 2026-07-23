@@ -287,17 +287,18 @@ export function CheckoutSheet({
   const zipInServiceArea =
     serviceZips.length === 0 || serviceZips.includes(dropoffZip);
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
-  // Contact validation. Email is ALWAYS required now — every order sends
-  // a receipt on confirmation + completion, so we must capture a valid
-  // address for both guests and authed users. Name is required for guests
-  // (keeps the creator's inbox personal). Phone is additionally required
-  // on delivery so the creator can reach the customer at the door.
+  // Contact validation for guest orders. Name is always required
+  // (keeps the creator's inbox personal). Email is OPTIONAL — a
+  // phone-first, low-friction checkout. Notification channel:
+  //   - delivery → phone REQUIRED (the creator needs a number to
+  //     reach the customer at the door)
+  //   - pickup   → phone OR email (one channel is enough; removes the
+  //     "I don't share my phone" friction for pickup-only orders)
   const emailValid = /\S+@\S+\.\S+/.test(email.trim());
   const phoneValid = guestPhoneDigits.length === 10;
   const guestFieldsValid =
     guestName.trim().length > 0 &&
-    emailValid &&
-    (fulfillment === "delivery" ? phoneValid : true);
+    (fulfillment === "delivery" ? phoneValid : phoneValid || emailValid);
   // Self-delivery orders need a complete, in-service-area address — the
   // creator has to be able to drive to it. Pickup orders skip this gate.
   const deliveryReady =
@@ -306,7 +307,6 @@ export function CheckoutSheet({
   const canPlace =
     !needsAddress &&
     deliveryReady &&
-    emailValid &&
     (!!currentUser || guestFieldsValid);
 
   const handlePlace = async () => {
@@ -535,39 +535,38 @@ export function CheckoutSheet({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email (required, for your receipt)"
+                placeholder={
+                  fulfillment === "delivery"
+                    ? "Email (optional, for receipt)"
+                    : "Email (or use phone above)"
+                }
                 autoComplete="email"
                 inputMode="email"
                 className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               <p className="text-xs text-muted-foreground">
                 {fulfillment === "delivery"
-                  ? "We'll email your receipt; the creator will call your phone to drop off."
-                  : "We'll email your receipt and order updates here."}
+                  ? "The creator will reach you via phone to drop off your order."
+                  : "Pick one — we'll send order updates there."}
               </p>
             </div>
           )}
 
-          {/* Email — required for authed users too. It's prefilled from
-              their account email when one is on file (see the effect
-              above); if not, they must supply one so the receipt can be
-              sent. Guests collect it in the contact block above. */}
+          {/* Email — optional add-on for authed users (they may not have
+              one on file). Prefilled from their account email when one
+              exists (see the effect above). Hidden for guests because the
+              contact-info block above already collects it. */}
           {currentUser && (
             <div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email (required, for your receipt)"
+                placeholder="Email (optional, for receipt)"
                 autoComplete="email"
                 inputMode="email"
                 className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
-              {!emailValid && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  We&apos;ll email your receipt here.
-                </p>
-              )}
             </div>
           )}
 

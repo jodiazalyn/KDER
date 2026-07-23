@@ -64,6 +64,29 @@ export async function POST(request: NextRequest) {
       return apiError("Not authenticated.", 401);
     }
 
+    // Creator email is REQUIRED so new-order alerts always reach them.
+    // Enforced "going forward": if the caller didn't supply an email, we
+    // only allow the save when one is already on file (existing creators
+    // updating other fields). A creator with no email on file — new
+    // accounts, or legacy rows — must add one before they can save.
+    if (!trimmedEmail) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingMember } = await (supabase as any)
+        .from("members")
+        .select("email")
+        .eq("id", user.id)
+        .single() as { data: { email: string | null } | null };
+      const hasEmailOnFile =
+        typeof existingMember?.email === "string" &&
+        existingMember.email.trim().length > 0;
+      if (!hasEmailOnFile) {
+        return apiError(
+          "Add an email so you don't miss new-order alerts.",
+          400
+        );
+      }
+    }
+
     // Upsert member record. Build the patch dynamically: only set
     // `email` when the caller actually supplied one, so a settings-
     // page save that omits email doesn't accidentally null out an

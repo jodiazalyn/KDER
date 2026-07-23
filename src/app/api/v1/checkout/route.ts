@@ -145,20 +145,28 @@ export async function POST(request: NextRequest) {
       return apiError("Cart is empty", 400);
     }
 
-    // Contact requirements:
-    //   - name  → always required (keeps the creator's inbox personal)
-    //   - email → ALWAYS required. Every order sends a receipt on
-    //     confirmation + completion, so we must capture a deliverable
-    //     address for every order, pickup or delivery. (Resolved below
-    //     after auth so we can fall back to the account email on file.)
-    //   - phone → additionally required on delivery so the creator can
-    //     reach the customer at the door.
+    // Contact requirements split by fulfillment:
+    //   - delivery → name + phone REQUIRED (the creator needs a number
+    //     to reach the customer at the door)
+    //   - pickup   → name + (phone OR email) — one notification channel
+    //     is enough so we don't gate the order on a number the customer
+    //     doesn't want to share (phone-first, low-friction checkout)
+    // Email itself is OPTIONAL for the customer; when supplied we
+    // validate the format and send a receipt, but it's never mandatory.
+    // (The creator's own order emails are guaranteed separately, via a
+    // required creator email at onboarding/settings.)
     if (!member_name) {
       return apiError("Name is required.", 400);
     }
     if (isDelivery && !member_phone) {
       return apiError(
         "Phone is required for delivery so the creator can reach you at the door.",
+        400
+      );
+    }
+    if (!isDelivery && !member_phone && !customerEmail) {
+      return apiError(
+        "Enter a phone number or email so we can send order updates.",
         400
       );
     }
@@ -179,12 +187,11 @@ export async function POST(request: NextRequest) {
       return apiError("Sign in to place an order.", 401);
     }
 
-    // Email is mandatory for the receipt. The client requires it, but
-    // enforce server-side too so a raw API call can't create a
-    // receipt-less order. If the caller didn't supply one, fall back to
-    // the member's account email (and the Supabase auth email) before
-    // giving up — an authed customer with an email on file never needs to
-    // re-enter it.
+    // Customer email is optional (phone-first checkout). But when the
+    // caller didn't type one, best-effort fall back to the member's
+    // account email (then the Supabase auth email) so an authed customer
+    // with an email on file still gets a receipt without re-entering it.
+    // No hard-fail — a phone-only order is allowed.
     if (!customerEmail) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: memberRow } = await (supabase as any)
@@ -199,12 +206,9 @@ export async function POST(request: NextRequest) {
         (typeof user.email === "string" && user.email.trim()
           ? user.email
           : null);
-      if (fallback) {
+      if (fallback && EMAIL_RE.test(fallback.trim().toLowerCase())) {
         customerEmail = fallback.trim().toLowerCase().slice(0, 254);
       }
-    }
-    if (!customerEmail || !EMAIL_RE.test(customerEmail)) {
-      return apiError("An email is required so we can send your receipt.", 400);
     }
 
     const listingIds = items.map((i) => i.listing_id);
