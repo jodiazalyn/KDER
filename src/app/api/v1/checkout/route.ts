@@ -74,10 +74,14 @@ export async function POST(request: NextRequest) {
       delivery_address,
     } = body;
 
-    const customerEmail =
+    let customerEmail =
       typeof body.customer_email === "string" && body.customer_email.trim()
         ? body.customer_email.trim().toLowerCase().slice(0, 254)
         : null;
+    // Loose deliverability sanity check — the receipt is mandatory, so a
+    // malformed address is worse than none (it silently bounces). Mirrors
+    // the client-side validator in CheckoutSheet.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // ── Uber Direct delivery fields (Phase 2, migration 019) ─────
     // We only honor these when fulfillment_type is "delivery" — for
@@ -141,26 +145,25 @@ export async function POST(request: NextRequest) {
       return apiError("Cart is empty", 400);
     }
 
-    // Contact requirements split by fulfillment:
-    //   - delivery → name + phone REQUIRED (Uber's courier needs
-    //     a number to reach the customer at the door)
-    //   - pickup   → name + (phone OR email) — one notification
-    //     channel is enough so we don't gate the order on a
-    //     number the customer doesn't want to share
+    // Contact requirements:
+    //   - name  → always required (keeps the creator's inbox personal)
+    //   - email → ALWAYS required. Every order sends a receipt on
+    //     confirmation + completion, so we must capture a deliverable
+    //     address for every order, pickup or delivery. (Resolved below
+    //     after auth so we can fall back to the account email on file.)
+    //   - phone → additionally required on delivery so the creator can
+    //     reach the customer at the door.
     if (!member_name) {
       return apiError("Name is required.", 400);
     }
     if (isDelivery && !member_phone) {
       return apiError(
-        "Phone is required for delivery — the courier needs to reach you at the door.",
+        "Phone is required for delivery so the creator can reach you at the door.",
         400
       );
     }
-    if (!isDelivery && !member_phone && !customerEmail) {
-      return apiError(
-        "Enter a phone number or email so we can send order updates.",
-        400
-      );
+    if (customerEmail && !EMAIL_RE.test(customerEmail)) {
+      return apiError("Enter a valid email for your receipt.", 400);
     }
 
     // Require authenticated customer. The client-side gate should have
@@ -174,6 +177,34 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
     if (!user) {
       return apiError("Sign in to place an order.", 401);
+    }
+
+    // Email is mandatory for the receipt. The client requires it, but
+    // enforce server-side too so a raw API call can't create a
+    // receipt-less order. If the caller didn't supply one, fall back to
+    // the member's account email (and the Supabase auth email) before
+    // giving up — an authed customer with an email on file never needs to
+    // re-enter it.
+    if (!customerEmail) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: memberRow } = await (supabase as any)
+        .from("members")
+        .select("email")
+        .eq("id", user.id)
+        .single() as { data: { email: string | null } | null };
+      const fallback =
+        (typeof memberRow?.email === "string" && memberRow.email.trim()
+          ? memberRow.email
+          : null) ||
+        (typeof user.email === "string" && user.email.trim()
+          ? user.email
+          : null);
+      if (fallback) {
+        customerEmail = fallback.trim().toLowerCase().slice(0, 254);
+      }
+    }
+    if (!customerEmail || !EMAIL_RE.test(customerEmail)) {
+      return apiError("An email is required so we can send your receipt.", 400);
     }
 
     const listingIds = items.map((i) => i.listing_id);

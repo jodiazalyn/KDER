@@ -157,6 +157,16 @@ export function CheckoutSheet({
     }
   }, [open]);
 
+  // Prefill the receipt email from the authed user's account email so
+  // they don't retype it — email is now required for every order (the
+  // receipt is never optional). Only seed when the field is still empty
+  // so we don't clobber a manual edit. Guests type their own below.
+  useEffect(() => {
+    if (open && currentUser?.email) {
+      setEmail((prev) => prev || currentUser.email);
+    }
+  }, [open, currentUser?.email]);
+
   const total = getCartTotal(items);
 
   /** Best-effort parse of the customer's free-text address into the
@@ -277,18 +287,17 @@ export function CheckoutSheet({
   const zipInServiceArea =
     serviceZips.length === 0 || serviceZips.includes(dropoffZip);
   const needsAddress = fulfillment === "delivery" && deliveryAddress.trim().length < 5;
-  // Contact validation for guest orders. Name is always required
-  // (keeps the creator's inbox personal). Notification channel:
-  //   - delivery → phone REQUIRED (Uber's courier needs a number
-  //     to reach the customer at the door)
-  //   - pickup   → phone OR email (one channel is enough; this
-  //     removes the "I don't share my phone" friction for
-  //     pickup-only orders)
+  // Contact validation. Email is ALWAYS required now — every order sends
+  // a receipt on confirmation + completion, so we must capture a valid
+  // address for both guests and authed users. Name is required for guests
+  // (keeps the creator's inbox personal). Phone is additionally required
+  // on delivery so the creator can reach the customer at the door.
   const emailValid = /\S+@\S+\.\S+/.test(email.trim());
   const phoneValid = guestPhoneDigits.length === 10;
   const guestFieldsValid =
     guestName.trim().length > 0 &&
-    (fulfillment === "delivery" ? phoneValid : phoneValid || emailValid);
+    emailValid &&
+    (fulfillment === "delivery" ? phoneValid : true);
   // Self-delivery orders need a complete, in-service-area address — the
   // creator has to be able to drive to it. Pickup orders skip this gate.
   const deliveryReady =
@@ -297,6 +306,7 @@ export function CheckoutSheet({
   const canPlace =
     !needsAddress &&
     deliveryReady &&
+    emailValid &&
     (!!currentUser || guestFieldsValid);
 
   const handlePlace = async () => {
@@ -525,37 +535,39 @@ export function CheckoutSheet({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={
-                  fulfillment === "delivery"
-                    ? "Email (optional, for receipt)"
-                    : "Email (or use phone above)"
-                }
+                placeholder="Email (required, for your receipt)"
                 autoComplete="email"
                 inputMode="email"
                 className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
               <p className="text-xs text-muted-foreground">
                 {fulfillment === "delivery"
-                  ? "The creator will reach you via phone to drop off your order."
-                  : "Pick one — we'll send order updates there."}
+                  ? "We'll email your receipt; the creator will call your phone to drop off."
+                  : "We'll email your receipt and order updates here."}
               </p>
             </div>
           )}
 
-          {/* Email — optional add-on for authed users (they may
-              not have one on file). Hidden for guests because the
-              contact-info block above already collects it. */}
+          {/* Email — required for authed users too. It's prefilled from
+              their account email when one is on file (see the effect
+              above); if not, they must supply one so the receipt can be
+              sent. Guests collect it in the contact block above. */}
           {currentUser && (
             <div>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email (optional, for receipt)"
+                placeholder="Email (required, for your receipt)"
                 autoComplete="email"
                 inputMode="email"
                 className="glass-input h-12 w-full rounded-xl px-4 text-base text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               />
+              {!emailValid && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  We&apos;ll email your receipt here.
+                </p>
+              )}
             </div>
           )}
 

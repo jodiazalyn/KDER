@@ -9,6 +9,9 @@ export interface CurrentUser {
   handle: string;
   photo_url: string | null;
   phone: string;
+  /** Account email on file, if any. Used to prefill the checkout receipt
+   *  field so an authed user never has to retype it. May be empty. */
+  email: string;
 }
 
 /**
@@ -34,18 +37,19 @@ export function useCurrentUser(): CurrentUser | null {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const { data: member } = await (supabase as any)
             .from("members")
-            .select("id, display_name, handle, photo_url, phone")
+            .select("id, display_name, handle, photo_url, phone, email")
             .eq("id", authUser.id)
             .single();
 
           if (member && !cancelled) {
-            const m = member as { id: string; display_name: string; handle: string | null; photo_url: string | null; phone: string | null };
+            const m = member as { id: string; display_name: string; handle: string | null; photo_url: string | null; phone: string | null; email: string | null };
             setUser({
               id: m.id,
               display_name: m.display_name,
               handle: m.handle || "mystore",
               photo_url: m.photo_url,
               phone: m.phone || authUser.phone || "",
+              email: m.email || authUser.email || "",
             });
             return;
           }
@@ -62,6 +66,7 @@ export function useCurrentUser(): CurrentUser | null {
               handle: handle || "mystore",
               photo_url: profile.photo_url || null,
               phone: authUser.phone || "",
+              email: authUser.email || "",
             });
             return;
           }
@@ -83,6 +88,7 @@ export function useCurrentUser(): CurrentUser | null {
             handle: handle || "mystore",
             photo_url: profile.photo_url || null,
             phone: "",
+            email: profile.email || "",
           });
         } else {
           setUser({
@@ -91,6 +97,7 @@ export function useCurrentUser(): CurrentUser | null {
             handle: "mystore",
             photo_url: null,
             phone: "",
+            email: "",
           });
         }
       }
