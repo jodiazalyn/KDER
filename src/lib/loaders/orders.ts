@@ -26,14 +26,6 @@ export async function loadCreatorOrders(
     .from("orders")
     .select("*, listing:listings(name, photos)")
     .eq("creator_id", creatorId)
-    // Payment gate: only surface orders Stripe has actually confirmed
-    // paid. Checkout inserts the row as `status=pending, paid_at=NULL`
-    // BEFORE redirecting to Stripe, and the webhook stamps `paid_at`
-    // only on `checkout.session.completed`. Without this filter an
-    // in-progress or abandoned (never-paid) order shows in the creator's
-    // inbox as a real order to fulfill. `paid_at IS NOT NULL` matches
-    // exactly when the order-placed email fires.
-    .not("paid_at", "is", null)
     .order("created_at", { ascending: false })
     .limit(100);
 
