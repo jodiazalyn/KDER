@@ -40,6 +40,10 @@ export async function GET() {
       .select("id", { count: "exact" })
       .eq("creator_id", creator.id)
       .eq("status", "pending")
+      // Only count orders Stripe has confirmed paid. An unpaid pre-payment
+      // row (checkout inserts pending + paid_at NULL before Stripe) must
+      // not inflate the new-order banner. Mirrors loadCreatorOrders.
+      .not("paid_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(1) as {
         data: { id: string }[] | null;

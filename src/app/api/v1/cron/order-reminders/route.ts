@@ -98,6 +98,10 @@ async function handle(request: NextRequest) {
        member:members(display_name, email)`
     )
     .eq("status", "pending")
+    // Only remind on orders Stripe has confirmed paid. Checkout inserts
+    // the row as pending + paid_at NULL before payment; without this gate
+    // the sweep would nag creators about unpaid / abandoned phantom orders.
+    .not("paid_at", "is", null)
     .lt("reminder_count", MAX_REMINDERS);
 
   if (error) {
