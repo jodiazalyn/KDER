@@ -5,6 +5,7 @@
       "name": "kder-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
+      "cwd": "/Users/jwa85/KDER-app",
       "port": 3000,
       "autoPort": true
     }
