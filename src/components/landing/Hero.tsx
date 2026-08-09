@@ -44,7 +44,7 @@ export function Hero() {
         {/* Left column — headline, sub-copy, claim input */}
         <div className="flex flex-col">
           <span className="mb-6 inline-flex w-fit items-center rounded-full bg-kder-mint px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-kder-green">
-            For Houston cooks
+            For home cooks
           </span>
 
           <h1 className="text-6xl font-extrabold leading-[0.95] tracking-[-0.04em] text-kder-ink sm:text-7xl lg:text-9xl">

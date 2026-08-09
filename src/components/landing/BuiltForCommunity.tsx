@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 /**
- * Houston anchor section — repurposes `community-houston.jpg` from
+ * Community anchor section — repurposes `community-houston.jpg` from
  * the previous dark landing page. In the dark version this photo
  * was the page's main image moment with a heavy green wash. In the
  * light version we lighten the treatment dramatically: the photo
@@ -12,24 +12,26 @@ import { ArrowRight } from "lucide-react";
  * Photo attribution: Community hero photo based on Houston 2014 by
  * Katie Haugland Bowen (CC BY 2.0), adapted by KDER. The credit is
  * surfaced visibly in the marketing footer (in addition to the
- * `metadata.other` entry in `layout.tsx`).
+ * `metadata.other` entry in `layout.tsx`). The attribution keeps the
+ * original work's title for CC-BY compliance even though the section
+ * copy is location-agnostic.
  */
 
-export function BuiltForHouston() {
+export function BuiltForCommunity() {
   return (
     <section
-      aria-labelledby="built-for-houston-heading"
+      aria-labelledby="built-for-community-heading"
       className="bg-kder-cream px-5 py-16 sm:px-6 sm:py-24 lg:py-32"
     >
       {/* Mobile: photo stacked ABOVE the text so nothing is clipped.
           lg: the text card floats over a full-bleed photo (the
           original overlay treatment). */}
       <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[28px] border border-kder-line bg-kder-paper sm:rounded-[40px]">
-        {/* Houston photo */}
+        {/* Community photo */}
         <div className="relative aspect-[16/10] w-full sm:aspect-[16/9] lg:aspect-[16/7]">
           <Image
             src="/images/community-houston.jpg"
-            alt="Houston skyline at golden hour"
+            alt="City skyline at golden hour"
             fill
             sizes="(max-width: 1280px) 100vw, 1280px"
             className="object-cover"
@@ -52,14 +54,14 @@ export function BuiltForHouston() {
               Community Choice
             </span>
             <h2
-              id="built-for-houston-heading"
+              id="built-for-community-heading"
               className="text-2xl font-extrabold leading-[1.08] tracking-[-0.03em] text-kder-ink sm:text-3xl lg:text-5xl"
             >
-              Built for Houston. Backed by the block.
+              Built for your community. Backed by the block.
             </h2>
             <p className="mt-4 text-sm leading-relaxed text-kder-ink-muted sm:mt-5 lg:text-base">
-              Every order on KDER stays close to home. We started here
-              because Houston cooks deserve better &mdash; not an app that
+              Every order on KDER stays close to home. We&rsquo;re here
+              because home cooks deserve better &mdash; not an app that
               takes 30% of every plate.
             </p>
             <Link

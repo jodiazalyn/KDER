@@ -81,7 +81,7 @@ export default function SmsPolicyPage() {
           <Section eyebrow="Overview" title="About KDER">
             <p>
               KDER is a Member-to-Member hospitality marketplace that connects
-              Houston food creators with members who hire them as service
+              food creators with members who hire them as service
               providers. KDER sends SMS messages to facilitate order
               management, account authentication, and platform notifications
               for both Food Creators and Members.

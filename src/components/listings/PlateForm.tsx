@@ -1006,7 +1006,7 @@ export function PlateForm({ listing }: PlateFormProps) {
                     description,
                   })}
                   label="Not sure what to charge?"
-                  hint="Ask Mia for a Houston-aware price"
+                  hint="Ask Mia for a market-aware price"
                 />
               </div>
             </section>

@@ -35,7 +35,7 @@ export function CreatorProgram() {
             KDER Creator Program.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-kder-ink-muted lg:text-lg">
-            Tell another Houston cook about KDER. When they sell their first
+            Tell another cook about KDER. When they sell their first
             plate, you both get paid. Earn while you help friends.
           </p>
         </div>

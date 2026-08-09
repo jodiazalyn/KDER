@@ -25,10 +25,10 @@ type ConciergePlateCardT =
  * Every other section on this page sells the CREATOR side (claim a
  * handle, get paid). This one flips to the EATER: KDER's "Drive Thru"
  * voice concierge (see `src/lib/concierge/concierge-prompt.ts` +
- * `ConciergeSheet.tsx`) lets anyone in Houston just *say* what they're
+ * `ConciergeSheet.tsx`) lets anyone just *say* what they're
  * hungry for. Drive Thru searches the WHOLE marketplace, shows real
  * orderable plates, and hands the pick to delivery or pickup. That's
- * how millions of Houston eaters reach the creators the rest of the
+ * how eaters everywhere reach the creators the rest of the
  * page is recruiting.
  *
  * Copy is written at a ~4th-grade reading level to match the rest of
@@ -169,7 +169,7 @@ export function VoiceOrderAgent() {
             Meet Drive Thru, your own food helper. Tell it what you&rsquo;re
             hungry for. It looks across all of KDER, finds that dish from a
             real cook near you, and gets it delivered or ready to pick up.
-            It&rsquo;s how millions of Houston neighbors order home cooking.
+            It&rsquo;s how neighbors everywhere order home cooking.
           </p>
 
           <ul className="mt-10 space-y-5">

@@ -675,7 +675,7 @@ function EmptyState({ onPick }: { onPick: (prompt: string) => void }) {
           Hey, I&apos;m Mia.
         </h2>
         <p className="mt-1.5 text-sm text-white/60">
-          I help home cooks in Houston get set up on KDER, sharpen
+          I help home cooks get set up on KDER, sharpen
           their plate listings, price their food, and land their first
           orders. Tell me what you&apos;re working on.
         </p>
