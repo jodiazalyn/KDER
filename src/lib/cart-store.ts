@@ -35,6 +35,47 @@ function cartKey(handle: string): string {
   return `kder_cart_${handle}`;
 }
 
+/** Idempotency key for the in-flight checkout attempt, stored alongside
+ *  the cart (same per-creator-handle sessionStorage scope, same lifetime).
+ *  Bound to the cart so an *unchanged* cart re-submitted (back-button /
+ *  double-tap on Stripe) reuses the same key → the server dedupes to one
+ *  order + one Stripe Session, while any cart mutation resets it so a
+ *  genuinely different order still gets its own key. */
+function checkoutKey(handle: string): string {
+  return `kder_checkout_key_${handle}`;
+}
+
+/** Return the current checkout key for this handle, minting + persisting a
+ *  fresh one if none exists yet. Called by the checkout sheet right before
+ *  POSTing to /api/v1/checkout. */
+export function getOrCreateCheckoutKey(handle: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const existing = sessionStorage.getItem(checkoutKey(handle));
+    if (existing) return existing;
+    const key = crypto.randomUUID();
+    sessionStorage.setItem(checkoutKey(handle), key);
+    return key;
+  } catch {
+    // sessionStorage unavailable (private mode edge) — fall back to an
+    // ephemeral key so the request still carries one; dedupe simply won't
+    // survive a reload, matching the pre-idempotency behavior.
+    return crypto.randomUUID();
+  }
+}
+
+/** Drop the checkout key for this handle. Called on every cart mutation
+ *  (via saveCart) and on clearCart, so the *next* checkout attempt mints a
+ *  new key = a new order. */
+function clearCheckoutKey(handle: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(checkoutKey(handle));
+  } catch {
+    // no-op
+  }
+}
+
 export function getCart(handle: string): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -47,6 +88,10 @@ export function getCart(handle: string): CartItem[] {
 
 function saveCart(handle: string, items: CartItem[]) {
   sessionStorage.setItem(cartKey(handle), JSON.stringify(items));
+  // Any cart change = new order intent → invalidate the in-flight checkout
+  // key so the next checkout mints a fresh one (a genuinely different order
+  // must not be deduped into the previous attempt).
+  clearCheckoutKey(handle);
 }
 
 const MAX_UNIQUE_ITEMS = 20;
@@ -171,6 +216,9 @@ export function removeFromCart(handle: string, listingId: string): CartItem[] {
 
 export function clearCart(handle: string): void {
   sessionStorage.removeItem(cartKey(handle));
+  // Drop the checkout key too — on the confirmation page this fires after a
+  // successful payment, so the next order starts with a clean, fresh key.
+  clearCheckoutKey(handle);
 }
 
 /** Sum the plate subtotal AND every selected extra across every line.

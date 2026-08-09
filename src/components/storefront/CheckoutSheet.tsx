@@ -18,7 +18,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { CartItem } from "@/lib/cart-store";
-import { getCartTotal } from "@/lib/cart-store";
+import { getCartTotal, getOrCreateCheckoutKey } from "@/lib/cart-store";
 import type { FulfillmentType } from "@/types";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -359,11 +359,19 @@ export function CheckoutSheet({
         memberPhone = currentUser.phone;
       }
 
+      // Cart-scoped idempotency key. Persisted in sessionStorage alongside
+      // the cart and reset on any cart mutation / successful order, so a
+      // back-button re-tap of THIS same cart reuses it (server dedupes to one
+      // order + one Stripe Session) while a genuinely new order gets a fresh
+      // key. See getOrCreateCheckoutKey in cart-store.ts.
+      const idempotencyKey = getOrCreateCheckoutKey(creatorHandle);
+
       // Create Stripe Checkout Session
       const res = await fetch("/api/v1/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          idempotency_key: idempotencyKey,
           items: items.map((item) => ({
             listing_id: item.listing.id,
             name: item.listing.name,
