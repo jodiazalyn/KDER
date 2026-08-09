@@ -380,6 +380,11 @@ export function CheckoutSheet({
                 name: e.name,
                 price_cents: e.price_cents,
                 qty: e.qty,
+                // Preserve the required-choice group label (migration 023)
+                // so the server can credit each required group's pick.
+                // Omitting it made required groups impossible to satisfy,
+                // triggering a false "Please choose a …" 400 at checkout.
+                ...(e.group ? { group: e.group } : {}),
               })),
           })),
           member_name: memberName,

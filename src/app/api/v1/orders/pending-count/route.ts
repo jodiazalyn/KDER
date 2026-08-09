@@ -40,6 +40,11 @@ export async function GET() {
       .select("id", { count: "exact" })
       .eq("creator_id", creator.id)
       .eq("status", "pending")
+      // Only count PAID pending orders. Checkout inserts a pending row with
+      // paid_at=NULL before the customer pays, so an unpaid/abandoned order
+      // must not inflate the new-order badge. paid_at is stamped by the
+      // checkout.session.completed webhook (the reliable "paid" signal).
+      .not("paid_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(1) as {
         data: { id: string }[] | null;
