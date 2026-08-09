@@ -177,7 +177,7 @@ function WaitlistInner() {
         </h2>
 
         <p className="text-base text-muted-foreground">
-          KDER is a private club for Houston home cooks and the people who
+          KDER is a private club for home cooks and the people who
           love them. We&apos;re approving new members by hand. Drop us a DM
           on Facebook or Instagram to fast-track your spot.
         </p>

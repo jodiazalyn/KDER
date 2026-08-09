@@ -4,7 +4,7 @@ import Link from "next/link";
 
 /**
  * Light-theme rewrite of the previous dark footer. Same routes,
- * same brand mark, same Houston photo attribution — restyled for
+ * same brand mark, same photo attribution — restyled for
  * cream surfaces and ink-muted text.
  *
  * The image attribution line is surfaced visibly here (in addition
@@ -187,7 +187,7 @@ export function MarketingFooter() {
 
         <div className="mt-12 flex flex-col items-start gap-3 border-t border-kder-line pt-6 text-[11px] text-kder-ink-muted/80 lg:flex-row lg:items-center lg:justify-between">
           <p>
-            © {new Date().getFullYear()} KDER. Made for Houston.
+            © {new Date().getFullYear()} KDER. Made for your community.
           </p>
           <div className="flex gap-5">
             <Link

@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 export const metadata: Metadata = {
   title: "Terms of Service — KDER",
   description:
-    "The rules of the road for KDER's Member-to-Member hospitality marketplace in Houston.",
+    "The rules of the road for KDER's Member-to-Member hospitality marketplace.",
 };
 
 const LAST_UPDATED = "April 29, 2026";
@@ -74,8 +74,8 @@ export default function TermsPage() {
           <Section title="1. What KDER is">
             <p>
               KDER operates a Member-to-Member (M2M) hospitality marketplace
-              that connects independent food Creators with ordering Members
-              in Houston. KDER is a technology provider. We do not prepare,
+              that connects independent food Creators with ordering Members.
+              KDER is a technology provider. We do not prepare,
               inspect, handle, deliver, or guarantee any food. Every
               transaction on KDER is structured as a service agreement
               directly between a Creator and a Member.
@@ -111,9 +111,9 @@ export default function TermsPage() {
             </p>
             <ul className="mt-3 list-disc space-y-2 pl-5 text-white/70">
               <li>
-                They prepare food in compliance with Texas cottage food law
-                (or any other applicable food-safety regime) and handle all
-                food-safety responsibilities themselves.
+                They prepare food in compliance with applicable cottage food
+                laws and any other applicable food-safety regime, and handle
+                all food-safety responsibilities themselves.
               </li>
               <li>
                 Listings are accurate — prices, quantities, ingredients,
@@ -196,7 +196,7 @@ export default function TermsPage() {
             <ul className="mt-3 list-disc space-y-2 pl-5 text-white/70">
               <li>
                 Sell alcohol, cannabis, controlled substances, or any
-                products that are illegal to sell in Texas or the applicable
+                products that are illegal to sell in the applicable
                 jurisdiction.
               </li>
               <li>

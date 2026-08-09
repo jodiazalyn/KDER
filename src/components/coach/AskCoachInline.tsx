@@ -30,7 +30,7 @@ interface Props {
  * Usage:
  *   <AskCoachInline
  *     seedPrompt="Help me price my brisket plates"
- *     hint="Get a Houston-aware price in 30 seconds"
+ *     hint="Get a market-aware price in 30 seconds"
  *   />
  *
  * The card variant is the default — it's a small bordered surface

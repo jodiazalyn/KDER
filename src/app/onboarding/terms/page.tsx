@@ -376,8 +376,8 @@ export default function TermsPage() {
                     </p>
                     <p>
                       By using KDER, you acknowledge that all food items are
-                      prepared by independent creators in accordance with Texas
-                      cottage food law. KDER does not prepare, inspect, or
+                      prepared by independent creators in accordance with
+                      applicable cottage food laws. KDER does not prepare, inspect, or
                       guarantee any food items.
                     </p>
                     <p>

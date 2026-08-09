@@ -210,7 +210,7 @@ export function orderDeclinedCustomer(args: {
     html: shell(
       "Order couldn't be confirmed",
       `<p>Sorry — <strong>${creator.display_name}</strong> wasn't able to take your order for <strong>${order.listing_name}</strong>.</p>
-       <p>Your card hasn't been charged. Browse other Houston creators or try again later.</p>`,
+       <p>Your card hasn't been charged. Browse other creators or try again later.</p>`,
       `${APP_URL}`,
       "Browse other creators"
     ),

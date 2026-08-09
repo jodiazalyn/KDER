@@ -2,7 +2,7 @@
  * Credibility bar — replaces the synthetic LiveUserTicker. Stooty
  * uses a "Trusted by world-class creators" line at the bottom of the
  * hero; we adapt that to a neighborhood marquee that signals
- * Houston-specific reach without fabricating numbers.
+ * local, community-level reach without fabricating numbers.
  *
  * CSS-only marquee (uses the `animate-marquee` keyframe defined in
  * tailwind.config.ts). Content is duplicated 2x inside the wrapper
@@ -35,11 +35,11 @@ export function TrustStrip() {
 
   return (
     <section
-      aria-label="Loved by Houston home cooks"
+      aria-label="Loved by home cooks"
       className="border-y border-kder-line bg-kder-cream py-8"
     >
       <p className="mb-5 text-center text-xs font-semibold uppercase tracking-[0.22em] text-kder-ink-muted">
-        Loved by Houston home cooks
+        Loved by home cooks
       </p>
       <div
         className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]"

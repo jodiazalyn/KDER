@@ -38,14 +38,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://kder.club"),
   title: "KDER — Feed the city. Own your income.",
   description:
-    "A hospitality sovereignty platform for Houston food creators. List your plates, manage orders, and get paid — all from your phone.",
+    "A hospitality sovereignty platform for food creators. List your plates, manage orders, and get paid — all from your phone.",
   manifest: "/manifest.json",
   // Favicon + apple-touch-icon are auto-discovered from
   // src/app/icon.png and src/app/apple-icon.png (Next.js file convention).
   // Likewise opengraph-image.png and twitter-image.png are auto-wired.
   openGraph: {
     title: "KDER — Feed the city. Own your income.",
-    description: "Houston's hospitality marketplace for food creators.",
+    description: "The hospitality marketplace for food creators.",
     type: "website",
     siteName: "KDER",
     locale: "en_US",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "KDER — Feed the city. Own your income.",
-    description: "Houston's hospitality marketplace for food creators.",
+    description: "The hospitality marketplace for food creators.",
     images: ["/twitter-image.png"],
   },
   // Image attribution (moved here from visible page credit)

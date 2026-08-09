@@ -229,7 +229,7 @@ export async function generateMetadata({
   const title = `${creator.display_name} on KDER`;
   const description =
     creator.bio?.trim() ||
-    `Order plates from ${creator.display_name} in Houston. ${creator.total_plates} plate${
+    `Order plates from ${creator.display_name}. ${creator.total_plates} plate${
       creator.total_plates === 1 ? "" : "s"
     } available now on KDER.`;
   const url = `https://kder.club/@${cleanHandle}`;

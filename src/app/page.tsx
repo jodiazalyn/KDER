@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KderSpinner } from "@/components/ui/kder-spinner";
 import { createClient } from "@/lib/supabase/client";
-import { BuiltForHouston } from "@/components/landing/BuiltForHouston";
+import { BuiltForCommunity } from "@/components/landing/BuiltForCommunity";
 import { CreatorCards } from "@/components/landing/CreatorCards";
 import { CreatorProgram } from "@/components/landing/CreatorProgram";
 import { Hero } from "@/components/landing/Hero";
@@ -108,7 +108,7 @@ export default function LandingPage() {
         <ListingShowcase />
         <CreatorProgram />
         <PayoutShowcase />
-        <BuiltForHouston />
+        <BuiltForCommunity />
         <Testimonials />
         <PaymentMethods />
         <CreatorCards />

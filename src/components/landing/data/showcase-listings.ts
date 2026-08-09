@@ -25,7 +25,7 @@ export interface ShowcaseListing {
   handle: string;
   /** 1.0–5.0 rating shown in the chip row. */
   rating: number;
-  /** Houston neighborhood — chip row + visual proof of locality. */
+  /** Neighborhood — chip row + visual proof of locality. */
   neighborhood: string;
   /** Single category tag — appears between neighborhood and price. */
   category: string;

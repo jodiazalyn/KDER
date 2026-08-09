@@ -76,7 +76,7 @@ export const COACHMARK_COPY = {
 
   // ── Mia (KDER concierge) ──────────────────────────────────────
   "pricing-agent-welcome":
-    "Hey, I'm Mia. I help home cooks in Houston get set up on KDER, polish their listings, work out prices, and land their first orders. Ask me anything.",
+    "Hey, I'm Mia. I help home cooks get set up on KDER, polish their listings, work out prices, and land their first orders. Ask me anything.",
 } as const satisfies Record<string, string>;
 
 export type CoachmarkId = keyof typeof COACHMARK_COPY;

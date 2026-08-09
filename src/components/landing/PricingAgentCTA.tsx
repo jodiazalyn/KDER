@@ -50,7 +50,7 @@ export function PricingAgentCTA() {
               selling your food?
             </h2>
             <p className="mt-3 max-w-xl text-base leading-relaxed text-neutral-700">
-              Mia helps Houston cooks start on KDER. She helps you pick
+              Mia helps home cooks start on KDER. She helps you pick
               what to make, set a fair price, and write a post that gets
               your first orders. Free to try. No sign-up needed.
             </p>
