@@ -18,15 +18,34 @@ import {
 import type Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
-  // Read + trim the secret on every invocation (not at module load) so an
+  // Read + trim the secrets on every invocation (not at module load) so an
   // env-var change in Netlify takes effect on the next cold start without
   // needing code redeployment. Trim guards against whitespace/newlines that
   // sneak in when pasting the secret into dashboards.
-  const webhookSecret = (process.env.STRIPE_WEBHOOK_SECRET ?? "").trim();
+  //
+  // We run TWO Stripe event destinations that both POST here, each with its
+  // own signing secret:
+  //   - STRIPE_WEBHOOK_SECRET          → the "Connected accounts" destination
+  //     (payout.* + account.updated — events emitted by creators' connected
+  //     accounts).
+  //   - STRIPE_WEBHOOK_SECRET_PLATFORM → the "Your account" destination
+  //     (checkout.session.completed, payment_intent.succeeded, charge.*,
+  //     charge.dispute.* — events that fire on the platform account, e.g. the
+  //     destination-charge checkout that stamps an order's paid_at).
+  // A given request is signed by exactly one of them, so we try each secret
+  // and accept on the first that verifies. (Historically only the connected
+  // secret existed, which silently dropped every checkout.session.completed
+  // and left orders.paid_at NULL forever.)
+  const webhookSecrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_SECRET_PLATFORM,
+  ]
+    .map((s) => (s ?? "").trim())
+    .filter((s) => s.length > 0);
 
-  if (!webhookSecret) {
+  if (webhookSecrets.length === 0) {
     console.error(
-      "[webhook] STRIPE_WEBHOOK_SECRET is not set in the environment"
+      "[webhook] No signing secret set (STRIPE_WEBHOOK_SECRET / STRIPE_WEBHOOK_SECRET_PLATFORM)"
     );
     return new Response(
       JSON.stringify({ error: "Webhook secret not configured" }),
@@ -44,24 +63,35 @@ export async function POST(request: NextRequest) {
 
   const body = await request.text();
 
-  // ── Verify signature ──────────────────────────────────────────
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Signature verification failed";
+  // ── Verify signature (try each configured destination secret) ─────
+  let event: Stripe.Event | null = null;
+  let lastError = "Signature verification failed";
+  for (const secret of webhookSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, secret);
+      break;
+    } catch (err) {
+      lastError =
+        err instanceof Error ? err.message : "Signature verification failed";
+    }
+  }
+
+  if (!event) {
     // Log safe-to-expose diagnostics so Netlify logs reveal whether the
     // problem is a missing secret, wrong prefix, length mismatch, or body
-    // mutation — without ever logging the secret itself.
-    console.error("[webhook] Verification failed:", message, {
-      secretLength: webhookSecret.length,
-      secretPrefix: webhookSecret.slice(0, 6), // "whsec_" expected
-      secretStartsWithWhsec: webhookSecret.startsWith("whsec_"),
-      bodyLength: body.length,
-      signatureHeaderLength: signature.length,
-    });
-    return new Response(JSON.stringify({ error: message }), { status: 400 });
+    // mutation — without ever logging the secret values themselves.
+    console.error(
+      "[webhook] Verification failed against all secrets:",
+      lastError,
+      {
+        secretsTried: webhookSecrets.length,
+        secretPrefixes: webhookSecrets.map((s) => s.slice(0, 6)), // "whsec_" expected
+        allStartWithWhsec: webhookSecrets.every((s) => s.startsWith("whsec_")),
+        bodyLength: body.length,
+        signatureHeaderLength: signature.length,
+      }
+    );
+    return new Response(JSON.stringify({ error: lastError }), { status: 400 });
   }
 
   // ── Route events ──────────────────────────────────────────────

@@ -98,6 +98,11 @@ async function handle(request: NextRequest) {
        member:members(display_name, email)`
     )
     .eq("status", "pending")
+    // Only escalate PAID, un-accepted orders. Checkout inserts a pending row
+    // with paid_at=NULL before the customer pays; nagging the creator (email +
+    // SMS) about an unpaid/abandoned order would be noise. paid_at is stamped
+    // by the checkout.session.completed webhook (the reliable "paid" signal).
+    .not("paid_at", "is", null)
     .lt("reminder_count", MAX_REMINDERS);
 
   if (error) {

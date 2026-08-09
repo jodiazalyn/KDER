@@ -26,6 +26,17 @@ export async function loadCreatorOrders(
     .from("orders")
     .select("*, listing:listings(name, photos)")
     .eq("creator_id", creatorId)
+    // Hide pre-payment phantom rows: checkout inserts an order at
+    // status="pending", paid_at=NULL *before* the customer pays, so an
+    // abandoned/mid-checkout order must never surface to the creator as
+    // actionable. `paid_at` is only stamped by the Stripe
+    // `checkout.session.completed` webhook (handleCheckoutCompleted), so it
+    // is the reliable "actually paid" signal. We gate on payment ONLY for
+    // pending rows — terminal history (completed/declined) and any
+    // accepted/ready rows stay visible regardless of paid_at, so existing
+    // order history is never hidden. Reads as: show the row if it is not
+    // pending, OR it is paid.
+    .or("status.neq.pending,paid_at.not.is.null")
     .order("created_at", { ascending: false })
     .limit(100);
 
