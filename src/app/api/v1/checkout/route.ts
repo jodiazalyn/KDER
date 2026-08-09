@@ -59,6 +59,13 @@ interface CheckoutBody {
    *  server-side against the creator's own code list — a client-
    *  supplied discount amount is never trusted. */
   discount_code?: string | null;
+  /** Cart-scoped idempotency key (migration 026). The client mints one per
+   *  cart and resets it on any cart change / successful order, so a
+   *  back-button re-tap of the SAME cart carries the SAME key. The server
+   *  reuses the existing in-flight order for that key instead of inserting a
+   *  duplicate, and passes it to Stripe so the same Session is returned.
+   *  Optional — absent/empty is treated as "no key" (legacy behavior). */
+  idempotency_key?: string | null;
 }
 
 export async function POST(request: NextRequest) {
@@ -73,6 +80,14 @@ export async function POST(request: NextRequest) {
       creator_handle,
       delivery_address,
     } = body;
+
+    // Cart-scoped idempotency key (migration 026). Cap length and coerce
+    // empty → null so a keyless/legacy request falls through to the normal
+    // insert path (the partial unique index exempts NULLs).
+    const idempotencyKey =
+      typeof body.idempotency_key === "string" && body.idempotency_key.trim()
+        ? body.idempotency_key.trim().slice(0, 100)
+        : null;
 
     let customerEmail =
       typeof body.customer_email === "string" && body.customer_email.trim()
@@ -522,6 +537,10 @@ export async function POST(request: NextRequest) {
         503
       );
     }
+    // Narrow to a non-null const so it survives into the createSession
+    // closure below (property narrowing from the guard above doesn't cross
+    // the function boundary).
+    const creatorConnectId: string = creatorRow.stripe_connect_id;
 
     // ── Self-delivery fee + ZIP gate (migration 025) ────────────────
     // For self-delivery orders the fee is the creator's flat rate, read
@@ -580,9 +599,29 @@ export async function POST(request: NextRequest) {
     const creatorPayout =
       (discountedSubtotalCents - platformFeeCents + selfDeliveryFeeCents) / 100;
 
-    // Let Postgres generate the UUID via DEFAULT gen_random_uuid()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: insertedOrder, error: orderErr } = await (supabase as any)
+    // Dedupe (migration 026): a back-button re-tap of the SAME cart carries
+    // the SAME idempotency key. Reuse the existing still-actionable order
+    // (pending + unpaid) for that key instead of inserting a duplicate. A key
+    // whose order already paid/advanced falls through to a fresh insert (the
+    // client resets the key on success, so this shouldn't happen — safe
+    // default).
+    let orderId: string | null = null;
+    if (idempotencyKey) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existing } = (await (supabase as any)
+        .from("orders")
+        .select("id")
+        .eq("checkout_idempotency_key", idempotencyKey)
+        .eq("status", "pending")
+        .is("paid_at", null)
+        .maybeSingle()) as { data: { id: string } | null };
+      if (existing) orderId = existing.id;
+    }
+
+    if (!orderId) {
+      // Let Postgres generate the UUID via DEFAULT gen_random_uuid()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: insertedOrder, error: orderErr } = (await (supabase as any)
       .from("orders")
       .insert({
         creator_id: creatorRow.id,
@@ -629,6 +668,9 @@ export async function POST(request: NextRequest) {
         discount_code: appliedCode,
         discount_cents: discountCents,
         status: "pending",
+        // Cart-scoped dedupe key (migration 026). NULL for keyless/legacy
+        // requests; a partial unique index enforces one order per non-null key.
+        checkout_idempotency_key: idempotencyKey,
         items: verifiedItems.map((i) => ({
           listing_id: i.listing_id,
           name: i.name,
@@ -646,14 +688,42 @@ export async function POST(request: NextRequest) {
         })),
       })
       .select("id")
-      .single() as { data: { id: string } | null; error: { message: string } | null };
+      .single()) as {
+        data: { id: string } | null;
+        error: { message: string; code?: string } | null;
+      };
 
-    if (orderErr || !insertedOrder) {
-      console.error("Failed to create order:", orderErr?.message);
-      return apiError("Failed to create order", 500);
+      if (orderErr || !insertedOrder) {
+        // Unique-violation race (23505): two rapid taps inserted the same key
+        // at once. The loser re-selects the winner's row and reuses it rather
+        // than failing the checkout.
+        if (orderErr?.code === "23505" && idempotencyKey) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: raced } = (await (supabase as any)
+            .from("orders")
+            .select("id")
+            .eq("checkout_idempotency_key", idempotencyKey)
+            .maybeSingle()) as { data: { id: string } | null };
+          if (raced) {
+            orderId = raced.id;
+          } else {
+            console.error("Failed to create order:", orderErr?.message);
+            return apiError("Failed to create order", 500);
+          }
+        } else {
+          console.error("Failed to create order:", orderErr?.message);
+          return apiError("Failed to create order", 500);
+        }
+      } else {
+        orderId = insertedOrder.id;
+      }
     }
 
-    const orderId = insertedOrder.id;
+    // Every path above either set orderId or returned; this narrows the type
+    // and guards the impossible null.
+    if (!orderId) {
+      return apiError("Failed to create order", 500);
+    }
 
     // Attach the promo discount (migration 024) as an ephemeral,
     // one-shot Stripe coupon so the hosted checkout page + the
@@ -673,8 +743,11 @@ export async function POST(request: NextRequest) {
       discounts.push({ coupon: coupon.id });
     }
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // Create Stripe Checkout Session. Pass our cart-scoped key as Stripe's
+    // idempotencyKey so a re-tap of the same cart returns the SAME Session
+    // (same URL) for 24h instead of creating a fresh one.
+    const createSession = (opts?: { idempotencyKey: string }) =>
+      stripe.checkout.sessions.create({
       mode: "payment",
       line_items,
       ...(discounts.length ? { discounts } : {}),
@@ -711,10 +784,32 @@ export async function POST(request: NextRequest) {
       payment_intent_data: {
         application_fee_amount: applicationFeeCents,
         transfer_data: {
-          destination: creatorRow.stripe_connect_id,
+          destination: creatorConnectId,
         },
       },
-    });
+    }, opts);
+
+    let session;
+    try {
+      session = await createSession(
+        idempotencyKey ? { idempotencyKey } : undefined
+      );
+    } catch (err) {
+      // If params ever differ under the same key, Stripe throws an
+      // idempotency_error. Retry once WITHOUT the key so a legitimately
+      // changed order still checks out. (Shouldn't happen — the client resets
+      // the key on any cart change, so an unchanged re-tap has identical params.)
+      const isIdemErr =
+        !!err &&
+        typeof err === "object" &&
+        "type" in err &&
+        (err as { type?: string }).type === "idempotency_error";
+      if (idempotencyKey && isIdemErr) {
+        session = await createSession(undefined);
+      } else {
+        throw err;
+      }
+    }
 
     return NextResponse.json({ checkout_url: session.url });
   } catch (error) {
