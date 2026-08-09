@@ -3,7 +3,12 @@
 import { useState, useEffect, useCallback, useRef, useId, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CalendarRange, ShoppingCart, UtensilsCrossed } from "lucide-react";
+import {
+  CalendarRange,
+  ShoppingCart,
+  UtensilsCrossed,
+  ShoppingBag,
+} from "lucide-react";
 import { CategoryFilter } from "@/components/storefront/CategoryFilter";
 import { CreatorReviews } from "@/components/storefront/CreatorReviews";
 import {
@@ -11,7 +16,9 @@ import {
   type ActiveOrderSummary,
 } from "@/components/storefront/ActiveOrderBanner";
 import { CreatorHeader } from "@/components/storefront/CreatorHeader";
-import { PlateTile } from "@/components/storefront/PlateTile";
+import { PlateOfferCard } from "@/components/storefront/PlateOfferCard";
+import { SpecialtiesGallery } from "@/components/storefront/SpecialtiesGallery";
+import { AboutChef } from "@/components/storefront/AboutChef";
 import { CateringMenuCard } from "@/components/storefront/CateringMenuCard";
 import { Coachmark } from "@/components/ui/coachmark";
 import { COACHMARK_COPY } from "@/lib/coachmarks";
@@ -99,11 +106,6 @@ export function StorefrontClient({
   const [creator] = useState<CreatorProfile | null>(initialCreator);
   const [listings] = useState<Listing[]>(initialListings);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  // Active storefront tab. Plates + Reviews are always present; Catering
-  // only appears when the creator has ≥1 catering listing.
-  const [activeTab, setActiveTab] = useState<
-    "plates" | "catering" | "reviews"
-  >("plates");
   // IDs of catering listings the customer has tapped to pre-select.
   // These ride along to the inquiry form so the creator's quote starts
   // pre-populated with the items the customer wants.
@@ -142,21 +144,18 @@ export function StorefrontClient({
   // causing `.on()`-after-`.subscribe()` crashes.
   const instanceId = useId();
 
-  // Coachmark anchor for the first plate tile — first-time visitors
-  // get a tip explaining that tapping a tile opens details.
+  // Coachmark anchor for the first plate offer card — first-time visitors
+  // get a tip explaining that tapping a card opens details.
   const firstTileRef = useRef<HTMLDivElement>(null);
-  // Coachmark anchor for the CATERING tab — fires once the first time
+  // Coachmark anchor for the CATERING section — fires once the first time
   // a visitor lands on a creator that has catering listings.
-  const cateringTabRef = useRef<HTMLButtonElement>(null);
-  // Scroll target for the "Start order" action in the redesigned header.
-  // Tapping Start order activates the Menu tab and brings the (sticky) tab
-  // strip to the top of the viewport so the plate list is immediately in view.
-  const tabStripRef = useRef<HTMLDivElement>(null);
+  const cateringTabRef = useRef<HTMLHeadingElement>(null);
+  // Scroll target for the "Start order" action (header/book bar/gallery).
+  // In the single-scroll layout this simply brings the Menu section to the
+  // top of the viewport so the plate list is immediately in view.
+  const menuRef = useRef<HTMLDivElement>(null);
   const handleStartOrder = useCallback(() => {
-    setActiveTab("plates");
-    requestAnimationFrame(() => {
-      tabStripRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    menuRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
   // Bridge a Drive Thru concierge pick into a creator's EXISTING order flow.
@@ -174,7 +173,6 @@ export function StorefrontClient({
         const listing = listings.find((l) => l.id === plate.id);
         if (listing) {
           setConciergeOpen(false);
-          setActiveTab("plates");
           setSelectedPlate(listing);
           return;
         }
@@ -197,7 +195,6 @@ export function StorefrontClient({
     if (!plateId) return;
     const listing = listings.find((l) => l.id === plateId);
     if (listing) {
-      setActiveTab("plates");
       setSelectedPlate(listing);
     }
     router.replace(`/@${handle}`);
@@ -530,7 +527,7 @@ export function StorefrontClient({
   }, [messageText, sending, currentUserId, creator?.member_id]);
 
   // Split listings by kind. Catering uses a different flow (inquiry →
-  // quote → deposit), so the storefront renders them in separate tabs.
+  // quote → deposit), so the storefront renders them as a separate section.
   const plateListings = useMemo(
     () => listings.filter((l) => l.kind !== "catering"),
     [listings]
@@ -540,54 +537,40 @@ export function StorefrontClient({
     [listings]
   );
 
-  // Tab strip config. Plates + Reviews are always shown; Catering is
-  // inserted between them only when the creator offers catering. Each tab
-  // carries a small count sublabel (redesign): plate count, catering
-  // entry price, and the review rating · count.
-  const storefrontTabs = useMemo(() => {
-    const plateCount = plateListings.length;
-    const minCateringPrice =
-      cateringListings.length > 0
-        ? Math.min(...cateringListings.map((l) => l.price))
-        : null;
-    const reviewSub =
-      creator?.review_count && creator.review_count > 0 && creator.review_rating_avg != null
-        ? `${creator.review_rating_avg.toFixed(1)} · ${creator.review_count}`
-        : "New";
-    return [
-      {
-        key: "plates" as const,
-        label: "Menu",
-        count: `${plateCount} ${plateCount === 1 ? "plate" : "plates"}`,
-      },
-      ...(cateringListings.length > 0
-        ? [
-            {
-              key: "catering" as const,
-              label: "Catering",
-              count:
-                minCateringPrice != null
-                  ? `From $${
-                      Number.isInteger(minCateringPrice)
-                        ? minCateringPrice
-                        : minCateringPrice.toFixed(2)
-                    }`
-                  : "",
-            },
-          ]
-        : []),
-      {
-        key: "reviews" as const,
-        label: "Reviews",
-        count: reviewSub,
-      },
-    ];
-  }, [
-    plateListings.length,
-    cateringListings,
-    creator?.review_count,
-    creator?.review_rating_avg,
-  ]);
+  // Hero image for the header: the creator's first plate photo (food-forward,
+  // Airbnb-style), falling back to any listing photo. The header itself falls
+  // back further to the creator's own photo / a gradient when this is null.
+  const heroPhoto = useMemo(() => {
+    const firstPlate = plateListings.find((l) => l.photos[0]);
+    if (firstPlate) return firstPlate.photos[0];
+    const anyListing = listings.find((l) => l.photos[0]);
+    return anyListing?.photos[0] ?? null;
+  }, [plateListings, listings]);
+
+  // "My specialties" collage — one representative photo per listing, deduped,
+  // capped so the "+N photos" overlay reads sensibly.
+  const specialtyPhotos = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const l of listings) {
+      const p = l.photos[0];
+      if (p && !seen.has(p)) {
+        seen.add(p);
+        out.push(p);
+      }
+      if (out.length >= 7) break;
+    }
+    return out;
+  }, [listings]);
+
+  // Lowest plate price — powers the "From $X" label on the sticky book bar.
+  const minPlatePrice = useMemo(
+    () =>
+      plateListings.length > 0
+        ? Math.min(...plateListings.map((l) => l.price))
+        : null,
+    [plateListings]
+  );
 
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
@@ -616,14 +599,12 @@ export function StorefrontClient({
   const cartTotal = getCartTotal(cart);
   const cartCount = getCartCount(cart);
 
-  // A floating action bar is pinned to the bottom only in two cases: the
-  // Plates tab with a non-empty cart, or the Catering tab with ≥1 selection.
-  // We reserve bottom padding to clear that bar ONLY when it's actually
-  // showing — otherwise the page would carry ~7rem of dead whitespace under
-  // every short screen (Reviews, empty states, etc.).
-  const hasFloatingBar =
-    (activeTab === "plates" && cartCount > 0) ||
-    (activeTab === "catering" && selectedCateringIds.size > 0);
+  // The sticky book bar is present whenever the creator has something
+  // orderable (plates or catering). It reserves bottom padding so its
+  // three states (cart / catering request / "Start order") never overlap
+  // the page content. Empty stores drop the bar and the reserved space.
+  const hasBookBar =
+    plateListings.length > 0 || cateringListings.length > 0;
 
   if (!creator) {
     return (
@@ -637,7 +618,7 @@ export function StorefrontClient({
   return (
     <main
       className={`min-h-[100dvh] bg-background ${
-        hasFloatingBar
+        hasBookBar
           ? "pb-[calc(7rem+env(safe-area-inset-bottom))]"
           : "pb-[calc(2rem+env(safe-area-inset-bottom))]"
       }`}
@@ -652,13 +633,9 @@ export function StorefrontClient({
           </div>
         )}
 
-        {/* Redesigned storefront header (cover + floating profile + stats +
-            Start order / Message actions). */}
-        <CreatorHeader
-          creator={creator}
-          onMessageClick={handleMessageClick}
-          onStartOrder={handleStartOrder}
-        />
+        {/* Airbnb-Experiences-style hero: full-bleed food photo + floating
+            chef avatar + name / rating / neighborhood meta line. */}
+        <CreatorHeader creator={creator} heroPhoto={heroPhoto} />
 
         {/* Drive Thru nudge — the flagship concierge, surfaced on EVERY
             storefront. Lets a visitor describe / show what they want and
@@ -666,7 +643,7 @@ export function StorefrontClient({
         <button
           type="button"
           onClick={() => setConciergeOpen(true)}
-          className="group mx-4 mb-4 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/[0.04] px-4 py-3 text-left transition active:scale-[0.99]"
+          className="group mx-4 mb-2 mt-6 flex w-[calc(100%-2rem)] items-center gap-3 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 to-primary/[0.04] px-4 py-3 text-left transition active:scale-[0.99]"
         >
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-1.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -698,108 +675,42 @@ export function StorefrontClient({
           </div>
         )}
 
-        {/* Tab bar — Plates | [Catering] | Reviews. Plates and Reviews
-            are always present; Catering only appears when the creator
-            has ≥1 catering listing. */}
-        <div
-          ref={tabStripRef}
-          role="tablist"
-          aria-label="Storefront sections"
-          className="sticky top-0 z-10 flex gap-1.5 border-b border-border bg-background/85 px-3.5 py-3 backdrop-blur-md"
-        >
-          {storefrontTabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                ref={tab.key === "catering" ? cateringTabRef : undefined}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveTab(tab.key)}
-                className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl py-2 text-sm font-bold transition-colors",
-                  isActive
-                    ? "bg-foreground/[0.06] text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {tab.label}
-                {tab.count && (
-                  <span
-                    className={cn(
-                      "text-[11px] font-semibold",
-                      isActive ? "text-primary" : "text-muted-foreground/70"
-                    )}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Two-tier category filter — only on the Plates tab */}
-        {activeTab === "plates" && availableTags.length > 0 && (
-          <CategoryFilter
-            availableTags={availableTags}
-            selected={selectedTag}
-            onSelect={setSelectedTag}
-          />
-        )}
-
-        {/* Catering tab content — wide cards in a single column */}
-        {activeTab === "catering" && (
-          <div className="space-y-2 px-4 py-4">
-            {cateringListings.length > 0 ? (
-              cateringListings.map((listing) => (
-                <CateringMenuCard
-                  key={listing.id}
-                  listing={listing}
-                  selected={selectedCateringIds.has(listing.id)}
-                  onToggle={toggleCateringSelection}
-                />
-              ))
-            ) : (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No catering options right now.
-              </p>
-            )}
-            <p className="pt-2 text-center text-[11px] text-muted-foreground">
-              Tap items you&apos;re interested in, then request a quote.
-            </p>
+        {/* ---- Menu section — vertical list of horizontal offer cards ---- */}
+        <section ref={menuRef} className="px-4 pt-6 scroll-mt-4">
+          <div className="mb-3 flex items-center gap-2">
+            <ShoppingBag size={18} className="text-primary" />
+            <h2 className="text-lg font-bold tracking-[-0.01em] text-foreground">
+              Menu
+            </h2>
           </div>
-        )}
 
-        {/* Reviews tab content — ratings + written reviews. Self-fetches
-            on first render via CreatorReviews. */}
-        {activeTab === "reviews" && (
-          <CreatorReviews
-            creatorId={creator.creator_id ?? null}
-            averageRating={creator.review_rating_avg}
-            reviewCount={creator.review_count}
-          />
-        )}
+          {availableTags.length > 0 && (
+            <div className="-mx-4 mb-3">
+              <CategoryFilter
+                availableTags={availableTags}
+                selected={selectedTag}
+                onSelect={setSelectedTag}
+              />
+            </div>
+          )}
 
-        {/* Plates grid + empty state — only on the Plates tab */}
-        {activeTab === "plates" && (
-          filteredListings.length > 0 ? (
-            <div className="grid grid-cols-3 gap-[2px]">
+          {filteredListings.length > 0 ? (
+            <div className="space-y-2.5">
               {filteredListings.map((listing, idx) => (
                 <div
                   key={listing.id}
                   ref={idx === 0 ? firstTileRef : undefined}
                 >
-                  <PlateTile
+                  <PlateOfferCard
                     listing={listing}
                     onClick={setSelectedPlate}
+                    priority={idx === 0}
                   />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center gap-4 pt-16">
+            <div className="flex flex-col items-center justify-center gap-4 py-12">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
                 <UtensilsCrossed size={28} className="text-muted-foreground/40" />
               </div>
@@ -809,9 +720,122 @@ export function StorefrontClient({
                   : "No plates available right now. Check back soon!"}
               </p>
             </div>
-          )
+          )}
+        </section>
+
+        {/* ---- Catering section — only when the creator offers catering ---- */}
+        {cateringListings.length > 0 && (
+          <section className="px-4 pt-8">
+            <div className="mb-1 flex items-center gap-2">
+              <CalendarRange size={18} className="text-primary" />
+              <h2
+                ref={cateringTabRef}
+                className="text-lg font-bold tracking-[-0.01em] text-foreground"
+              >
+                Catering
+              </h2>
+            </div>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Tap items you&apos;re interested in, then request a quote.
+            </p>
+            <div className="space-y-2">
+              {cateringListings.map((listing) => (
+                <CateringMenuCard
+                  key={listing.id}
+                  listing={listing}
+                  selected={selectedCateringIds.has(listing.id)}
+                  onToggle={toggleCateringSelection}
+                />
+              ))}
+            </div>
+          </section>
         )}
+
+        {/* ---- My specialties — photographic taste of the kitchen ---- */}
+        <SpecialtiesGallery
+          photos={specialtyPhotos}
+          onSeeAll={handleStartOrder}
+        />
+
+        {/* ---- Reviews — ratings + written reviews (self-fetches) ---- */}
+        <section className="pt-2">
+          <CreatorReviews
+            creatorId={creator.creator_id ?? null}
+            averageRating={creator.review_rating_avg}
+            reviewCount={creator.review_count}
+          />
+        </section>
+
+        {/* ---- Meet your chef — Message CTA + socials + stats ---- */}
+        <AboutChef creator={creator} onMessageClick={handleMessageClick} />
       </div>
+
+      {/* ---- Sticky book bar — cart / catering-request / "Start order" ---- */}
+      {hasBookBar && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 backdrop-blur-md">
+          <div className="mx-auto flex max-w-[640px] items-center gap-3 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            {cartCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setHasOpenedCart(true);
+                  setCartOpen(true);
+                }}
+                className="flex h-13 flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] py-3.5 text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-transform active:scale-95"
+              >
+                <ShoppingCart size={18} />
+                View cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}
+                ${cartTotal.toFixed(2)}
+              </button>
+            ) : selectedCateringIds.size > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const ids = Array.from(selectedCateringIds).join(",");
+                  router.push(
+                    `/${encodeURIComponent(handle)}/catering/inquire?items=${ids}`
+                  );
+                }}
+                className="flex h-13 flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] py-3.5 text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-transform active:scale-95"
+              >
+                <CalendarRange size={18} />
+                Request catering ({selectedCateringIds.size}{" "}
+                {selectedCateringIds.size === 1 ? "item" : "items"})
+              </button>
+            ) : (
+              <>
+                <div className="flex min-w-0 flex-col">
+                  {minPlatePrice != null ? (
+                    <>
+                      <span className="text-base font-extrabold leading-tight text-foreground">
+                        From ${minPlatePrice.toFixed(2)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        per plate
+                      </span>
+                    </>
+                  ) : (
+                    <span className="truncate text-sm font-semibold text-foreground">
+                      {creator.display_name}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={
+                    plateListings.length > 0
+                      ? handleStartOrder
+                      : handleMessageClick
+                  }
+                  className="ml-auto flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] px-7 text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] transition-transform active:scale-95"
+                >
+                  {plateListings.length > 0 ? "Start order" : "Message chef"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Plate detail sheet — only mounted once the user actually taps a
           tile so the dynamic chunk doesn't fetch on initial render. */}
@@ -833,42 +857,6 @@ export function StorefrontClient({
             photo_url: creator.photo_url,
           }}
         />
-      )}
-
-      {/* Floating cart button — only on the Plates tab */}
-      {activeTab === "plates" && cartCount > 0 && (
-        <button
-          type="button"
-          onClick={() => {
-            setHasOpenedCart(true);
-            setCartOpen(true);
-          }}
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
-        >
-          <ShoppingCart size={18} />
-          View Cart ({cartCount} {cartCount === 1 ? "item" : "items"}) ·{" "}
-          ${cartTotal.toFixed(2)}
-        </button>
-      )}
-
-      {/* Floating Request Catering button — only on the Catering tab,
-          and only once the customer has selected at least one item.
-          Passes the selected ids to the inquiry form via query string. */}
-      {activeTab === "catering" && selectedCateringIds.size > 0 && (
-        <button
-          type="button"
-          onClick={() => {
-            const ids = Array.from(selectedCateringIds).join(",");
-            router.push(
-              `/${encodeURIComponent(handle)}/catering/inquire?items=${ids}`
-            );
-          }}
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-4 right-4 z-40 mx-auto flex h-14 max-w-lg items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-sm font-bold text-white shadow-[0_8px_28px_rgba(34,197,94,0.4)] active:scale-95 transition-transform"
-        >
-          <CalendarRange size={18} />
-          Request Catering ({selectedCateringIds.size}{" "}
-          {selectedCateringIds.size === 1 ? "item" : "items"})
-        </button>
       )}
 
       {/* Cart sheet — chunk fetches lazily on first open. Stays mounted
@@ -1093,7 +1081,12 @@ export function StorefrontClient({
           type="button"
           onClick={() => setConciergeOpen(true)}
           aria-label="Ask Drive Thru"
-          className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-2.5 shadow-[0_8px_28px_rgba(34,197,94,0.45)] transition-transform active:scale-90"
+          className={cn(
+            "fixed right-4 z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#37C871] to-[#1B5E20] p-2.5 shadow-[0_8px_28px_rgba(34,197,94,0.45)] transition-transform active:scale-90",
+            hasBookBar
+              ? "bottom-[calc(6rem+env(safe-area-inset-bottom))]"
+              : "bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
+          )}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
